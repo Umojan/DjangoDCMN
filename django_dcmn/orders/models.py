@@ -1,15 +1,35 @@
+# models.py
 from django.db import models
-from django.contrib.contenttypes.fields import GenericForeignKey
-from django.contrib.contenttypes.models import ContentType
 
-
-class OrderFile(models.Model):
-    order = models.ForeignKey("FbiApostilleOrder", on_delete=models.CASCADE, related_name="files")
-    file = models.FileField(upload_to='orders/')
-    uploaded_at = models.DateTimeField(auto_now_add=True)
+class FbiServicePackage(models.Model):
+    code = models.CharField(max_length=50, unique=True)
+    label = models.CharField(max_length=255)
+    price = models.DecimalField(max_digits=7, decimal_places=2)
 
     def __str__(self):
-        return f"File for Order #{self.order_id}"
+        return self.label
+
+    class Meta:
+        verbose_name = 'FBI Apostille — Service Package'
+        verbose_name_plural = 'FBI Apostille — Service Packages'
+
+
+class ShippingOption(models.Model):
+    code = models.CharField(max_length=50, unique=True)
+    label = models.CharField(max_length=255)
+    price = models.DecimalField(max_digits=7, decimal_places=2)
+
+    def __str__(self):
+        return self.label
+
+class FbiPricingSettings(models.Model):
+    price_per_certificate = models.DecimalField(max_digits=6, decimal_places=2, default=25.00)
+
+    def __str__(self):
+        return f"Settings (Per Certificate: {self.price_per_certificate})"
+
+    class Meta:
+        verbose_name = 'FBI Apostille — Pricing Setting'
 
 class FbiApostilleOrder(models.Model):
     name = models.CharField(max_length=255)
@@ -18,25 +38,25 @@ class FbiApostilleOrder(models.Model):
     country_name = models.CharField(max_length=100)
     address = models.TextField()
 
-    PACKAGE_CHOICES = [
-        ('federal_standard', 'Federal Standard Service - $125'),
-        ('expedited_federal', 'Expedited Federal Service - $195'),
-        ('state_level', 'State-Level Service - $250'),
-    ]
-    package = models.CharField(max_length=50, choices=PACKAGE_CHOICES)
+    package = models.ForeignKey(FbiServicePackage, on_delete=models.CASCADE)
     count = models.PositiveIntegerField(help_text="Price of $25 per apostille certificate")
-
-    SHIPPING_CHOICES = [
-        ('ups_ground', 'UPS Ground (Standard Shipping) - $0.00'),
-        ('1day_express', '1-Day Domestic Express (Overnight) - $29.00'),
-        ('2day_express', '2-Day Domestic Express - $19.00'),
-    ]
-    shipping_option = models.CharField(max_length=50, choices=SHIPPING_CHOICES)
+    shipping_option = models.ForeignKey(ShippingOption, on_delete=models.CASCADE)
 
     total_price = models.DecimalField(max_digits=10, decimal_places=2, help_text="Total Price")
-
     is_paid = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"FBI Apostille Order #{self.id} by {self.name}"
+
+    class Meta:
+        verbose_name = 'FBI Apostille — Order'
+        verbose_name_plural = 'FBI Apostille — Orders'
+
+class OrderFile(models.Model):
+    order = models.ForeignKey(FbiApostilleOrder, on_delete=models.CASCADE, related_name="files")
+    file = models.FileField(upload_to='orders/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"File for Order #{self.order.id}"

@@ -1,29 +1,44 @@
+# views.py
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from .serializers import FbiApostilleOrderSerializer, OrderFileSerializer
-from .models import OrderFile
-
+from .models import FbiApostilleOrder, FbiServicePackage, FbiPricingSettings, ShippingOption, OrderFile
 
 class CreateFbiOrderView(APIView):
     def post(self, request, format=None):
-        order_serializer = FbiApostilleOrderSerializer(data=request.data)
+        serializer = FbiApostilleOrderSerializer(data=request.data)
+        if serializer.is_valid():
+            try:
+                package = FbiServicePackage.objects.get(code=request.data['package'])
+                shipping = ShippingOption.objects.get(code=request.data['shipping_option'])
+                count = int(request.data['count'])
 
-        if order_serializer.is_valid():
-            order = order_serializer.save()
+                # Получаем цену за 1 certificate из настроек
+                price_setting = FbiPricingSettings.objects.first()
+                per_certificate_price = price_setting.price_per_certificate if price_setting else 25
 
-            file_urls = []
-            if request.FILES:
-                files = request.FILES.getlist('files')
-                for f in files:
-                    file_instance = OrderFile.objects.create(order=order, file=f)
-                    file_url = request.build_absolute_uri(file_instance.file.url)
-                    file_urls.append(file_url)
+                total = package.price + shipping.price + (count * per_certificate_price)
 
-            return Response({
-                'message': 'Order created successfully',
-                'order_id': order.id,
-                'file_urls': file_urls if file_urls else None
-            }, status=status.HTTP_201_CREATED)
+                order = serializer.save(
+                    total_price=total,
+                    package=package,
+                    shipping_option=shipping
+                )
 
-        return Response(order_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                file_urls = []
+                if request.FILES:
+                    for f in request.FILES.getlist('files'):
+                        file_instance = OrderFile.objects.create(order=order, file=f)
+                        file_urls.append(request.build_absolute_uri(file_instance.file.url))
+
+                return Response({
+                    'message': 'Order created',
+                    'order_id': order.id,
+                    'file_urls': file_urls or None,
+                    'calculated_total': float(total),
+                }, status=status.HTTP_201_CREATED)
+
+            except (FbiServicePackage.DoesNotExist, ShippingOption.DoesNotExist):
+                return Response({'error': 'Invalid package or shipping option.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
