@@ -18,8 +18,11 @@ from django.conf import settings
 from django.contrib import admin
 from django.conf.urls.static import static
 from django.urls import path, include
+from views import serve_media_file
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('orders.urls')),
+
+    path('media/<path:path>', serve_media_file),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
