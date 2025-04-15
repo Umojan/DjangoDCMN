@@ -5,7 +5,6 @@ __pycache__/
 *.log
 
 # Django
-/staticfiles/
 media/
 db.sqlite3
 .env
