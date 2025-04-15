@@ -1,3 +1,4 @@
+gunicorn
 asgiref==3.8.1
 certifi==2025.1.31
 charset-normalizer==3.4.1
