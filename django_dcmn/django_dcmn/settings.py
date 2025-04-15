@@ -131,7 +131,10 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = config('MEDIA_ROOT', default=os.path.join(BASE_DIR, 'media'))
+if os.getenv("RAILWAY_ENVIRONMENT"):
+    MEDIA_ROOT = '/app/media'  # Railway
+else:
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Local
 
 
 CSRF_TRUSTED_ORIGINS = [
