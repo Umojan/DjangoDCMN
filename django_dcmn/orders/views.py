@@ -1,4 +1,4 @@
-# views.py
+# orders/views.py
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -42,3 +42,18 @@ class CreateFbiOrderView(APIView):
             except (FbiServicePackage.DoesNotExist, ShippingOption.DoesNotExist):
                 return Response({'error': 'Invalid package or shipping option.'}, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# Get form options
+class FbiOptionsView(APIView):
+    def get(self, request, format=None):
+        packages = FbiServicePackage.objects.values('id', 'code', 'label', 'price')
+        shipping = ShippingOption.objects.values('id', 'code', 'label', 'price')
+        price_setting = FbiPricingSettings.objects.first()
+        price_per_certificate = price_setting.price_per_certificate if price_setting else 25.00
+
+        return Response({
+            'packages': list(packages),
+            'shipping_options': list(shipping),
+            'price_per_certificate': price_per_certificate
+        })

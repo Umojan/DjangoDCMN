@@ -1,4 +1,4 @@
-# models.py
+# orders/models.py
 from django.db import models
 
 class FbiServicePackage(models.Model):

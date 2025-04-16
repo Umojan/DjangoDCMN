@@ -1,3 +1,4 @@
-from django.test import TestCase
+# orders/tests.py
+# from django.test import TestCase
 
 # Create your tests here.

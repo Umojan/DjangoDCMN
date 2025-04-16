@@ -1,6 +1,8 @@
+# orders/urls.py
 from django.urls import path
-from .views import CreateFbiOrderView
+from .views import CreateFbiOrderView, FbiOptionsView
 
 urlpatterns = [
-    path('create-fbi-order/', CreateFbiOrderView.as_view(), name='create_fbi_order'),
+    path('fbi/create-order/', CreateFbiOrderView.as_view(), name='fbi_create_order'),
+    path('fbi/options/', FbiOptionsView.as_view(), name='fbi_options'),
 ]
