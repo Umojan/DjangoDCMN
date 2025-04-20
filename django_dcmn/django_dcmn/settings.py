@@ -28,6 +28,11 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='').split(',')
 
+CORS_ALLOWED_ORIGINS = [
+    "https://dcmobilenotary.webflow.io",
+    "https://www.dcmobilenotary.com",
+]
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -38,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.staticfiles',
 
+    'corsheaders',
     'rest_framework',
 
     'orders',
@@ -47,6 +53,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -135,7 +142,6 @@ if os.getenv("RAILWAY_ENVIRONMENT"):
     MEDIA_ROOT = '/app/media'  # Railway
 else:
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Local
-
 
 CSRF_TRUSTED_ORIGINS = [
     "https://djangodcmn-production.up.railway.app",
