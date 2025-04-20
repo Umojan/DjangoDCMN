@@ -37,6 +37,7 @@ class FbiApostilleOrder(models.Model):
     phone = models.CharField(max_length=50)
     country_name = models.CharField(max_length=100)
     address = models.TextField()
+    comments = models.TextField(blank=True, null=True)
 
     package = models.ForeignKey(FbiServicePackage, on_delete=models.CASCADE)
     count = models.PositiveIntegerField(help_text="Price of $25 per apostille certificate")
