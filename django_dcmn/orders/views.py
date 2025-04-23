@@ -1,9 +1,14 @@
 # orders/views.py
+from django.conf import settings
+from django.shortcuts import get_object_or_404
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from .serializers import FbiApostilleOrderSerializer, OrderFileSerializer
 from .models import FbiApostilleOrder, FbiServicePackage, FbiPricingSettings, ShippingOption, OrderFile
+
+import stripe
 
 class CreateFbiOrderView(APIView):
     def post(self, request, format=None):
@@ -57,3 +62,37 @@ class FbiOptionsView(APIView):
             'shipping_options': list(shipping),
             'price_per_certificate': price_per_certificate
         })
+
+
+stripe.api_key = settings.STRIPE_SECRET_KEY
+
+class CreateStripeSessionView(APIView):
+    def post(self, request):
+        order_id = request.data.get("order_id")
+        order = get_object_or_404(FbiApostilleOrder, id=order_id)
+
+        try:
+            session = stripe.checkout.Session.create(
+                payment_method_types=["card"],
+                line_items=[{
+                    "price_data": {
+                        "currency": "usd",
+                        "product_data": {
+                            "name": f"FBI Apostille Order #{order.id}",
+                        },
+                        "unit_amount": int(order.total_price * 100),  # in cents
+                    },
+                    "quantity": 1,
+                }],
+                mode="payment",
+                success_url=f"{settings.STRIPE_SUCCESS_URL}?session_id={{CHECKOUT_SESSION_ID}}",
+                cancel_url=settings.STRIPE_CANCEL_URL,
+                metadata={
+                    "order_id": str(order.id),
+                }
+            )
+
+            return Response({"checkout_url": session.url})
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)
