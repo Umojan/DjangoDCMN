@@ -93,7 +93,8 @@ class CreateStripeSessionView(APIView):
                 cancel_url=settings.STRIPE_CANCEL_URL,
                 metadata={
                     "order_id": str(order.id),
-                }
+                },
+                customer_email=order.email,
             )
 
             return Response({"checkout_url": session.url})
