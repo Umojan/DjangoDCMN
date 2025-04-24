@@ -127,6 +127,10 @@ def stripe_webhook(request):
                     order.is_paid = True
                     order.save()
 
+                    file_links = ""
+                    for f in order.files.all():
+                        file_links += f"📎 {request.build_absolute_uri(f.file.url)}\n"
+
                     # Send email
                     send_mail(
                         subject=f"✅ New Paid Order #{order.id}",
@@ -141,12 +145,14 @@ def stripe_webhook(request):
                             f"Quantity: {order.count}\n"
                             f"Shipping: {order.shipping_option.label}\n"
                             f"Total: ${order.total_price}\n"
-                            f"Paid: ✅\n"
+                            f"Paid: ✅\n\n"
+                            f"Files:\n{file_links if file_links else 'None'}"
                         ),
-                        from_email='2vlad.grigorev.2005@gmail.com',
-                        recipient_list=['vlad.g.atom@gmail.com'],
+                        from_email="2vlad.grigorev.2005@gmail.com",
+                        recipient_list=["vlad.g.atom@gmail.com"],
                         fail_silently=True,
                     )
+
             except FbiApostilleOrder.DoesNotExist:
                 pass
 
