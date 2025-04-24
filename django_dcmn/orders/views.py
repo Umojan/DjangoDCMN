@@ -160,7 +160,7 @@ def stripe_webhook(request):
                         for f in order.files.all()
                     ]) or "<li>No files attached</li>"
 
-                    html_content = render_to_string("emails/order_paid.html", {
+                    html_content = render_to_string("emails/fbi_order_paid.html", {
                         "name": order.name,
                         "order_id": order.id,
                         "package": order.package.label,
