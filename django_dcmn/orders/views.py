@@ -143,6 +143,7 @@ def stripe_webhook(request):
                             f"Phone: {order.phone}\n"
                             f"Country: {order.country_name}\n"
                             f"Address: {order.address}\n\n"
+                            f"Comments: \n{order.comments}\n\n"
                             f"Package: {order.package.label}\n"
                             f"Quantity: {order.count}\n"
                             f"Shipping: {order.shipping_option.label}\n"
