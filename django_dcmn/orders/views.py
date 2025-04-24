@@ -1,6 +1,10 @@
 # orders/views.py
 from django.conf import settings
 from django.shortcuts import get_object_or_404
+from django.views.decorators.csrf import csrf_exempt
+from django.http import HttpResponse
+from django.utils.decorators import method_decorator
+from django.core.mail import send_mail
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -96,3 +100,42 @@ class CreateStripeSessionView(APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=400)
+
+@csrf_exempt
+def stripe_webhook(request):
+    payload = request.body
+    sig_header = request.META.get("HTTP_STRIPE_SIGNATURE")
+    webhook_secret = settings.STRIPE_WEBHOOK_SECRET
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, webhook_secret
+        )
+    except ValueError:
+        return HttpResponse(status=400)
+    except stripe.error.SignatureVerificationError:
+        return HttpResponse(status=400)
+
+    if event["type"] == "checkout.session.completed":
+        session = event["data"]["object"]
+        order_id = session.get("metadata", {}).get("order_id")
+
+        if order_id:
+            try:
+                order = FbiApostilleOrder.objects.get(id=order_id)
+                if not order.is_paid:
+                    order.is_paid = True
+                    order.save()
+
+                    # Send email
+                    send_mail(
+                        subject=f"✅ New Paid Order #{order.id}",
+                        message=f"Apostille order by {order.name} has been paid.\n\nTotal: ${order.total_price}",
+                        from_email="no-reply@dcmobilenotary.com",
+                        recipient_list=["youremail@example.com"],
+                        fail_silently=True,
+                    )
+            except FbiApostilleOrder.DoesNotExist:
+                pass
+
+    return HttpResponse(status=200)

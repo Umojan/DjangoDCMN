@@ -40,7 +40,7 @@ class FbiApostilleOrder(models.Model):
     comments = models.TextField(blank=True, null=True)
 
     package = models.ForeignKey(FbiServicePackage, on_delete=models.CASCADE)
-    count = models.PositiveIntegerField(help_text="Price of $25 per apostille certificate")
+    count = models.PositiveIntegerField(help_text="Price per apostille certificate")
     shipping_option = models.ForeignKey(ShippingOption, on_delete=models.CASCADE)
 
     total_price = models.DecimalField(max_digits=10, decimal_places=2, help_text="Total Price")
