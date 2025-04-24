@@ -2,7 +2,7 @@
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.utils.decorators import method_decorator
 from django.core.mail import send_mail
 
@@ -130,12 +130,39 @@ def stripe_webhook(request):
                     # Send email
                     send_mail(
                         subject=f"✅ New Paid Order #{order.id}",
-                        message=f"Apostille order by {order.name} has been paid.\n\nTotal: ${order.total_price}",
-                        from_email="no-reply@dcmobilenotary.com",
-                        recipient_list=["youremail@example.com"],
+                        message=(
+                            f"New FBI Apostille order has been paid!\n\n"
+                            f"Name: {order.name}\n"
+                            f"Email: {order.email}\n"
+                            f"Phone: {order.phone}\n"
+                            f"Country: {order.country_name}\n"
+                            f"Address: {order.address}\n\n"
+                            f"Package: {order.package.label}\n"
+                            f"Quantity: {order.count}\n"
+                            f"Shipping: {order.shipping_option.label}\n"
+                            f"Total: ${order.total_price}\n"
+                            f"Paid: ✅\n"
+                        ),
+                        from_email='no-reply@dcmobilenotary.com',
+                        recipient_list=['vlad.g.atom@gmail.com'],
                         fail_silently=True,
                     )
             except FbiApostilleOrder.DoesNotExist:
                 pass
 
     return HttpResponse(status=200)
+
+
+
+
+
+
+def test_email(request):
+    send_mail(
+        subject="🚀 Django Email Test",
+        message="If you're reading this, your email setup works perfectly!",
+        from_email="vlad.grigorev.2005@gmail.com",  # или no-reply@... если хочешь
+        recipient_list=["vlad.grigorev.2005@gmail.com"],
+        fail_silently=False,
+    )
+    return JsonResponse({"status": "✅ Email sent!"})
