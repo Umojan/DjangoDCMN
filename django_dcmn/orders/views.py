@@ -131,7 +131,7 @@ def stripe_webhook(request):
                     for f in order.files.all():
                         file_links += f"📎 {request.build_absolute_uri(f.file.url)}\n"
 
-                    # Send email
+                    # Send email to office
                     send_mail(
                         subject=f"✅ New Paid Order #{order.id}",
                         message=(
@@ -150,7 +150,27 @@ def stripe_webhook(request):
                         ),
                         from_email="2vlad.grigorev.2005@gmail.com",
                         recipient_list=["vlad.g.atom@gmail.com"],
-                        fail_silently=True,
+                        fail_silently=False,
+                    )
+
+                    # Send email to the client
+                    send_mail(
+                        subject=f"Your Order Has Been Paid",
+                        message=(
+                            f"Thank you, {order.name}!\n\n"
+                            f"Your apostille order has been successfully paid.\n\n"
+                            f"We will begin processing it shortly.\n\n"
+                            f"Summary:\n"
+                            f"Package: {order.package.label}\n"
+                            f"Quantity: {order.count}\n"
+                            f"Shipping: {order.shipping_option.label}\n"
+                            f"Total: ${order.total_price}\n\n"
+                            f"If you have any questions, feel free to reply to this email.\n\n"
+                            f"— DC Mobile Notary"
+                        ),
+                        from_email="2vlad.grigorev.2005@gmail.com",  # временно твоя
+                        recipient_list=[order.email],
+                        fail_silently=False,
                     )
 
             except FbiApostilleOrder.DoesNotExist:
