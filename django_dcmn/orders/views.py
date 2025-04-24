@@ -143,7 +143,7 @@ def stripe_webhook(request):
                             f"Total: ${order.total_price}\n"
                             f"Paid: ✅\n"
                         ),
-                        from_email='no-reply@dcmobilenotary.com',
+                        from_email='2vlad.grigorev.2005@gmail.com',
                         recipient_list=['vlad.g.atom@gmail.com'],
                         fail_silently=True,
                     )
@@ -161,8 +161,8 @@ def test_email(request):
     send_mail(
         subject="🚀 Django Email Test",
         message="If you're reading this, your email setup works perfectly!",
-        from_email="vlad.grigorev.2005@gmail.com",  # или no-reply@... если хочешь
-        recipient_list=["vlad.grigorev.2005@gmail.com"],
+        from_email="2vlad.grigorev.2005@gmail.com",
+        recipient_list=["2vlad.grigorev.2005@gmail.com"],
         fail_silently=False,
     )
     return JsonResponse({"status": "✅ Email sent!"})
