@@ -5,6 +5,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse, JsonResponse
 from django.utils.decorators import method_decorator
 from django.core.mail import send_mail
+from django.template.loader import render_to_string
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -154,23 +155,28 @@ def stripe_webhook(request):
                         fail_silently=False,
                     )
 
+                    file_links_html = "".join([
+                        f'<li><a href="{request.build_absolute_uri(f.file.url)}">{f.file.name}</a></li>'
+                        for f in order.files.all()
+                    ]) or "<li>No files attached</li>"
+
+                    html_content = render_to_string("emails/order_paid.html", {
+                        "name": order.name,
+                        "order_id": order.id,
+                        "package": order.package.label,
+                        "count": order.count,
+                        "shipping": order.shipping_option.label,
+                        "total": order.total_price,
+                        "files": file_links_html
+                    })
+
                     # Send email to the client
                     send_mail(
-                        subject=f"Your Order Has Been Paid",
-                        message=(
-                            f"Thank you, {order.name}!\n\n"
-                            f"Your apostille order has been successfully paid.\n\n"
-                            f"We will begin processing it shortly.\n\n"
-                            f"Summary:\n"
-                            f"Package: {order.package.label}\n"
-                            f"Quantity: {order.count}\n"
-                            f"Shipping: {order.shipping_option.label}\n"
-                            f"Total: ${order.total_price}\n\n"
-                            f"If you have any questions, feel free to reply to this email.\n\n"
-                            f"— DC Mobile Notary"
-                        ),
-                        from_email="2vlad.grigorev.2005@gmail.com",  # временно твоя
+                        subject="✅ Your Order Has Been Paid",
+                        message="",
+                        from_email="2vlad.grigorev.2005@gmail.com",
                         recipient_list=[order.email],
+                        html_message=html_content,
                         fail_silently=False,
                     )
 
