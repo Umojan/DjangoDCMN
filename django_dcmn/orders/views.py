@@ -151,8 +151,8 @@ def stripe_webhook(request):
                             f"Paid: ✅\n\n"
                             f"Files:\n{file_links if file_links else 'None'}"
                         ),
-                        from_email="2vlad.grigorev.2005@gmail.com",
-                        recipient_list=["vlad.g.atom@gmail.com"],
+                        from_email=settings.EMAIL_HOST_USER,  # <-- from test of company email
+                        recipient_list=settings.EMAIL_OFFICE_RECEIVER,  # <-- to office emails
                         fail_silently=False,
                     )
 
@@ -175,7 +175,7 @@ def stripe_webhook(request):
                     send_mail(
                         subject="✅ Your Order Has Been Paid",
                         message="",
-                        from_email="2vlad.grigorev.2005@gmail.com",
+                        from_email=settings.EMAIL_CLIENT_FROM,
                         recipient_list=[order.email],
                         html_message=html_content,
                         fail_silently=False,
