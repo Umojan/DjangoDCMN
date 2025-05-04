@@ -164,4 +164,5 @@ else:
 
 CSRF_TRUSTED_ORIGINS = [
     "https://djangodcmn-production.up.railway.app",
+    "https://api.dcmobilenotary.net",
 ]
