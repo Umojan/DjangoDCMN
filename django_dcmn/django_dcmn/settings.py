@@ -163,6 +163,7 @@ else:
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Local
 
 CSRF_TRUSTED_ORIGINS = [
+    "https://djangodcmn-production-32c8.up.railway.app",
     "https://djangodcmn-production.up.railway.app",
     "https://api.dcmobilenotary.net",
 ]
