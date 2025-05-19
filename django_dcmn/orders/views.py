@@ -147,7 +147,7 @@ def stripe_webhook(request):
                             f"Package: {order.package.label}\n"
                             f"Quantity: {order.count}\n"
                             f"Shipping: {order.shipping_option.label}\n"
-                            f"Total: ${order.total_price}\n"
+                            # f"Total: ${order.total_price}\n"
                             f"Paid: ✅\n\n"
                             f"Files:\n{file_links if file_links else 'None'}"
                         ),
