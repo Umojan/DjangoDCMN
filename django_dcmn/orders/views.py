@@ -180,9 +180,8 @@ def stripe_webhook(request):
                             subject="✅ Your Order Has Been Paid",
                             message="Order Has Been Paid",
                             from_email=settings.EMAIL_HOST_USER,
-                            # recipient_list=[order.email],
-                            recipient_list=["vlad.g.atom@gmail.com"],
-                            html_message=html_content,
+                            recipient_list=[order.email],
+                            # html_message=html_content,
                             fail_silently=False,
                         )
                     except Exception as e:
