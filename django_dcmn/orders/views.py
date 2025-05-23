@@ -194,7 +194,8 @@ def test_email(request):
         subject="🚀 Django Email Test",
         message="If you're reading this, your email setup works perfectly!",
         from_email="support@dcmobilenotary.net",
-        recipient_list=["support@dcmobilenotary.com"],
+        recipient_list=["vlad.g.atom@gmail.com"],
+        # recipient_list=["support@dcmobilenotary.com"],
         fail_silently=False,
     )
     return JsonResponse({"status": "✅ Email sent!"})
