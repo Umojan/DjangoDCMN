@@ -15,6 +15,7 @@ from .models import FbiApostilleOrder, FbiServicePackage, FbiPricingSettings, Sh
 
 import stripe
 
+
 class CreateFbiOrderView(APIView):
     def post(self, request, format=None):
         serializer = FbiApostilleOrderSerializer(data=request.data)
@@ -71,6 +72,7 @@ class FbiOptionsView(APIView):
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
+
 class CreateStripeSessionView(APIView):
     def post(self, request):
         order_id = request.data.get("order_id")
@@ -102,6 +104,7 @@ class CreateStripeSessionView(APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=400)
+
 
 @csrf_exempt
 def stripe_webhook(request):
@@ -172,14 +175,18 @@ def stripe_webhook(request):
                     })
 
                     # Send email to the client
-                    send_mail(
-                        subject="✅ Your Order Has Been Paid",
-                        message="",
-                        from_email=settings.EMAIL_CLIENT_FROM,
-                        recipient_list=[order.email],
-                        html_message=html_content,
-                        fail_silently=False,
-                    )
+                    try:
+                        send_mail(
+                            subject="✅ Your Order Has Been Paid",
+                            message="",
+                            from_email=settings.EMAIL_CLIENT_FROM,
+                            # recipient_list=[order.email],
+                            recipient_list=["vlad.g.atom@gmail.com"],
+                            html_message=html_content,
+                            fail_silently=False,
+                        )
+                    except Exception as e:
+                        print("[ERROR] Sending client email failed:", e)
 
             except FbiApostilleOrder.DoesNotExist:
                 pass
@@ -187,15 +194,12 @@ def stripe_webhook(request):
     return HttpResponse(status=200)
 
 
-
-
 def test_email(request):
     send_mail(
         subject="🚀 Django Email Test",
         message="If you're reading this, your email setup works perfectly!",
         from_email="support@dcmobilenotary.net",
-        recipient_list=["vlad.g.atom@gmail.com"],
-        # recipient_list=["support@dcmobilenotary.com"],
+        recipient_list=["support@dcmobilenotary.com"],
         fail_silently=False,
     )
     return JsonResponse({"status": "✅ Email sent!"})
