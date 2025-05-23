@@ -178,8 +178,8 @@ def stripe_webhook(request):
                     try:
                         send_mail(
                             subject="✅ Your Order Has Been Paid",
-                            message="",
-                            from_email=settings.EMAIL_CLIENT_FROM,
+                            message="Order Has Been Paid",
+                            from_email=settings.EMAIL_HOST_USER,
                             # recipient_list=[order.email],
                             recipient_list=["vlad.g.atom@gmail.com"],
                             html_message=html_content,
