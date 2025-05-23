@@ -189,14 +189,12 @@ def stripe_webhook(request):
 
 
 
-
-
 def test_email(request):
     send_mail(
         subject="🚀 Django Email Test",
         message="If you're reading this, your email setup works perfectly!",
-        from_email="2vlad.grigorev.2005@gmail.com",
-        recipient_list=["2vlad.grigorev.2005@gmail.com"],
+        from_email="support@dcmobilenotary.net",
+        recipient_list=["support@dcmobilenotary.com"],
         fail_silently=False,
     )
     return JsonResponse({"status": "✅ Email sent!"})
