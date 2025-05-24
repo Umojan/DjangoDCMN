@@ -99,7 +99,7 @@ class CreateStripeSessionView(APIView):
                 },
                 customer_email=order.email,
                 payment_intent_data={
-                    "description": f"FBI Apostille Order #{order.id} — {order.name}",
+                    "description": f"FBI Apostille Order #{order.id} — {order.package}",
                 }
             )
 
