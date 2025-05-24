@@ -98,6 +98,9 @@ class CreateStripeSessionView(APIView):
                     "order_id": str(order.id),
                 },
                 customer_email=order.email,
+                payment_intent_data={
+                    "description": f"FBI Apostille Order #{order.id} — {order.name}",
+                }
             )
 
             return Response({"checkout_url": session.url})
