@@ -25,8 +25,8 @@ SECRET_KEY = config('SECRET_KEY')
 STRIPE_SECRET_KEY = config("STRIPE_SECRET_KEY")
 STRIPE_WEBHOOK_SECRET = config("STRIPE_WEBHOOK_SECRET")
 
-STRIPE_SUCCESS_URL = "https://dcmobilenotary.webflow.io/success-page-done"
-STRIPE_CANCEL_URL = "https://dcmobilenotary.webflow.io/cancel-page"
+STRIPE_SUCCESS_URL = "https://www.dcmobilenotary.com//success-page-done"
+STRIPE_CANCEL_URL = "https://www.dcmobilenotary.com//cancel-page"
 
 
 # Email
