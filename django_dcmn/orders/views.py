@@ -139,7 +139,7 @@ def stripe_webhook(request):
                     for f in order.files.all():
                         file_links += f"📎 {request.build_absolute_uri(f.file.url)}\n"
 
-                    # Send email to office
+                    # Send email to office receiver
                     email_body = (
                         f"New FBI Apostille order has been paid!\n\n"
                         f"Name: {order.name}\n"
