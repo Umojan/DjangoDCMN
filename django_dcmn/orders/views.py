@@ -157,7 +157,7 @@ def stripe_webhook(request):
                     )
 
                     email = EmailMessage(
-                        subject=f"✅ New Paid Order #{order.id}",
+                        subject=f"✅ New Paid FBI Apostille Order",
                         body=email_body,
                         from_email=settings.EMAIL_HOST_USER,
                         to=settings.EMAIL_OFFICE_RECEIVER,
