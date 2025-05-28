@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse, JsonResponse
 from django.utils.decorators import method_decorator
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMessage
 from django.template.loader import render_to_string
 
 from rest_framework.views import APIView
@@ -140,27 +140,34 @@ def stripe_webhook(request):
                         file_links += f"📎 {request.build_absolute_uri(f.file.url)}\n"
 
                     # Send email to office
-                    send_mail(
-                        subject=f"✅ New Paid Order #{order.id}",
-                        message=(
-                            f"New FBI Apostille order has been paid!\n\n"
-                            f"Name: {order.name}\n"
-                            f"Email: {order.email}\n"
-                            f"Phone: {order.phone}\n"
-                            f"Country: {order.country_name}\n"
-                            f"Address: {order.address}\n\n"
-                            f"Comments: \n{order.comments}\n\n"
-                            f"Package: {order.package.label}\n"
-                            f"Quantity: {order.count}\n"
-                            f"Shipping: {order.shipping_option.label}\n"
-                            # f"Total: ${order.total_price}\n"
-                            f"Paid: ✅\n\n"
-                            f"Files:\n{file_links if file_links else 'None'}"
-                        ),
-                        from_email=settings.EMAIL_HOST_USER,  # <-- from test of company email
-                        recipient_list=settings.EMAIL_OFFICE_RECEIVER,  # <-- to office emails
-                        fail_silently=False,
+                    email_body = (
+                        f"New FBI Apostille order has been paid!\n\n"
+                        f"Name: {order.name}\n"
+                        f"Email: {order.email}\n"
+                        f"Phone: {order.phone}\n"
+                        f"Country: {order.country_name}\n"
+                        f"Address: {order.address}\n\n"
+                        f"Comments: \n{order.comments}\n\n"
+                        f"Package: {order.package.label}\n"
+                        f"Quantity: {order.count}\n"
+                        f"Shipping: {order.shipping_option.label}\n\n"
+                        f"Total: ${order.total_price}\n"
+                        f"Paid: ✅\n\n"
+                        f"Files:\n{file_links if file_links else 'None'}"
                     )
+
+                    email = EmailMessage(
+                        subject=f"✅ New Paid Order #{order.id}",
+                        body=email_body,
+                        from_email=settings.EMAIL_HOST_USER,
+                        to=settings.EMAIL_OFFICE_RECEIVER,
+                        headers={
+                            "Message-ID": f"<order-{order.id}@dcmobilenotary.com>",
+                            "In-Reply-To": "<fbi-orders-thread@dcmobilenotary.com>",
+                            "References": "<fbi-orders-thread@dcmobilenotary.com>",
+                        }
+                    )
+                    email.send()
 
                     file_links_html = "".join([
                         f'<li><a href="{request.build_absolute_uri(f.file.url)}">{f.file.name}</a></li>'
