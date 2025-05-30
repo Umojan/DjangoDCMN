@@ -156,15 +156,18 @@ def stripe_webhook(request):
                         f"Files:\n{file_links if file_links else 'None'}"
                     )
 
+                    from datetime import datetime
+                    today_str = datetime.utcnow().strftime("%Y-%m-%d")
+                    thread_id = f"<fbi-orders-thread-{today_str}@dcmobilenotary.com>"
                     email = EmailMessage(
-                        subject=f"✅ New Paid FBI Apostille Order",
+                        subject=f"✅ New Paid FBI Apostille Order — {today_str}",
                         body=email_body,
                         from_email=settings.EMAIL_HOST_USER,
                         to=settings.EMAIL_OFFICE_RECEIVER,
                         headers={
                             "Message-ID": f"<order-{order.id}@dcmobilenotary.com>",
-                            "In-Reply-To": "<fbi-orders-thread@dcmobilenotary.com>",
-                            "References": "<fbi-orders-thread@dcmobilenotary.com>",
+                            "In-Reply-To": thread_id,
+                            "References": thread_id,
                         }
                     )
                     email.send()
