@@ -1,5 +1,6 @@
 # orders/views.py
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse, JsonResponse
@@ -10,8 +11,9 @@ from django.template.loader import render_to_string
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import FbiApostilleOrderSerializer, OrderFileSerializer
-from .models import FbiApostilleOrder, FbiServicePackage, FbiPricingSettings, ShippingOption, OrderFile
+from .serializers import FbiApostilleOrderSerializer, OrderFileSerializer, MarriageOrderSerializer
+from .models import FbiApostilleOrder, FbiServicePackage, FbiPricingSettings, ShippingOption, OrderFile, MarriageOrder, \
+    MarriagePricingSettings, FileAttachment
 
 import stripe
 
@@ -55,7 +57,6 @@ class CreateFbiOrderView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# Get form options
 class FbiOptionsView(APIView):
     def get(self, request, format=None):
         packages = FbiServicePackage.objects.values('id', 'code', 'label', 'price')
@@ -68,6 +69,51 @@ class FbiOptionsView(APIView):
             'shipping_options': list(shipping),
             'price_per_certificate': price_per_certificate
         })
+
+
+class CreateMarriageOrderView(APIView):
+    """
+    Принимает POST-запрос с полями MarriageOrder + файлами (ключ 'files').
+    Сохраняет все поля из serializer, потом устанавливает total_price из MarriagePricingSettings
+    и создаёт FileAttachment для каждого пришедшего файла.
+    """
+    def post(self, request, format=None):
+        # 1) Валидация основных полей (name, email, phone, address и любые дополнительные)
+        serializer = MarriageOrderSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # 2) Сохраняем заказ без цены и файлов
+        marriage_order = MarriageOrder.objects.create(**serializer.validated_data)
+
+        # 3) Берём базовую цену из настроек (или 0.00, если записей нет)
+        price_setting = MarriagePricingSettings.objects.first()
+        base_price = price_setting.price if price_setting else 0.00
+
+        # 4) Сохраняем total_price
+        marriage_order.total_price = base_price
+        marriage_order.save()
+
+        # 5) Если во входящем запросе есть файлы, создаём FileAttachment
+        file_urls = []
+        if request.FILES:
+            ct = ContentType.objects.get_for_model(MarriageOrder)
+            for f in request.FILES.getlist('files'):
+                attachment = FileAttachment.objects.create(
+                    content_type=ct,
+                    object_id=marriage_order.id,
+                    file=f
+                )
+                file_urls.append(request.build_absolute_uri(attachment.file.url))
+
+        # 6) Возвращаем ответ
+        return Response({
+            'message': 'Marriage order created',
+            'order_id': marriage_order.id,
+            'calculated_total': float(marriage_order.total_price),
+            'file_urls': file_urls or None
+        }, status=status.HTTP_201_CREATED)
+
 
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
