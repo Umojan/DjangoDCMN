@@ -136,7 +136,7 @@ class CreateStripeSessionView(APIView):
             product_name = f"Tripe Seal Marriage Certificate Deposit"
             unit_amount = int(order.total_price * 100)
             customer_email = order.email
-            description = f"Marriage Order #{order.id}"
+            description = f"Marriage Certificate Order #{order.id}"
         else:
             return Response({"error": "Invalid order_type"}, status=400)
 
