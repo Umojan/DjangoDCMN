@@ -243,11 +243,10 @@ def stripe_webhook(request):
                     html_content = render_to_string("emails/fbi_order_paid.html", {
                         "name": order.name,
                         "order_id": order.id,
-                        "package": order.package.label,
-                        "count": order.count,
-                        "shipping": order.shipping_option.label,
+                        "email": order.email,
+                        "phone": order.phone,
+                        "address": order.address,
                         "total": order.total_price,
-                        "files": file_links_html
                     })
                     try:
                         send_mail(
