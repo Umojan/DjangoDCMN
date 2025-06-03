@@ -133,7 +133,7 @@ class CreateStripeSessionView(APIView):
             description = f"FBI Apostille Order #{order.id} — {order.package}"
         elif order_type == "marriage":
             order = get_object_or_404(MarriageOrder, id=order_id)
-            product_name = f"Marriage Certificate Order #{order.id}"
+            product_name = f"Tripe Seal Marriage Certificate Deposit"
             unit_amount = int(order.total_price * 100)
             customer_email = order.email
             description = f"Marriage Order #{order.id}"
