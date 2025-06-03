@@ -292,9 +292,11 @@ def stripe_webhook(request):
                         f"Marriage Date: {order.marriage_date}\n"
                         f"Country: {order.country}\n"
                         f"Comments: \n{order.comments}\n\n"
-                        f"Total: ${order.total_price}\n"
-                        f"Paid: ✅\n\n"
+                        f"------ OR ------\n\n"
                         f"Files:\n{file_links if file_links else 'None'}"
+
+                        f"Deposit: ${order.total_price}\n"
+                        f"Paid: ✅\n\n"
                     )
                     email = EmailMessage(
                         subject=f"✅ New Paid Marriage Certificate Order — {today_str}",
