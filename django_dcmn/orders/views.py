@@ -11,8 +11,8 @@ from django.template.loader import render_to_string
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import FbiApostilleOrderSerializer, OrderFileSerializer, MarriageOrderSerializer
-from .models import FbiApostilleOrder, FbiServicePackage, FbiPricingSettings, ShippingOption, OrderFile, MarriageOrder, \
+from .serializers import FbiApostilleOrderSerializer, MarriageOrderSerializer
+from .models import FbiApostilleOrder, FbiServicePackage, FbiPricingSettings, ShippingOption, MarriageOrder, \
     MarriagePricingSettings, FileAttachment
 
 import stripe
@@ -41,9 +41,14 @@ class CreateFbiOrderView(APIView):
 
                 file_urls = []
                 if request.FILES:
+                    ct = ContentType.objects.get_for_model(FbiApostilleOrder)
                     for f in request.FILES.getlist('files'):
-                        file_instance = OrderFile.objects.create(order=order, file=f)
-                        file_urls.append(request.build_absolute_uri(file_instance.file.url))
+                        attachment = FileAttachment.objects.create(
+                            content_type=ct,
+                            object_id=order.id,
+                            file=f
+                        )
+                        file_urls.append(request.build_absolute_uri(attachment.file.url))
 
                 return Response({
                     'message': 'Order created',
@@ -200,9 +205,9 @@ def stripe_webhook(request):
                     order.is_paid = True
                     order.save()
 
-                    # Files (legacy)
+                    # Files (universal)
                     file_links = ""
-                    for f in order.files.all():
+                    for f in order.file_attachments.all():
                         file_links += f"📎 {request.build_absolute_uri(f.file.url)}\n"
 
                     today_str = datetime.utcnow().strftime("%Y-%m-%d")
@@ -238,7 +243,7 @@ def stripe_webhook(request):
                     # Клиенту HTML-письмо (пример)
                     file_links_html = "".join([
                         f'<li><a href="{request.build_absolute_uri(f.file.url)}">{f.file.name}</a></li>'
-                        for f in order.files.all()
+                        for f in order.file_attachments.all()
                     ]) or "<li>No files attached</li>"
                     html_content = render_to_string("emails/fbi_order_paid.html", {
                         "name": order.name,

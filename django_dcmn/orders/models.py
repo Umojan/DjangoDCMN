@@ -63,6 +63,13 @@ class FbiApostilleOrder(models.Model):
     is_paid = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    file_attachments = GenericRelation(
+        FileAttachment,
+        content_type_field='content_type',
+        object_id_field='object_id',
+        related_query_name='fbi_order'
+    )
+
     def __str__(self):
         return f"FBI Apostille Order #{self.id} by {self.name}"
 
@@ -79,18 +86,6 @@ class FbiPricingSettings(models.Model):
 
     class Meta:
         verbose_name = 'FBI Apostille — Pricing Setting'
-
-
-# Legacy model for FBI
-class OrderFile(models.Model):
-    order = models.ForeignKey(FbiApostilleOrder, on_delete=models.CASCADE, related_name="files")
-    file = models.FileField(upload_to='orders/')
-    uploaded_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"File for Order #{self.order.id}"
-
-
 
 
 # Tripe Seal Marriage
@@ -146,6 +141,3 @@ class MarriagePricingSettings(models.Model):
     class Meta:
         verbose_name = "Triple Seal Marriage — Pricing Setting"
         verbose_name_plural = "Triple Seal Marriage — Pricing Settings"
-
-
-

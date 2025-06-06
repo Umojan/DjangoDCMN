@@ -7,7 +7,6 @@ from .models import (
     FbiApostilleOrder,
     FbiServicePackage,
     FbiPricingSettings,
-    OrderFile, # FBI Legacy
 
     MarriagePricingSettings,
     MarriageOrder,
@@ -37,11 +36,6 @@ class FbiServicePackageSerializer(serializers.ModelSerializer):
     class Meta:
         model = FbiServicePackage
         fields = '__all__'
-
-class OrderFileSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = OrderFile
-        fields = ['id', 'file', 'uploaded_at']
 
 class FbiApostilleOrderSerializer(serializers.ModelSerializer):
     package = serializers.SlugRelatedField(
