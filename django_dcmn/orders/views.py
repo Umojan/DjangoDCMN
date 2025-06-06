@@ -295,10 +295,10 @@ def stripe_webhook(request):
                         f"Wife: {order.wife_full_name}\n"
                         f"Marriage Date: {order.marriage_date}\n"
                         f"Country: {order.country}\n"
+                        f"Certificate Number: {order.marriage_certificate_number}\n"
                         f"Comments: \n{order.comments}\n\n"
                         f"------ OR ------\n\n"
                         f"Files:\n{file_links if file_links else 'None'}"
-
                         f"Deposit: ${order.total_price}\n"
                         f"Paid: ✅\n\n"
                     )
@@ -327,6 +327,7 @@ def stripe_webhook(request):
                         "wife": order.wife_full_name,
                         "marriage_date": order.marriage_date,
                         "country": order.country,
+                        "marriage_certificate_number": order.marriage_certificate_number,
                         "total": order.total_price,
                         "files": file_links_html
                     })

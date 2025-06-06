@@ -102,6 +102,7 @@ class MarriageOrder(models.Model):
     marriage_date = models.CharField(max_length=255, blank=True, null=True)
     country = models.CharField(max_length=255, blank=True, null=True)
     comments = models.TextField(blank=True, null=True)
+    marriage_certificate_number = models.CharField(max_length=100, blank=True, null=True)
 
     total_price = models.DecimalField(
         max_digits=10,

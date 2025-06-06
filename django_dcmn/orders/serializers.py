@@ -69,6 +69,7 @@ class MarriageOrderSerializer(serializers.ModelSerializer):
             'name', 'email', 'phone', 'address',
             'husband_full_name', 'wife_full_name',
             'marriage_date', 'country', 'comments',
+            'marriage_certificate_number',
             'total_price', 'is_paid', 'created_at',
         ]
         read_only_fields = ('total_price', 'is_paid', 'created_at')
