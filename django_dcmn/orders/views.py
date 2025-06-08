@@ -248,9 +248,9 @@ def stripe_webhook(request):
                     html_content = render_to_string("emails/fbi_order_paid.html", {
                         "name": order.name,
                         "order_id": order.id,
-                        "package": order.package,
+                        "package": order.package.label,
                         "count": order.count,
-                        "shipping": order.shipping,
+                        "shipping": order.shipping_option.label,
                         "total": order.total_price,
                     })
                     try:
