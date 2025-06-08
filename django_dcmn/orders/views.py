@@ -295,7 +295,7 @@ def stripe_webhook(request):
                         f"Wife: {order.wife_full_name}\n"
                         f"Marriage Date: {order.marriage_date}\n"
                         f"Country: {order.country}\n"
-                        f"Certificate Number: {order.marriage_certificate_number}\n"
+                        f"Certificate Number: {order.marriage_number}\n"
                         f"Comments: \n{order.comments}\n\n"
                         f"------ OR ------\n\n"
                         f"Files:\n{file_links if file_links else 'None'}"
