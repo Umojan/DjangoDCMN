@@ -29,7 +29,7 @@ STRIPE_SUCCESS_URL = "https://www.dcmobilenotary.com/success-page-done"
 STRIPE_CANCEL_URL = "https://www.dcmobilenotary.com/cancel-page"
 
 
-# Email
+# ====== EMAIL ======
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.hostinger.com"
 EMAIL_PORT = 587

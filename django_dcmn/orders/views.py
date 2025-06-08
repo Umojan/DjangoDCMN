@@ -1,5 +1,6 @@
 # orders/views.py
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse, JsonResponse
@@ -10,8 +11,9 @@ from django.template.loader import render_to_string
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import FbiApostilleOrderSerializer, OrderFileSerializer
-from .models import FbiApostilleOrder, FbiServicePackage, FbiPricingSettings, ShippingOption, OrderFile
+from .serializers import FbiApostilleOrderSerializer, MarriageOrderSerializer
+from .models import FbiApostilleOrder, FbiServicePackage, FbiPricingSettings, ShippingOption, MarriageOrder, \
+    MarriagePricingSettings, FileAttachment
 
 import stripe
 
@@ -39,9 +41,14 @@ class CreateFbiOrderView(APIView):
 
                 file_urls = []
                 if request.FILES:
+                    ct = ContentType.objects.get_for_model(FbiApostilleOrder)
                     for f in request.FILES.getlist('files'):
-                        file_instance = OrderFile.objects.create(order=order, file=f)
-                        file_urls.append(request.build_absolute_uri(file_instance.file.url))
+                        attachment = FileAttachment.objects.create(
+                            content_type=ct,
+                            object_id=order.id,
+                            file=f
+                        )
+                        file_urls.append(request.build_absolute_uri(attachment.file.url))
 
                 return Response({
                     'message': 'Order created',
@@ -55,7 +62,6 @@ class CreateFbiOrderView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# Get form options
 class FbiOptionsView(APIView):
     def get(self, request, format=None):
         packages = FbiServicePackage.objects.values('id', 'code', 'label', 'price')
@@ -70,13 +76,74 @@ class FbiOptionsView(APIView):
         })
 
 
+class CreateMarriageOrderView(APIView):
+    """
+    Принимает POST-запрос с полями MarriageOrder + файлами (ключ 'files').
+    Сохраняет все поля из serializer, потом устанавливает total_price из MarriagePricingSettings
+    и создаёт FileAttachment для каждого пришедшего файла.
+    """
+
+    def post(self, request, format=None):
+        # 1) Валидация основных полей (name, email, phone, address и любые дополнительные)
+        serializer = MarriageOrderSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # 2) Сохраняем заказ без цены и файлов
+        marriage_order = MarriageOrder.objects.create(**serializer.validated_data)
+
+        # 3) Берём базовую цену из настроек (или 0.00, если записей нет)
+        price_setting = MarriagePricingSettings.objects.first()
+        base_price = price_setting.price if price_setting else 0.00
+
+        # 4) Сохраняем total_price
+        marriage_order.total_price = base_price
+        marriage_order.save()
+
+        # 5) Если во входящем запросе есть файлы, создаём FileAttachment
+        file_urls = []
+        if request.FILES:
+            ct = ContentType.objects.get_for_model(MarriageOrder)
+            for f in request.FILES.getlist('files'):
+                attachment = FileAttachment.objects.create(
+                    content_type=ct,
+                    object_id=marriage_order.id,
+                    file=f
+                )
+                file_urls.append(request.build_absolute_uri(attachment.file.url))
+
+        # 6) Возвращаем ответ
+        return Response({
+            'message': 'Marriage order created',
+            'order_id': marriage_order.id,
+            'calculated_total': float(marriage_order.total_price),
+            'file_urls': file_urls or None
+        }, status=status.HTTP_201_CREATED)
+
+
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
 class CreateStripeSessionView(APIView):
     def post(self, request):
         order_id = request.data.get("order_id")
-        order = get_object_or_404(FbiApostilleOrder, id=order_id)
+        order_type = request.data.get("order_type")
+
+        # Определяем модель и параметры для заказа
+        if order_type == "fbi":
+            order = get_object_or_404(FbiApostilleOrder, id=order_id)
+            product_name = f"FBI Apostille Order #{order.id}"
+            unit_amount = int(order.total_price * 100)
+            customer_email = order.email
+            description = f"FBI Apostille Order #{order.id} — {order.package}"
+        elif order_type == "marriage":
+            order = get_object_or_404(MarriageOrder, id=order_id)
+            product_name = f"Tripe Seal Marriage Certificate Deposit"
+            unit_amount = int(order.total_price * 100)
+            customer_email = order.email
+            description = f"Marriage Certificate Order #{order.id}"
+        else:
+            return Response({"error": "Invalid order_type"}, status=400)
 
         try:
             session = stripe.checkout.Session.create(
@@ -85,9 +152,9 @@ class CreateStripeSessionView(APIView):
                     "price_data": {
                         "currency": "usd",
                         "product_data": {
-                            "name": f"FBI Apostille Order #{order.id}",
+                            "name": product_name,
                         },
-                        "unit_amount": int(order.total_price * 100),  # in cents
+                        "unit_amount": unit_amount,
                     },
                     "quantity": 1,
                 }],
@@ -96,52 +163,57 @@ class CreateStripeSessionView(APIView):
                 cancel_url=settings.STRIPE_CANCEL_URL,
                 metadata={
                     "order_id": str(order.id),
+                    "order_type": order_type,
                 },
-                customer_email=order.email,
+                customer_email=customer_email,
                 payment_intent_data={
-                    "description": f"FBI Apostille Order #{order.id} — {order.package}",
+                    "description": description,
                 }
             )
 
             return Response({"checkout_url": session.url})
-
         except Exception as e:
             return Response({"error": str(e)}, status=400)
 
 
 @csrf_exempt
 def stripe_webhook(request):
+    from datetime import datetime
     payload = request.body
     sig_header = request.META.get("HTTP_STRIPE_SIGNATURE")
     webhook_secret = settings.STRIPE_WEBHOOK_SECRET
 
     try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, webhook_secret
-        )
-    except ValueError:
-        return HttpResponse(status=400)
-    except stripe.error.SignatureVerificationError:
+        event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
+    except (ValueError, stripe.error.SignatureVerificationError):
         return HttpResponse(status=400)
 
     if event["type"] == "checkout.session.completed":
         session = event["data"]["object"]
         order_id = session.get("metadata", {}).get("order_id")
+        order_type = session.get("metadata", {}).get("order_type")
 
-        if order_id:
-            try:
+        if not order_id or not order_type:
+            return HttpResponse(status=400)
+
+        try:
+            # === FBI Apostille Order ===
+            if order_type == "fbi":
+                from .models import FbiApostilleOrder
                 order = FbiApostilleOrder.objects.get(id=order_id)
                 if not order.is_paid:
                     order.is_paid = True
                     order.save()
 
+                    # Files (universal)
                     file_links = ""
-                    for f in order.files.all():
+                    for f in order.file_attachments.all():
                         file_links += f"📎 {request.build_absolute_uri(f.file.url)}\n"
 
-                    # Send email to office
+                    today_str = datetime.utcnow().strftime("%Y-%m-%d")
+                    thread_id = f"<fbi-orders-thread-{today_str}@dcmobilenotary.com>"
                     email_body = (
-                        f"New FBI Apostille order has been paid!\n\n"
+                        f"New FBI Apostille order has been paid! Order ID: {order.id}\n\n"
                         f"Name: {order.name}\n"
                         f"Email: {order.email}\n"
                         f"Phone: {order.phone}\n"
@@ -155,10 +227,6 @@ def stripe_webhook(request):
                         f"Paid: ✅\n\n"
                         f"Files:\n{file_links if file_links else 'None'}"
                     )
-
-                    from datetime import datetime
-                    today_str = datetime.utcnow().strftime("%Y-%m-%d")
-                    thread_id = f"<fbi-orders-thread-{today_str}@dcmobilenotary.com>"
                     email = EmailMessage(
                         subject=f"✅ New Paid FBI Apostille Order — {today_str}",
                         body=email_body,
@@ -172,11 +240,11 @@ def stripe_webhook(request):
                     )
                     email.send()
 
+                    # Клиенту HTML-письмо (пример)
                     file_links_html = "".join([
                         f'<li><a href="{request.build_absolute_uri(f.file.url)}">{f.file.name}</a></li>'
-                        for f in order.files.all()
+                        for f in order.file_attachments.all()
                     ]) or "<li>No files attached</li>"
-
                     html_content = render_to_string("emails/fbi_order_paid.html", {
                         "name": order.name,
                         "order_id": order.id,
@@ -184,10 +252,7 @@ def stripe_webhook(request):
                         "count": order.count,
                         "shipping": order.shipping_option.label,
                         "total": order.total_price,
-                        "files": file_links_html
                     })
-
-                    # Send email to the client
                     try:
                         send_mail(
                             subject="✅ Your Order Has Been Paid",
@@ -200,8 +265,89 @@ def stripe_webhook(request):
                     except Exception as e:
                         print("[ERROR] Sending client email failed:", e)
 
-            except FbiApostilleOrder.DoesNotExist:
-                pass
+            # === Marriage Order ===
+            elif order_type == "marriage":
+                from .models import MarriageOrder, FileAttachment
+                order = MarriageOrder.objects.get(id=order_id)
+                if not order.is_paid:
+                    order.is_paid = True
+                    order.save()
+
+                    # Файлы (через универсальные FileAttachment)
+                    ct = ContentType.objects.get_for_model(MarriageOrder)
+                    file_attachments = FileAttachment.objects.filter(
+                        content_type=ct,
+                        object_id=order.id
+                    )
+                    file_links = ""
+                    for att in file_attachments:
+                        file_links += f"📎 {request.build_absolute_uri(att.file.url)}\n"
+
+                    today_str = datetime.utcnow().strftime("%Y-%m-%d")
+                    thread_id = f"<marriage-orders-thread-{today_str}@dcmobilenotary.com>"
+                    email_body = (
+                        f"New Triple Seal Marriage Certificate order has been paid! Order ID: {order.id}\n\n"
+                        f"Name: {order.name}\n"
+                        f"Email: {order.email}\n"
+                        f"Phone: {order.phone}\n"
+                        f"Address: {order.address}\n\n"
+                        f"Husband: {order.husband_full_name}\n"
+                        f"Wife: {order.wife_full_name}\n"
+                        f"Marriage Date: {order.marriage_date}\n"
+                        f"Country: {order.country}\n"
+                        f"Certificate Number: {order.marriage_number}\n"
+                        f"------ OR ------\n\n"
+                        f"Files:\n{file_links if file_links else 'None'}\n\n"
+                        
+                        f"Comments: \n{order.comments}\n\n"
+                        
+                        f"Deposit: ${order.total_price}\n"
+                        f"Paid: ✅\n\n"
+                    )
+                    email = EmailMessage(
+                        subject=f"✅ New Paid Marriage Certificate Order — {today_str}",
+                        body=email_body,
+                        from_email=settings.EMAIL_HOST_USER,
+                        to=settings.EMAIL_OFFICE_RECEIVER,
+                        headers={
+                            "Message-ID": f"<marriage-order-{order.id}@dcmobilenotary.com>",
+                            "In-Reply-To": thread_id,
+                            "References": thread_id,
+                        }
+                    )
+                    email.send()
+
+                    # Клиенту HTML-письмо (аналогично, если есть темплейт)
+                    file_links_html = "".join([
+                        f'<li><a href="{request.build_absolute_uri(att.file.url)}">{att.file.name}</a></li>'
+                        for att in file_attachments
+                    ]) or "<li>No files attached</li>"
+                    html_content = render_to_string("emails/marriage_order_paid.html", {
+                        "order_id": order.id,
+                        "name": order.name,
+                        "email": order.email,
+                        "phone": order.phone,
+                        "address": order.address,
+                        "total": order.total_price,
+                    })
+                    try:
+                        send_mail(
+                            subject="✅ Your Marriage Certificate Order Has Been Paid",
+                            message="Order Has Been Paid",
+                            from_email=settings.EMAIL_HOST_USER,
+                            recipient_list=[order.email],
+                            html_message=html_content,
+                            fail_silently=False,
+                        )
+                    except Exception as e:
+                        print("[ERROR] Sending client marriage email failed:", e)
+
+            else:
+                return HttpResponse(status=400)
+
+        except Exception as e:
+            print(f"[Webhook Error] {e}")
+            return HttpResponse(status=400)
 
     return HttpResponse(status=200)
 

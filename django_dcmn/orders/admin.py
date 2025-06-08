@@ -1,19 +1,43 @@
 # orders/admin.py
 from django.contrib import admin
-from .models import FbiApostilleOrder, OrderFile, FbiServicePackage, ShippingOption, FbiPricingSettings
+from django.contrib.contenttypes.admin import GenericTabularInline
+
+from .models import (
+    FileAttachment,
+    ShippingOption,
+
+    FbiApostilleOrder,
+    FbiServicePackage,
+    FbiPricingSettings,
+
+    MarriagePricingSettings,
+    MarriageOrder,
+)
 
 
-class OrderFileInline(admin.TabularInline):
-    model = OrderFile
+# ====== FILES ======
+class FileAttachmentInline(GenericTabularInline):
+    model = FileAttachment
     extra = 0
+    readonly_fields = ('uploaded_at',)
 
-@admin.register(FbiServicePackage)
-class ServicePackageAdmin(admin.ModelAdmin):
+
+@admin.register(FileAttachment)
+class FileAttachmentAdmin(admin.ModelAdmin):
+    list_display = ('id', 'content_type', 'object_id', 'file', 'uploaded_at')
+    list_filter = ('content_type', 'uploaded_at')
+    search_fields = ('content_type__model',)
+
+
+# ====== SHIPPING ======
+@admin.register(ShippingOption)
+class ShippingOptionAdmin(admin.ModelAdmin):
     list_display = ("label", "code", "price")
 
 
-@admin.register(ShippingOption)
-class ShippingOptionAdmin(admin.ModelAdmin):
+# ====== FBI ======
+@admin.register(FbiServicePackage)
+class ServicePackageAdmin(admin.ModelAdmin):
     list_display = ("label", "code", "price")
 
 
@@ -24,13 +48,22 @@ class FBIPricingSettingsAdmin(admin.ModelAdmin):
 
 @admin.register(FbiApostilleOrder)
 class FbiApostilleOrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'email', 'package', 'count', 'shipping_option', 'total_price', 'is_paid', 'created_at')
+    list_display = ('id', 'name', 'email', 'package', 'count', 'shipping_option', 'total_price', 'is_paid',
+                    'created_at')
     list_filter = ('package', 'shipping_option', 'is_paid', 'created_at')
     search_fields = ('name', 'email', 'country_name', 'address')
-    inlines = [OrderFileInline]
+    inlines = [FileAttachmentInline]
 
 
-@admin.register(OrderFile)
-class OrderFileAdmin(admin.ModelAdmin):
-    list_display = ('id', 'order', 'file', 'uploaded_at')
-    search_fields = ('order__name',)
+# ====== MARRIAGE ======
+@admin.register(MarriagePricingSettings)
+class MarriagePricingSettingsAdmin(admin.ModelAdmin):
+    list_display = ('price',)
+
+
+@admin.register(MarriageOrder)
+class MarriageOrderAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'email', 'total_price', 'is_paid', 'created_at')
+    list_filter = ('is_paid', 'created_at')
+    search_fields = ('name', 'email', 'phone', 'address', 'husband_full_name', 'wife_full_name')
+    inlines = [FileAttachmentInline]
