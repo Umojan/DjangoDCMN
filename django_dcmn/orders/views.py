@@ -248,9 +248,9 @@ def stripe_webhook(request):
                     html_content = render_to_string("emails/fbi_order_paid.html", {
                         "name": order.name,
                         "order_id": order.id,
-                        "email": order.email,
-                        "phone": order.phone,
-                        "address": order.address,
+                        "package": order.package,
+                        "count": order.count,
+                        "shipping": order.shipping,
                         "total": order.total_price,
                     })
                     try:
@@ -296,9 +296,11 @@ def stripe_webhook(request):
                         f"Marriage Date: {order.marriage_date}\n"
                         f"Country: {order.country}\n"
                         f"Certificate Number: {order.marriage_number}\n"
-                        f"Comments: \n{order.comments}\n\n"
                         f"------ OR ------\n\n"
                         f"Files:\n{file_links if file_links else 'None'}\n\n"
+                        
+                        f"Comments: \n{order.comments}\n\n"
+                        
                         f"Deposit: ${order.total_price}\n"
                         f"Paid: ✅\n\n"
                     )
