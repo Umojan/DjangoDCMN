@@ -213,7 +213,7 @@ def stripe_webhook(request):
                     today_str = datetime.utcnow().strftime("%Y-%m-%d")
                     thread_id = f"<fbi-orders-thread-{today_str}@dcmobilenotary.com>"
                     email_body = (
-                        f"New FBI Apostille order has been paid!\n\n"
+                        f"New FBI Apostille order has been paid! Order ID: {order.id}\n\n"
                         f"Name: {order.name}\n"
                         f"Email: {order.email}\n"
                         f"Phone: {order.phone}\n"
@@ -286,7 +286,7 @@ def stripe_webhook(request):
                     today_str = datetime.utcnow().strftime("%Y-%m-%d")
                     thread_id = f"<marriage-orders-thread-{today_str}@dcmobilenotary.com>"
                     email_body = (
-                        f"New Triple Seal Marriage Certificate order has been paid!\n\n"
+                        f"New Triple Seal Marriage Certificate order has been paid! Order ID: {order.id}\n\n"
                         f"Name: {order.name}\n"
                         f"Email: {order.email}\n"
                         f"Phone: {order.phone}\n"
@@ -298,7 +298,7 @@ def stripe_webhook(request):
                         f"Certificate Number: {order.marriage_number}\n"
                         f"Comments: \n{order.comments}\n\n"
                         f"------ OR ------\n\n"
-                        f"Files:\n{file_links if file_links else 'None'}"
+                        f"Files:\n{file_links if file_links else 'None'}\n\n"
                         f"Deposit: ${order.total_price}\n"
                         f"Paid: ✅\n\n"
                     )
@@ -321,15 +321,12 @@ def stripe_webhook(request):
                         for att in file_attachments
                     ]) or "<li>No files attached</li>"
                     html_content = render_to_string("emails/marriage_order_paid.html", {
-                        "name": order.name,
                         "order_id": order.id,
-                        "husband": order.husband_full_name,
-                        "wife": order.wife_full_name,
-                        "marriage_date": order.marriage_date,
-                        "country": order.country,
-                        "marriage_certificate_number": order.marriage_certificate_number,
+                        "name": order.name,
+                        "email": order.email,
+                        "phone": order.phone,
+                        "address": order.address,
                         "total": order.total_price,
-                        "files": file_links_html
                     })
                     try:
                         send_mail(
