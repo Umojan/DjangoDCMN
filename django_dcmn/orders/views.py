@@ -361,3 +361,10 @@ def test_email(request):
         fail_silently=False,
     )
     return JsonResponse({"status": "✅ Email sent!"})
+
+
+def zoho_callback(request):
+    code = request.GET.get('code')
+    if code:
+        return HttpResponse(f'Authorization code: {code}')
+    return HttpResponse('No code found', status=400)
