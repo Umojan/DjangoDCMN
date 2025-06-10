@@ -2,12 +2,19 @@
 import requests
 import datetime
 from django.conf import settings
+from django.core.cache import cache
 from .models import FbiApostilleOrder
+
 
 ZOHO_API_DOMAIN = 'https://www.zohoapis.com'
 
 
+
 def get_access_token():
+    token = cache.get("zoho_access_token")
+    if token:
+        return token
+
     url = "https://accounts.zoho.com/oauth/v2/token"
     params = {
         "refresh_token": settings.ZOHO_REFRESH_TOKEN,
@@ -17,7 +24,11 @@ def get_access_token():
     }
     resp = requests.post(url, params=params)
     resp.raise_for_status()
-    return resp.json()["access_token"]
+    token = resp.json()["access_token"]
+
+    # Save token to cache
+    cache.set("zoho_access_token", token, timeout=3000)  # ~50 мин
+    return token
 
 
 
