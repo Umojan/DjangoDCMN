@@ -42,6 +42,18 @@ EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
 EMAIL_OFFICE_RECEIVER = os.getenv('EMAIL_OFFICE_RECEIVER', '').split(',')
 EMAIL_CLIENT_FROM = config("EMAIL_CLIENT_FROM")
 
+
+# ====== ZOHO CRM ======
+ZOHO_REFRESH_TOKEN = os.getenv('ZOHO_REFRESH_TOKEN')
+ZOHO_CLIENT_ID = os.getenv('ZOHO_CLIENT_ID')
+ZOHO_CLIENT_SECRET = os.getenv('ZOHO_CLIENT_SECRET')
+
+
+# ====== CELERY ======
+CELERY_BROKER_URL = config("REDIS_URL")
+CELERY_RESULT_BACKEND = config("REDIS_URL")
+
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 
