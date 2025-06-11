@@ -39,14 +39,15 @@ def sync_fbi_order_to_zoho(order: FbiApostilleOrder):
         "data": [
             {
                 "Deal_Name": f"FBI {order.package.label} #{order.id}",
-                "FBI_Order_ID": order.id,
+                "Order_ID": order.id,
                 "Name1": order.name,
                 "Email_1": order.email,
                 "Phone": order.phone,
                 "Country_of_Use": order.country_name,
                 "Client_Comment": order.comments,
                 "Address": order.address,
-                "FBI_Service_Type": order.package.label,
+                "Package": order.package.label,
+                "Certificate": str(order.count),
                 "Shipping_speed": order.shipping_option.label,
                 "Amount": float(order.total_price),
                 "Status": "Order Received",
