@@ -176,7 +176,14 @@ else:
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Local
 
 CSRF_TRUSTED_ORIGINS = [
+    # My railway
     "https://djangodcmn-production-32c8.up.railway.app",
+
+    # Test
+    "https://django-test-production-0ded.up.railway.app",
+    "https://django-celery-test-production.up.railway.app",
+
+    # Prod
     "https://djangodcmn-production.up.railway.app",
     "https://api.dcmobilenotary.net",
 ]
