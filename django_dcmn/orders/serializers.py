@@ -50,7 +50,7 @@ class FbiApostilleOrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = FbiApostilleOrder
         fields = '__all__'
-        read_only_fields = ('is_paid', 'created_at', 'total_price')
+        read_only_fields = ('is_paid', 'zoho_synced', 'created_at', 'total_price')
 
 
 # ====== MARRIAGE ======
