@@ -75,7 +75,9 @@ def sync_fbi_order_to_zoho(order: FbiApostilleOrder):
         return False
 
     # 2. File Attaching
-    file_urls = [fa.file.url for fa in order.file_attachments.all()]
+    # BASE_URL = "https://api.dcmobilenotary.net"
+
+    file_urls = [settings.BASE_URL + fa.file.url for fa in order.file_attachments.all()]
     for url in file_urls:
         file_response = requests.get(url)
         file_response.raise_for_status()
