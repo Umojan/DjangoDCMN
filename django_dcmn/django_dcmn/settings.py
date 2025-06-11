@@ -175,6 +175,10 @@ if os.getenv("RAILWAY_ENVIRONMENT"):
 else:
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Local
 
+
+BASE_URL = "https://api.dcmobilenotary.net"
+
+
 CSRF_TRUSTED_ORIGINS = [
     # My railway
     "https://djangodcmn-production-32c8.up.railway.app",
