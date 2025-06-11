@@ -42,6 +42,18 @@ EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
 EMAIL_OFFICE_RECEIVER = os.getenv('EMAIL_OFFICE_RECEIVER', '').split(',')
 EMAIL_CLIENT_FROM = config("EMAIL_CLIENT_FROM")
 
+
+# ====== ZOHO CRM ======
+ZOHO_REFRESH_TOKEN = os.getenv('ZOHO_REFRESH_TOKEN')
+ZOHO_CLIENT_ID = os.getenv('ZOHO_CLIENT_ID')
+ZOHO_CLIENT_SECRET = os.getenv('ZOHO_CLIENT_SECRET')
+
+
+# ====== CELERY ======
+CELERY_BROKER_URL = config("REDIS_URL")
+CELERY_RESULT_BACKEND = config("REDIS_URL")
+
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 
@@ -164,7 +176,24 @@ else:
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Local
 
 CSRF_TRUSTED_ORIGINS = [
+    # My railway
     "https://djangodcmn-production-32c8.up.railway.app",
+
+    # Test
+    "https://django-test-production-0ded.up.railway.app",
+    "https://django-celery-test-production.up.railway.app",
+
+    # Prod
     "https://djangodcmn-production.up.railway.app",
     "https://api.dcmobilenotary.net",
 ]
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": config("REDIS_URL"),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    }
+}

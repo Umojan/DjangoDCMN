@@ -48,8 +48,8 @@ class FBIPricingSettingsAdmin(admin.ModelAdmin):
 
 @admin.register(FbiApostilleOrder)
 class FbiApostilleOrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'email', 'package', 'count', 'shipping_option', 'total_price', 'is_paid',
-                    'created_at')
+    list_display = ('id', 'name', 'email', 'package', 'count', 'shipping_option', 'total_price',
+                    'is_paid', 'zoho_synced', 'created_at')
     list_filter = ('package', 'shipping_option', 'is_paid', 'created_at')
     search_fields = ('name', 'email', 'country_name', 'address')
     inlines = [FileAttachmentInline]

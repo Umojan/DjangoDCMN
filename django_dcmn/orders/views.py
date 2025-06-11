@@ -8,6 +8,8 @@ from django.utils.decorators import method_decorator
 from django.core.mail import send_mail, EmailMessage
 from django.template.loader import render_to_string
 
+from .tasks import sync_order_to_zoho_task
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -203,6 +205,7 @@ def stripe_webhook(request):
                 order = FbiApostilleOrder.objects.get(id=order_id)
                 if not order.is_paid:
                     order.is_paid = True
+                    sync_order_to_zoho_task.delay(order.id)
                     order.save()
 
                     # Files (universal)
@@ -361,3 +364,10 @@ def test_email(request):
         fail_silently=False,
     )
     return JsonResponse({"status": "✅ Email sent!"})
+
+
+def zoho_callback(request):
+    code = request.GET.get('code')
+    if code:
+        return HttpResponse(f'Authorization code: {code}')
+    return HttpResponse('No code found', status=400)

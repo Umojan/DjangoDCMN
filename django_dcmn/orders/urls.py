@@ -8,6 +8,8 @@ from .views import (
 
     stripe_webhook,
     test_email,
+
+    zoho_callback,
 )
 
 urlpatterns = [
@@ -20,4 +22,6 @@ urlpatterns = [
     path("webhook/stripe/", stripe_webhook),
 
     path("test-email/", test_email, name="test_email"),
+
+    path('zoho/callback/', zoho_callback, name='zoho_callback'),
 ]
