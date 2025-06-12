@@ -10,6 +10,8 @@ from .models import (
 
     MarriagePricingSettings,
     MarriageOrder,
+
+    EmbassyLegalizationOrder,
 )
 
 
@@ -73,3 +75,11 @@ class MarriageOrderSerializer(serializers.ModelSerializer):
             'total_price', 'is_paid', 'created_at',
         ]
         read_only_fields = ('total_price', 'is_paid', 'created_at')
+
+
+# ====== EMBASSY ======
+class EmbassyLegalizationOrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EmbassyLegalizationOrder
+        fields = '__all__'
+        read_only_fields = ('zoho_synced', 'created_at')
