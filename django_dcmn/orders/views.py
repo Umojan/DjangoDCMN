@@ -13,9 +13,9 @@ from .tasks import sync_order_to_zoho_task
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import FbiApostilleOrderSerializer, MarriageOrderSerializer
+from .serializers import FbiApostilleOrderSerializer, MarriageOrderSerializer, EmbassyLegalizationOrderSerializer
 from .models import FbiApostilleOrder, FbiServicePackage, FbiPricingSettings, ShippingOption, MarriageOrder, \
-    MarriagePricingSettings, FileAttachment
+    MarriagePricingSettings, FileAttachment, EmbassyLegalizationOrder
 
 import stripe
 
@@ -121,6 +121,35 @@ class CreateMarriageOrderView(APIView):
             'calculated_total': float(marriage_order.total_price),
             'file_urls': file_urls or None
         }, status=status.HTTP_201_CREATED)
+
+
+class CreateEmbassyOrderView(APIView):
+    def post(self, request, format=None):
+        serializer = EmbassyLegalizationOrderSerializer(data=request.data)
+        if serializer.is_valid():
+            # 1) Сохраняем заказ
+            order = serializer.save()
+
+            # 2) Если во входящем запросе есть файлы, создаём FileAttachment
+            file_urls = []
+            if request.FILES:
+                ct = ContentType.objects.get_for_model(EmbassyLegalizationOrder)
+                for f in request.FILES.getlist('files'):
+                    attachment = FileAttachment.objects.create(
+                        content_type=ct,
+                        object_id=order.id,
+                        file=f
+                    )
+                    file_urls.append(request.build_absolute_uri(attachment.file.url))
+
+            # 3) Ответ
+            return Response({
+                'message': 'Embassy legalization order created',
+                'order_id': order.id,
+                'file_urls': file_urls or None
+            }, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
