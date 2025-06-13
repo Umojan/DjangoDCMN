@@ -96,15 +96,18 @@ def sync_embassy_order_to_zoho(order: EmbassyLegalizationOrder):
         "data": [
             {
                 "Name": f"Embassy Legalization #{order.id}",
+
                 "Client_Name": order.name,
                 "Email": order.email,
                 "Phone": order.phone,
                 "Country_of_Legalization": order.country,
-                "Client_Comment": order.comments,
                 "Address": order.address,
                 "Document_Type": order.document_type,
+
                 "Status": "Order Received",
                 "Payment_Status": "Not Paid",
+
+                "Client_Comment": order.comments,
             }
         ]
     }
