@@ -127,10 +127,8 @@ class CreateEmbassyOrderView(APIView):
     def post(self, request, format=None):
         serializer = EmbassyLegalizationOrderSerializer(data=request.data)
         if serializer.is_valid():
-            # 1) Сохраняем заказ
             order = serializer.save()
 
-            # 2) Если во входящем запросе есть файлы, создаём FileAttachment
             file_urls = []
             if request.FILES:
                 ct = ContentType.objects.get_for_model(EmbassyLegalizationOrder)
@@ -142,7 +140,40 @@ class CreateEmbassyOrderView(APIView):
                     )
                     file_urls.append(request.build_absolute_uri(attachment.file.url))
 
-            # 3) Ответ
+            # Send email to staff
+            from datetime import datetime
+            today_str = datetime.utcnow().strftime("%Y-%m-%d")
+            thread_id = f"<embassy-orders-thread-{today_str}@dcmobilenotary.com>"
+
+            file_links = ""
+            for f in order.file_attachments.all():
+                file_links += f"📎 {request.build_absolute_uri(f.file.url)}\n"
+
+            email_body = (
+                f"New Embassy Legalization order submitted! Order ID: {order.id}\n\n"
+                f"Name: {order.name}\n"
+                f"Email: {order.email}\n"
+                f"Phone: {order.phone}\n"
+                f"Address: {order.address}\n"
+                f"Document Type: {order.document_type}\n"
+                f"Country: {order.country}\n"
+                f"Comments: {order.comments}\n\n"
+                f"Files:\n{file_links or 'None'}"
+            )
+
+            email = EmailMessage(
+                subject=f"📄 New Embassy Legalization Order — {today_str}",
+                body=email_body,
+                from_email=settings.EMAIL_HOST_USER,
+                to=settings.EMAIL_OFFICE_RECEIVER,
+                headers={
+                    "Message-ID": f"<embassy-order-{order.id}@dcmobilenotary.com>",
+                    "In-Reply-To": thread_id,
+                    "References": thread_id,
+                }
+            )
+            email.send()
+
             return Response({
                 'message': 'Embassy legalization order created',
                 'order_id': order.id,
