@@ -128,6 +128,7 @@ class CreateEmbassyOrderView(APIView):
         serializer = EmbassyLegalizationOrderSerializer(data=request.data)
         if serializer.is_valid():
             order = serializer.save()
+            sync_order_to_zoho_task.delay(order.id, "embassy")
 
             file_urls = []
             if request.FILES:
