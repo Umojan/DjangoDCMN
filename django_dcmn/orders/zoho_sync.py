@@ -99,7 +99,7 @@ def sync_embassy_order_to_zoho(order: EmbassyLegalizationOrder):
 
                 "Client_Name": order.name,
                 "Email": order.email,
-                "Pone_Number": order.phone,
+                "Phone": order.phone,
                 "Country_of_Legalization": order.country,
                 "Address": order.address,
                 "Document_Type": order.document_type,
