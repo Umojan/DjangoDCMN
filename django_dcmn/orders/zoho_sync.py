@@ -34,7 +34,7 @@ def sync_fbi_order_to_zoho(order: FbiApostilleOrder):
     data = {
         "data": [
             {
-                "Deal_Name": f"FBI {order.package.label} #{order.id}",
+                "Deal_Name": f"FBI {order.package.label} ID{order.id}",
                 "Order_ID": order.id,
                 "Name1": order.name,
                 "Email_1": order.email,
@@ -99,7 +99,7 @@ def sync_embassy_order_to_zoho(order: EmbassyLegalizationOrder):
 
                 "Client_Name": order.name,
                 "Email": order.email,
-                "Phone": order.phone,
+                "Pone_Number": order.phone,
                 "Country_of_Legalization": order.country,
                 "Address": order.address,
                 "Document_Type": order.document_type,
