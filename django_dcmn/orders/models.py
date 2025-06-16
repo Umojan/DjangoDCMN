@@ -144,3 +144,31 @@ class MarriagePricingSettings(models.Model):
     class Meta:
         verbose_name = "Triple Seal Marriage — Pricing Setting"
         verbose_name_plural = "Triple Seal Marriage — Pricing Settings"
+
+
+# Embassy Legalization Order
+class EmbassyLegalizationOrder(models.Model):
+    name = models.CharField(max_length=255)
+    email = models.EmailField()
+    phone = models.CharField(max_length=50)
+    address = models.TextField()
+    document_type = models.CharField(max_length=255)
+    country = models.CharField(max_length=100)
+    comments = models.TextField(blank=True, null=True)
+
+    zoho_synced = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    file_attachments = GenericRelation(
+        FileAttachment,
+        content_type_field='content_type',
+        object_id_field='object_id',
+        related_query_name='embassy_order'
+    )
+
+    def __str__(self):
+        return f"Embassy Legalization Order #{self.id} by {self.name}"
+
+    class Meta:
+        verbose_name = 'Embassy Legalization — Order'
+        verbose_name_plural = 'Embassy Legalization — Orders'

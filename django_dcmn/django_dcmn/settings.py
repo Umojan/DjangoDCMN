@@ -22,6 +22,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config('SECRET_KEY')
 
+BASE_URL = "https://" + os.getenv('BASE_DOMAIN')
+
 STRIPE_SECRET_KEY = config("STRIPE_SECRET_KEY")
 STRIPE_WEBHOOK_SECRET = config("STRIPE_WEBHOOK_SECRET")
 
@@ -175,8 +177,6 @@ if os.getenv("RAILWAY_ENVIRONMENT"):
 else:
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Local
 
-
-BASE_URL = "https://api.dcmobilenotary.net"
 
 
 CSRF_TRUSTED_ORIGINS = [

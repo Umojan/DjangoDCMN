@@ -13,9 +13,9 @@ from .tasks import sync_order_to_zoho_task
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import FbiApostilleOrderSerializer, MarriageOrderSerializer
+from .serializers import FbiApostilleOrderSerializer, MarriageOrderSerializer, EmbassyLegalizationOrderSerializer
 from .models import FbiApostilleOrder, FbiServicePackage, FbiPricingSettings, ShippingOption, MarriageOrder, \
-    MarriagePricingSettings, FileAttachment
+    MarriagePricingSettings, FileAttachment, EmbassyLegalizationOrder
 
 import stripe
 
@@ -121,6 +121,67 @@ class CreateMarriageOrderView(APIView):
             'calculated_total': float(marriage_order.total_price),
             'file_urls': file_urls or None
         }, status=status.HTTP_201_CREATED)
+
+
+class CreateEmbassyOrderView(APIView):
+    def post(self, request, format=None):
+        serializer = EmbassyLegalizationOrderSerializer(data=request.data)
+        if serializer.is_valid():
+            order = serializer.save()
+            sync_order_to_zoho_task.delay(order.id, "embassy")
+
+            file_urls = []
+            if request.FILES:
+                ct = ContentType.objects.get_for_model(EmbassyLegalizationOrder)
+                for f in request.FILES.getlist('files'):
+                    attachment = FileAttachment.objects.create(
+                        content_type=ct,
+                        object_id=order.id,
+                        file=f
+                    )
+                    file_urls.append(request.build_absolute_uri(attachment.file.url))
+
+            # Send email to staff
+            from datetime import datetime
+            today_str = datetime.utcnow().strftime("%Y-%m-%d")
+            thread_id = f"<embassy-orders-thread-{today_str}@dcmobilenotary.com>"
+
+            file_links = ""
+            for f in order.file_attachments.all():
+                file_links += f"📎 {request.build_absolute_uri(f.file.url)}\n"
+
+            email_body = (
+                f"New Embassy Legalization order submitted! Order ID: {order.id}\n\n"
+                f"Name: {order.name}\n"
+                f"Email: {order.email}\n"
+                f"Phone: {order.phone}\n"
+                f"Address: {order.address}\n"
+                f"Document Type: {order.document_type}\n"
+                f"Country: {order.country}\n"
+                f"Comments: {order.comments}\n\n"
+                f"Files:\n{file_links or 'None'}"
+            )
+
+            email = EmailMessage(
+                subject=f"📄 New Embassy Legalization Order — {today_str}",
+                body=email_body,
+                from_email=settings.EMAIL_HOST_USER,
+                to=settings.EMAIL_OFFICE_RECEIVER,
+                headers={
+                    "Message-ID": f"<embassy-order-{order.id}@dcmobilenotary.com>",
+                    "In-Reply-To": thread_id,
+                    "References": thread_id,
+                }
+            )
+            email.send()
+
+            return Response({
+                'message': 'Embassy legalization order created',
+                'order_id': order.id,
+                'file_urls': file_urls or None
+            }, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 stripe.api_key = settings.STRIPE_SECRET_KEY

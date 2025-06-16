@@ -4,8 +4,9 @@
     <data-source source="LOCAL" name="Test DB" uuid="0cb7e840-3712-4f39-befd-a8a1ce66c823">
       <driver-ref>postgresql</driver-ref>
       <synchronize>true</synchronize>
+      <remarks>postgresql://postgres:sXDwyMTlohPMQVvvZXHsXcZdpkiVwRti@shuttle.proxy.rlwy.net:18931/railway</remarks>
       <jdbc-driver>org.postgresql.Driver</jdbc-driver>
-      <jdbc-url>jdbc:postgresql://hopper.proxy.rlwy.net:39100/railway</jdbc-url>
+      <jdbc-url>jdbc:postgresql://shuttle.proxy.rlwy.net:18931/railway</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
     <data-source source="LOCAL" name="DCMN DB" uuid="74edf488-64b3-4c12-b9a2-0e8a832ab72e">
