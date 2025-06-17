@@ -154,7 +154,7 @@ def sync_translation_order_to_zoho(order: TranslationOrder):
     data = {
         "data": [
             {
-                "Name": f"Translation ID{order.id}",
+                "Name": f"Translation {order.name} ID{order.id}",
                 "Client_Name1": order.name,
                 "Email": order.email,
                 "Phone": order.phone,
