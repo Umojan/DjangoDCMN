@@ -184,6 +184,70 @@ class CreateEmbassyOrderView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+# === Translation Order View ===
+class CreateTranslationOrderView(APIView):
+    def post(self, request, format=None):
+        from .models import TranslationOrder
+        from .serializers import TranslationOrderSerializer
+        serializer = TranslationOrderSerializer(data=request.data)
+        if serializer.is_valid():
+            order = serializer.save()
+
+            # Save uploaded files
+            file_urls = []
+            if request.FILES:
+                ct = ContentType.objects.get_for_model(TranslationOrder)
+                for f in request.FILES.getlist('files'):
+                    attachment = FileAttachment.objects.create(
+                        content_type=ct,
+                        object_id=order.id,
+                        file=f
+                    )
+                    file_urls.append(request.build_absolute_uri(attachment.file.url))
+
+            # Send email to staff
+            from datetime import datetime
+            today_str = datetime.utcnow().strftime("%Y-%m-%d")
+            thread_id = f"<translation-orders-thread-{today_str}@dcmobilenotary.com>"
+
+            file_links = ""
+            for f in order.file_attachments.all():
+                file_links += f"📎 {request.build_absolute_uri(f.file.url)}\n"
+
+            email_body = (
+                f"New Translation Order submitted! Order ID: {order.id}\n\n"
+                f"Name: {order.name}\n"
+                f"Email: {order.email}\n"
+                f"Phone: {order.phone}\n"
+                f"Address: {order.address}\n"
+                f"Source Language: {order.source_language}\n"
+                f"Target Language: {order.target_language}\n\n"
+                f"Comments: \n{order.comments}\n\n"
+                f"Files:\n{file_links if file_links else 'None'}"
+            )
+
+            email = EmailMessage(
+                subject=f"📄 New Translation Order — {today_str}",
+                body=email_body,
+                from_email=settings.EMAIL_HOST_USER,
+                to=settings.EMAIL_OFFICE_RECEIVER,
+                headers={
+                    "Message-ID": f"<translation-order-{order.id}@dcmobilenotary.com>",
+                    "In-Reply-To": thread_id,
+                    "References": thread_id,
+                }
+            )
+            email.send()
+
+            return Response({
+                'message': 'Translation order created',
+                'order_id': order.id,
+                'file_urls': file_urls or None
+            }, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 

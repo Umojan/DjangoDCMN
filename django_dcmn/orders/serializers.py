@@ -12,6 +12,7 @@ from .models import (
     MarriageOrder,
 
     EmbassyLegalizationOrder,
+    TranslationOrder,
 )
 
 
@@ -81,5 +82,12 @@ class MarriageOrderSerializer(serializers.ModelSerializer):
 class EmbassyLegalizationOrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = EmbassyLegalizationOrder
+        fields = '__all__'
+        read_only_fields = ('zoho_synced', 'created_at')
+
+
+class TranslationOrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TranslationOrder
         fields = '__all__'
         read_only_fields = ('zoho_synced', 'created_at')
