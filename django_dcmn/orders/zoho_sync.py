@@ -159,7 +159,7 @@ def sync_translation_order_to_zoho(order: TranslationOrder):
                 "Email": order.email,
                 "Phone": order.phone,
                 "Address": order.address,
-                "Languages": ", ".join(order.languages or []),
+                "Languages": order.languages,
                 "Client_Comments": order.comments,
                 "Translation_Status": "Client Placed Request",
             }
