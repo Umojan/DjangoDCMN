@@ -220,7 +220,7 @@ class CreateTranslationOrderView(APIView):
                 f"Email: {order.email}\n"
                 f"Phone: {order.phone}\n"
                 f"Address: {order.address}\n"
-                f"Languages: {order.language}\n"
+                f"Languages: {order.languages}\n"
                 f"Comments: \n{order.comments}\n\n"
                 f"Files:\n{file_links if file_links else 'None'}"
             )
