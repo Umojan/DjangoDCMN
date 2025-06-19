@@ -13,6 +13,10 @@ class ShippingOption(models.Model):
     def __str__(self):
         return self.label
 
+    class Meta:
+        verbose_name = '⚙️ Shipping Option'
+        verbose_name_plural = '⚙️ Shipping Options'
+
 
 # FBI Model
 class FbiServicePackage(models.Model):
@@ -42,8 +46,8 @@ class FileAttachment(models.Model):
         return f"Attachment for {self.content_type.model} #{self.object_id}"
 
     class Meta:
-        verbose_name = 'File Attachment'
-        verbose_name_plural = 'File Attachments'
+        verbose_name = '⚙️ File Attachment'
+        verbose_name_plural = '⚙️ File Attachments'
 
 
 # FBI Model
