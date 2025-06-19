@@ -172,3 +172,29 @@ class EmbassyLegalizationOrder(models.Model):
     class Meta:
         verbose_name = 'Embassy Legalization — Order'
         verbose_name_plural = 'Embassy Legalization — Orders'
+
+
+class TranslationOrder(models.Model):
+    name = models.CharField(max_length=255)
+    email = models.EmailField()
+    phone = models.CharField(max_length=50)
+    address = models.TextField()
+    languages = models.TextField(help_text="Selected languages as comma-separated list")
+    comments = models.TextField(blank=True, null=True)
+
+    zoho_synced = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    file_attachments = GenericRelation(
+        FileAttachment,
+        content_type_field='content_type',
+        object_id_field='object_id',
+        related_query_name='translation_order'
+    )
+
+    def __str__(self):
+        return f"Translation Order #{self.id} by {self.name}"
+
+    class Meta:
+        verbose_name = 'Translation — Order'
+        verbose_name_plural = 'Translation — Orders'

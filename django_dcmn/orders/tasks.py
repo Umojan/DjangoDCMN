@@ -1,7 +1,7 @@
 # orders/tasks.py
 from celery import shared_task
-from .models import FbiApostilleOrder, EmbassyLegalizationOrder
-from .zoho_sync import sync_fbi_order_to_zoho, sync_embassy_order_to_zoho
+from .models import FbiApostilleOrder, EmbassyLegalizationOrder, TranslationOrder
+from .zoho_sync import sync_fbi_order_to_zoho, sync_embassy_order_to_zoho, sync_translation_order_to_zoho
 
 @shared_task
 def test_celery_task():
@@ -20,5 +20,9 @@ def sync_order_to_zoho_task(order_id, order_type):
             order = EmbassyLegalizationOrder.objects.get(id=order_id)
             if not order.zoho_synced:
                 sync_embassy_order_to_zoho(order)
+        elif order_type == "translation":
+            order = TranslationOrder.objects.get(id=order_id)
+            if not order.zoho_synced:
+                sync_translation_order_to_zoho(order)
     except Exception as e:
         print(f"[Celery Task Error] Failed to sync {order_type} order #{order_id} to Zoho: {e}")
