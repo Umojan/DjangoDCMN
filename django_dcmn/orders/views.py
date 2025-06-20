@@ -216,11 +216,11 @@ class CreateApostilleOrderView(APIView):
                 f"Phone: {order.phone}\n"
                 f"Documents Type: {order.type}\n"
                 f"Country: {order.country}\n"
-                f"Service Type: {order.service_type}\n"
+                f"Service Type: {order.service_type}\n\n"
             )
 
             if order.service_type == "My Address" and order.address:
-                email_body += f"Address: {order.address}\n"
+                email_body += f"Address: {order.address}\n\n"
 
             if order.comments:
                 email_body += f"Comments: {order.comments}"
