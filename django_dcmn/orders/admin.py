@@ -14,7 +14,8 @@ from .models import (
     MarriageOrder,
 
     EmbassyLegalizationOrder,
-    TranslationOrder, ApostilleOrder,
+    TranslationOrder,
+    ApostilleOrder,
 )
 
 
@@ -93,7 +94,7 @@ class TranslationOrderAdmin(admin.ModelAdmin):
 # ====== APOSTILLE ======
 @admin.register(ApostilleOrder)
 class ApostilleOrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'email', 'type', 'country', 'service_type', 'created_at')
-    list_filter = ('service_type', 'created_at')
+    list_display = ('id', 'name', 'email', 'type', 'country', 'service_type', 'zoho_synced', 'created_at')
+    list_filter = ('zoho_synced', 'service_type', 'created_at')
     search_fields = ('name', 'email', 'phone', 'address', 'type', 'country')
     inlines = [FileAttachmentInline]
