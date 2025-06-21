@@ -3,7 +3,7 @@ import requests
 import datetime
 from django.conf import settings
 from django.core.cache import cache
-from .models import FbiApostilleOrder, EmbassyLegalizationOrder, TranslationOrder
+from .models import FbiApostilleOrder, EmbassyLegalizationOrder, TranslationOrder, ApostilleOrder
 
 ZOHO_API_DOMAIN = 'https://www.zohoapis.com'
 
@@ -201,3 +201,47 @@ def sync_translation_order_to_zoho(order: TranslationOrder):
     order.zoho_synced = True
     order.save(update_fields=['zoho_synced'])
     return True
+
+
+def sync_apostille_order_to_zoho(order: ApostilleOrder):
+    module = 'Apostille_Services'
+
+    data = {
+        "data": [
+            {
+                "Name": f"Apostille Order ID{order.id}",
+                "Client_Name": order.name,
+                "Email": order.email,
+                "Phone_Number": order.phone,
+                "Address": order.address or "- Office Visit -",
+                "Country_of_Use": order.country,
+                "Document_Type": order.type,
+                "Client_Comments": order.comments or "",
+                "Status": "Client placed the request",
+                "Process_Stage": "Submission Received",
+            }
+        ]
+    }
+
+    access_token = get_access_token()
+    headers = {
+        "Authorization": f"Zoho-oauthtoken {access_token}",
+        "Content-Type": "application/json"
+    }
+
+    resp = requests.post(
+        f"{ZOHO_API_DOMAIN}/crm/v2/{module}",
+        headers=headers,
+        json=data
+    )
+    resp_data = resp.json()
+    print("Create apostille deal:", resp_data)
+
+    try:
+        record_id = resp_data['data'][0]['details']['id']
+        order.zoho_synced = True
+        order.save(update_fields=["zoho_synced"])
+        return True
+    except Exception as e:
+        print("Apostille order creation ERROR:", e)
+        return False

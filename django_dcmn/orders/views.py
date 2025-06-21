@@ -202,7 +202,7 @@ class CreateApostilleOrderView(APIView):
         serializer = ApostilleOrderSerializer(data=request.data)
         if serializer.is_valid():
             order = serializer.save()
-            # sync_order_to_zoho_task.delay(order.id, "apostille")
+            sync_order_to_zoho_task.delay(order.id, "apostille")
 
             # Send email to staff
             from datetime import datetime
