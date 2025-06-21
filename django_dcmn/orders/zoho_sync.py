@@ -138,7 +138,7 @@ def sync_translation_order_to_zoho(order: TranslationOrder):
 
 
 def sync_apostille_order_to_zoho(order: ApostilleOrder):
-    module = 'Apostille_Services'
+    zoho_module = 'Apostille_Services'
 
     data = {
         "data": [
@@ -156,4 +156,4 @@ def sync_apostille_order_to_zoho(order: ApostilleOrder):
             }
         ]
     }
-    return sync_order_to_zoho(order, module, data, attach_files=False)
+    return sync_order_to_zoho(order, zoho_module, data, attach_files=False)
