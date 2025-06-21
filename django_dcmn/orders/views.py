@@ -13,9 +13,22 @@ from .tasks import sync_order_to_zoho_task
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import FbiApostilleOrderSerializer, MarriageOrderSerializer, EmbassyLegalizationOrderSerializer
-from .models import FbiApostilleOrder, FbiServicePackage, FbiPricingSettings, ShippingOption, MarriageOrder, \
-    MarriagePricingSettings, FileAttachment, EmbassyLegalizationOrder
+from .serializers import (
+    FbiApostilleOrderSerializer,
+    MarriageOrderSerializer,
+    EmbassyLegalizationOrderSerializer,
+    ApostilleOrderSerializer
+)
+from .models import (
+    FbiApostilleOrder,
+    FbiServicePackage,
+    FbiPricingSettings,
+    ShippingOption,
+    MarriageOrder,
+    MarriagePricingSettings,
+    FileAttachment,
+    EmbassyLegalizationOrder
+)
 
 import stripe
 
@@ -179,6 +192,55 @@ class CreateEmbassyOrderView(APIView):
                 'message': 'Embassy legalization order created',
                 'order_id': order.id,
                 'file_urls': file_urls or None
+            }, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CreateApostilleOrderView(APIView):
+    def post(self, request, format=None):
+        serializer = ApostilleOrderSerializer(data=request.data)
+        if serializer.is_valid():
+            order = serializer.save()
+            sync_order_to_zoho_task.delay(order.id, "apostille")
+
+            # Send email to staff
+            from datetime import datetime
+            today_str = datetime.utcnow().strftime("%Y-%m-%d")
+            thread_id = f"<apostille-orders-thread-{today_str}@dcmobilenotary.com>"
+
+            email_body = (
+                f"New Apostille order submitted! Order ID: {order.id}\n\n"
+                f"Name: {order.name}\n"
+                f"Email: {order.email}\n"
+                f"Phone: {order.phone}\n"
+                f"Documents Type: {order.type}\n"
+                f"Country: {order.country}\n"
+                f"Service Type: {order.service_type}\n\n"
+            )
+
+            if order.service_type == "My Address" and order.address:
+                email_body += f"Address: {order.address}\n\n"
+
+            if order.comments:
+                email_body += f"Comments: {order.comments}"
+
+            email = EmailMessage(
+                subject=f"📄 New Apostille Order — {today_str}",
+                body=email_body,
+                from_email=settings.EMAIL_HOST_USER,
+                to=settings.EMAIL_OFFICE_RECEIVER,
+                headers={
+                    "Message-ID": f"<apostille-order-{order.id}@dcmobilenotary.com>",
+                    "In-Reply-To": thread_id,
+                    "References": thread_id,
+                }
+            )
+            email.send()
+
+            return Response({
+                'message': 'Apostille order created',
+                'order_id': order.id,
             }, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

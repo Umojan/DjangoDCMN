@@ -202,3 +202,29 @@ class TranslationOrder(models.Model):
     class Meta:
         verbose_name = 'Translation — Order'
         verbose_name_plural = 'Translation — Orders'
+
+
+# Apostille Order
+class ApostilleOrder(models.Model):
+    name = models.CharField(max_length=255)
+    email = models.EmailField()
+    phone = models.CharField(max_length=50)
+    type = models.CharField(max_length=255, help_text="Type of documents")
+    country = models.CharField(max_length=100, help_text="Country of legalization")
+    service_type = models.CharField(
+        max_length=100,
+        help_text="Service location type: Office, UPS, or My Address"
+    )
+    address = models.TextField(blank=True, null=True, help_text="Client address, if applicable")
+    comments = models.TextField(blank=True, null=True)
+
+    zoho_synced = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+    def __str__(self):
+        return f"Apostille Order #{self.id} by {self.name}"
+
+    class Meta:
+        verbose_name = 'Apostille — Order'
+        verbose_name_plural = 'Apostille — Orders'

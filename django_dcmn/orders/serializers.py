@@ -7,12 +7,11 @@ from .models import (
     FbiApostilleOrder,
     FbiServicePackage,
     FbiPricingSettings,
-
     MarriagePricingSettings,
     MarriageOrder,
-
     EmbassyLegalizationOrder,
     TranslationOrder,
+    ApostilleOrder,
 )
 
 
@@ -89,5 +88,12 @@ class EmbassyLegalizationOrderSerializer(serializers.ModelSerializer):
 class TranslationOrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = TranslationOrder
+        fields = '__all__'
+        read_only_fields = ('zoho_synced', 'created_at')
+
+# ====== APOSTILLE ======
+class ApostilleOrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ApostilleOrder
         fields = '__all__'
         read_only_fields = ('zoho_synced', 'created_at')
