@@ -229,8 +229,8 @@ class I9VerificationOrder(models.Model):
     email = models.EmailField()
     phone = models.CharField(max_length=50)
     address = models.TextField()
-    appointment_date = models.DateField()
-    appointment_time = models.TimeField()
+    appointment_date = models.CharField()
+    appointment_time = models.CharField()
     comments = models.TextField(blank=True, null=True)
 
     zoho_synced = models.BooleanField(default=False)
