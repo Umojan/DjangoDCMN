@@ -27,7 +27,7 @@ from .models import (
     MarriageOrder,
     MarriagePricingSettings,
     FileAttachment,
-    EmbassyLegalizationOrder, TranslationOrder
+    EmbassyLegalizationOrder, TranslationOrder, I9VerificationOrder
 )
 
 import stripe
@@ -303,7 +303,7 @@ class CreateI9OrderView(APIView):
 
             file_urls = []
             if request.FILES:
-                ct = ContentType.objects.get_for_model(EmbassyLegalizationOrder)
+                ct = ContentType.objects.get_for_model(I9VerificationOrder)
                 for f in request.FILES.getlist('files'):
                     attachment = FileAttachment.objects.create(
                         content_type=ct,
