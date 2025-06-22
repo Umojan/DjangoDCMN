@@ -18,7 +18,6 @@ class ShippingOption(models.Model):
         verbose_name_plural = '⚙️ Shipping Options'
 
 
-# FBI Model
 class FbiServicePackage(models.Model):
     code = models.CharField(max_length=50, unique=True)
     label = models.CharField(max_length=255)
@@ -33,7 +32,6 @@ class FbiServicePackage(models.Model):
 
 
 # ---------- Files ------------
-# Universal model for attachments
 class FileAttachment(models.Model):
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
@@ -50,7 +48,6 @@ class FileAttachment(models.Model):
         verbose_name_plural = '⚙️ File Attachments'
 
 
-# FBI Model
 class FbiApostilleOrder(models.Model):
     name = models.CharField(max_length=255)
     email = models.EmailField()
@@ -94,7 +91,6 @@ class FbiPricingSettings(models.Model):
         verbose_name = 'FBI Apostille — Pricing Setting'
 
 
-# Tripe Seal Marriage
 class MarriageOrder(models.Model):
     # Step 1
     name = models.CharField(max_length=255)
@@ -150,7 +146,6 @@ class MarriagePricingSettings(models.Model):
         verbose_name_plural = "Triple Seal Marriage — Pricing Settings"
 
 
-# Embassy Legalization Order
 class EmbassyLegalizationOrder(models.Model):
     name = models.CharField(max_length=255)
     email = models.EmailField()
@@ -204,7 +199,6 @@ class TranslationOrder(models.Model):
         verbose_name_plural = 'Translation — Orders'
 
 
-# Apostille Order
 class ApostilleOrder(models.Model):
     name = models.CharField(max_length=255)
     email = models.EmailField()
@@ -228,3 +222,30 @@ class ApostilleOrder(models.Model):
     class Meta:
         verbose_name = 'Apostille — Order'
         verbose_name_plural = 'Apostille — Orders'
+
+
+class I9VerificationOrder(models.Model):
+    name = models.CharField(max_length=255)
+    email = models.EmailField()
+    phone = models.CharField(max_length=50)
+    address = models.TextField()
+    appointment_date = models.CharField()
+    appointment_time = models.CharField()
+    comments = models.TextField(blank=True, null=True)
+
+    zoho_synced = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    file_attachments = GenericRelation(
+        FileAttachment,
+        content_type_field='content_type',
+        object_id_field='object_id',
+        related_query_name='i9_verification_order'
+    )
+
+    def __str__(self):
+        return f"I-9 Verification Order #{self.id} by {self.name}"
+
+    class Meta:
+        verbose_name = "I-9 Verification — Order"
+        verbose_name_plural = "I-9 Verification — Orders"

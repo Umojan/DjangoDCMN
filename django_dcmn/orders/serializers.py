@@ -12,6 +12,7 @@ from .models import (
     EmbassyLegalizationOrder,
     TranslationOrder,
     ApostilleOrder,
+    I9VerificationOrder,
 )
 
 
@@ -97,3 +98,10 @@ class ApostilleOrderSerializer(serializers.ModelSerializer):
         model = ApostilleOrder
         fields = '__all__'
         read_only_fields = ('zoho_synced', 'created_at')
+
+# ====== I-9 ======
+class I9OrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = I9VerificationOrder
+        fields = '__all__'
+        read_only_fields = ('zoho_synced', 'created_at',)
