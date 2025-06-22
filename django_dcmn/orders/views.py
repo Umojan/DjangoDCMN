@@ -17,7 +17,7 @@ from .serializers import (
     FbiApostilleOrderSerializer,
     MarriageOrderSerializer,
     EmbassyLegalizationOrderSerializer,
-    ApostilleOrderSerializer
+    ApostilleOrderSerializer, I9OrderSerializer, TranslationOrderSerializer
 )
 from .models import (
     FbiApostilleOrder,
@@ -27,10 +27,12 @@ from .models import (
     MarriageOrder,
     MarriagePricingSettings,
     FileAttachment,
-    EmbassyLegalizationOrder
+    EmbassyLegalizationOrder, TranslationOrder
 )
 
 import stripe
+
+from datetime import datetime
 
 
 class CreateFbiOrderView(APIView):
@@ -92,30 +94,19 @@ class FbiOptionsView(APIView):
 
 
 class CreateMarriageOrderView(APIView):
-    """
-    Принимает POST-запрос с полями MarriageOrder + файлами (ключ 'files').
-    Сохраняет все поля из serializer, потом устанавливает total_price из MarriagePricingSettings
-    и создаёт FileAttachment для каждого пришедшего файла.
-    """
-
     def post(self, request, format=None):
-        # 1) Валидация основных полей (name, email, phone, address и любые дополнительные)
         serializer = MarriageOrderSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        # 2) Сохраняем заказ без цены и файлов
         marriage_order = MarriageOrder.objects.create(**serializer.validated_data)
 
-        # 3) Берём базовую цену из настроек (или 0.00, если записей нет)
         price_setting = MarriagePricingSettings.objects.first()
         base_price = price_setting.price if price_setting else 0.00
 
-        # 4) Сохраняем total_price
         marriage_order.total_price = base_price
         marriage_order.save()
 
-        # 5) Если во входящем запросе есть файлы, создаём FileAttachment
         file_urls = []
         if request.FILES:
             ct = ContentType.objects.get_for_model(MarriageOrder)
@@ -127,7 +118,6 @@ class CreateMarriageOrderView(APIView):
                 )
                 file_urls.append(request.build_absolute_uri(attachment.file.url))
 
-        # 6) Возвращаем ответ
         return Response({
             'message': 'Marriage order created',
             'order_id': marriage_order.id,
@@ -155,7 +145,6 @@ class CreateEmbassyOrderView(APIView):
                     file_urls.append(request.build_absolute_uri(attachment.file.url))
 
             # Send email to staff
-            from datetime import datetime
             today_str = datetime.utcnow().strftime("%Y-%m-%d")
             thread_id = f"<embassy-orders-thread-{today_str}@dcmobilenotary.com>"
 
@@ -205,7 +194,6 @@ class CreateApostilleOrderView(APIView):
             sync_order_to_zoho_task.delay(order.id, "apostille")
 
             # Send email to staff
-            from datetime import datetime
             today_str = datetime.utcnow().strftime("%Y-%m-%d")
             thread_id = f"<apostille-orders-thread-{today_str}@dcmobilenotary.com>"
 
@@ -246,11 +234,8 @@ class CreateApostilleOrderView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# === Translation Order View ===
 class CreateTranslationOrderView(APIView):
     def post(self, request, format=None):
-        from .models import TranslationOrder
-        from .serializers import TranslationOrderSerializer
         serializer = TranslationOrderSerializer(data=request.data)
         if serializer.is_valid():
             order = serializer.save()
@@ -269,7 +254,6 @@ class CreateTranslationOrderView(APIView):
                     file_urls.append(request.build_absolute_uri(attachment.file.url))
 
             # Send email to staff
-            from datetime import datetime
             today_str = datetime.utcnow().strftime("%Y-%m-%d")
             thread_id = f"<translation-orders-thread-{today_str}@dcmobilenotary.com>"
 
@@ -308,6 +292,69 @@ class CreateTranslationOrderView(APIView):
             }, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CreateI9OrderView(APIView):
+    def post(self, request, format=None):
+        serializer = I9OrderSerializer(data=request.data)
+        if serializer.is_valid():
+            order = serializer.save()
+            # sync_order_to_zoho_task.delay(order.id, "I-9")
+
+            file_urls = []
+            if request.FILES:
+                ct = ContentType.objects.get_for_model(EmbassyLegalizationOrder)
+                for f in request.FILES.getlist('files'):
+                    attachment = FileAttachment.objects.create(
+                        content_type=ct,
+                        object_id=order.id,
+                        file=f
+                    )
+                    file_urls.append(request.build_absolute_uri(attachment.file.url))
+
+            # Email to staff
+            today_str = datetime.utcnow().strftime("%Y-%m-%d")
+            thread_id = f"<i9-orders-thread-{today_str}@dcmobilenotary.com>"
+
+            file_links = ""
+            for f in order.file_attachments.all():
+                file_links += f"📎 {request.build_absolute_uri(f.file.url)}\n"
+
+            email_body = (
+                f"New I-9 Verification Order submitted! Order ID: {order.id}\n\n"
+                f"Name: {order.name}\n"
+                f"Email: {order.email}\n"
+                f"Phone: {order.phone}\n"
+                f"Address: {order.address}\n"
+                f"Date: {order.appointment_date}\n"
+                f"Time: {order.appointment_}\n\n"
+                f"Comments: \n{order.comments or 'None'}\n\n"
+
+                f"Files:\n{file_links if file_links else 'None'}"
+            )
+
+            email = EmailMessage(
+                subject=f"📄 New I-9 Verification Order — {today_str}",
+                body=email_body,
+                from_email=settings.EMAIL_HOST_USER,
+                to=settings.EMAIL_OFFICE_RECEIVER,
+                headers={
+                    "Message-ID": f"<i9-order-{order.id}@dcmobilenotary.com>",
+                    "In-Reply-To": thread_id,
+                    "References": thread_id,
+                }
+            )
+            email.send()
+
+            return Response({
+                'message': 'I-9 Verification order created',
+                'order_id': order.id
+            }, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
 
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
