@@ -327,7 +327,7 @@ class CreateI9OrderView(APIView):
                 f"Phone: {order.phone}\n"
                 f"Address: {order.address}\n"
                 f"Date: {order.appointment_date}\n"
-                f"Time: {order.appointment_}\n\n"
+                f"Time: {order.appointment_time}\n\n"
                 f"Comments: \n{order.comments or 'None'}\n\n"
 
                 f"Files:\n{file_links if file_links else 'None'}"
