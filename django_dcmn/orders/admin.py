@@ -68,8 +68,8 @@ class MarriagePricingSettingsAdmin(admin.ModelAdmin):
 
 @admin.register(MarriageOrder)
 class MarriageOrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'email', 'total_price', 'is_paid', 'created_at')
-    list_filter = ('is_paid', 'created_at')
+    list_display = ('id', 'name', 'email', 'total_price', 'is_paid', 'zoho_synced', 'created_at')
+    list_filter = ('zoho_synced', 'is_paid', 'created_at')
     search_fields = ('name', 'email', 'phone', 'address', 'husband_full_name', 'wife_full_name')
     inlines = [FileAttachmentInline]
 
