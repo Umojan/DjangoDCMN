@@ -299,7 +299,7 @@ class CreateI9OrderView(APIView):
         serializer = I9OrderSerializer(data=request.data)
         if serializer.is_valid():
             order = serializer.save()
-            # sync_order_to_zoho_task.delay(order.id, "I-9")
+            sync_order_to_zoho_task.delay(order.id, "I-9")
 
             file_urls = []
             if request.FILES:
@@ -508,6 +508,7 @@ def stripe_webhook(request):
                 order = MarriageOrder.objects.get(id=order_id)
                 if not order.is_paid:
                     order.is_paid = True
+                    sync_order_to_zoho_task.delay(order.id, "marriage")
                     order.save()
 
                     # Файлы (через универсальные FileAttachment)
