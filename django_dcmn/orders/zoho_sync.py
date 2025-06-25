@@ -232,7 +232,7 @@ def sync_marriage_order_to_zoho(order):
                 "Address": order.address,
                 "Type_of_Legalization": "Triple Seal",
                 "Stage": "Order Received",
-                "Payment_Status": "Deposit" if not order.is_paid else "Fully Paid",
+                "Payment_Status": "Deposit",
                 "Amount_Paid": str(order.total_price),
 
                 "Marriage_Info": marriage_info,
