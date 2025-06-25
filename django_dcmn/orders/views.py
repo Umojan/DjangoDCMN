@@ -299,7 +299,7 @@ class CreateI9OrderView(APIView):
         serializer = I9OrderSerializer(data=request.data)
         if serializer.is_valid():
             order = serializer.save()
-            # sync_order_to_zoho_task.delay(order.id, "I-9")
+            sync_order_to_zoho_task.delay(order.id, "I-9")
 
             file_urls = []
             if request.FILES:

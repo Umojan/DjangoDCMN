@@ -244,3 +244,26 @@ def sync_marriage_order_to_zoho(order):
     }
 
     return sync_order_to_zoho(order, zoho_module, data, attach_files=True)
+
+
+def sync_i9_order_to_zoho(order):
+    contact_id = get_or_create_contact_id(order.name, order.email, order.phone)
+    zoho_module = 'I_9_Verification'
+
+    data = {
+        "data": [
+            {
+                "Name": f"I9 Verification ID{order.id}",
+                "Client_Name": order.name,
+                "Client_Email": order.email,
+                "Client_Phone": order.phone,
+                "Address": order.address,
+                "Form_Date_Time": f'{order.appointment_date} - {order.appointment_time}',
+                "Stage": "Order Received",
+                "Client_Comments": order.comments or "",
+                "Client_Contact": {"id": contact_id},
+            }
+        ]
+    }
+
+    return sync_order_to_zoho(order, zoho_module, data, attach_files=True)
