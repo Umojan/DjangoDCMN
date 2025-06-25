@@ -113,6 +113,8 @@ class MarriageOrder(models.Model):
         help_text="Calculated total price for this marriage order"
     )
     is_paid = models.BooleanField(default=False)
+    zoho_synced = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     file_attachments = GenericRelation(
