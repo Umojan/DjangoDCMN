@@ -212,6 +212,16 @@ def sync_marriage_order_to_zoho(order):
     contact_id = get_or_create_contact_id(order.name, order.email, order.phone)
     zoho_module = 'Triple_Seal_Apostilles'
 
+    marriage_info = "- File Uploaded -"
+    if not order.file_attachments.exists():
+        marriage_info = (
+            f"Husband: {order.husband_full_name}\n"
+            f"Wife: {order.wife_full_name}\n"
+            f"Date of marriage: {order.marriage_date}\n"
+            f"Certificate Number: {order.marriage_number}\n"
+            f"Country of Use: {order.country}"
+        )
+
     data = {
         "data": [
             {
@@ -225,13 +235,7 @@ def sync_marriage_order_to_zoho(order):
                 "Payment_Status": "Deposit" if not order.is_paid else "Fully Paid",
                 "Amount_Paid": str(order.total_price),
 
-                "Marriage_Info": f"Husband: {order.husband_full_name}\n"
-                                 f"Wife: {order.wife_full_name}\n"
-                                 f"Date of marriage: {order.marriage_date}\n"
-                                 f"Certificate Number: {order.marriage_number}\n"
-                                 f"Country of Use: {order.country}"
-
-                                 or '- File Uploaded -',
+                "Marriage_Info": marriage_info,
 
                 "Client_Notes_Comments": order.comments or "",
                 "Client_Contact": {"id": contact_id},
