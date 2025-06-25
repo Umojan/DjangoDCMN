@@ -8,6 +8,53 @@ from .models import FbiApostilleOrder, EmbassyLegalizationOrder, TranslationOrde
 ZOHO_API_DOMAIN = 'https://www.zohoapis.com'
 
 
+def get_or_create_contact_id(name, email, phone):
+    access_token = get_access_token()
+    headers = {
+        "Authorization": f"Zoho-oauthtoken {access_token}",
+        "Content-Type": "application/json"
+    }
+
+    search_url = f"{ZOHO_API_DOMAIN}/crm/v2/Contacts/search?email={email}"
+    resp = requests.get(search_url, headers=headers)
+    if resp.status_code == 204:
+        contact_data = {}
+    else:
+        try:
+            contact_data = resp.json()
+        except Exception as e:
+            print("❌ Failed to parse Zoho JSON response:", e)
+            return None
+
+    if 'data' in contact_data and len(contact_data['data']) > 0:
+        return contact_data['data'][0]['id']
+    else:
+        # Create a new contact
+        create_contact_url = f"{ZOHO_API_DOMAIN}/crm/v2/Contacts"
+        payload = {
+            "data": [{
+                "Last_Name": name,
+                "Email": email,
+                "Phone": phone
+            }]
+        }
+        resp = requests.post(create_contact_url, headers=headers, json=payload)
+        try:
+            created_data = resp.json()
+            if 'data' in created_data:
+                return created_data['data'][0]['details']['id']
+            elif 'data' in created_data and 'details' in created_data['data'][0]:
+                return created_data['data'][0]['details']['id']
+            elif 'code' in created_data['data'][0] and created_data['data'][0]['code'] == 'DUPLICATE_DATA':
+                return created_data['data'][0]['details']['id']
+            else:
+                print("❌ Error creating contact:", created_data)
+                return None
+        except Exception as e:
+            print("❌ Exception while creating contact:", e)
+            return None
+
+
 def get_access_token(force_refresh=False):
     token = cache.get("zoho_access_token")
     if token and not force_refresh:
@@ -69,6 +116,7 @@ def sync_order_to_zoho(order, module_name, data_payload, attach_files=True):
 
 
 def sync_fbi_order_to_zoho(order: FbiApostilleOrder):
+    contact_id = get_or_create_contact_id(order.name, order.email, order.phone)
     zoho_module = 'Deals'
     data = {
         "data": [
@@ -88,6 +136,7 @@ def sync_fbi_order_to_zoho(order: FbiApostilleOrder):
                 "Status": "Order Received",
                 "Payment_Status": "Fully Paid" if order.is_paid else "Not Paid",
                 "Submission_Date": order.created_at.date().isoformat(),
+                "Client_Contact": {"id": contact_id},
             }
         ]
     }
