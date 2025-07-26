@@ -251,3 +251,24 @@ class I9VerificationOrder(models.Model):
     class Meta:
         verbose_name = "I-9 Verification — Order"
         verbose_name_plural = "I-9 Verification — Orders"
+
+
+class QuoteRequest(models.Model):
+    name = models.CharField(max_length=255)
+    email = models.EmailField()
+    phone = models.CharField(max_length=50)
+    appointment_date = models.CharField(max_length=50)
+    appointment_time = models.CharField(max_length=50)
+    services = models.TextField(help_text="Comma-separated list of selected services")
+    address = models.TextField(blank=True, null=True, help_text="Client address, if applicable")
+    comments = models.TextField(blank=True, null=True)
+
+    zoho_synced = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Quote Request #{self.id} by {self.name}"
+
+    class Meta:
+        verbose_name = 'Quote — Request'
+        verbose_name_plural = 'Quote — Requests'

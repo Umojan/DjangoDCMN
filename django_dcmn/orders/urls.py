@@ -9,6 +9,7 @@ from .views import (
     CreateStripeSessionView,
     CreateApostilleOrderView,
     CreateI9OrderView,
+    CreateQuoteRequestView,
 
     stripe_webhook,
     test_email,
@@ -23,6 +24,7 @@ urlpatterns = [
     path('translation/create-order/', CreateTranslationOrderView.as_view(), name='create-translation-order'),
     path('apostille/create-order/', CreateApostilleOrderView.as_view(), name='create-apostille-order'),
     path('i9/create-order/', CreateI9OrderView.as_view(), name='create-i9-order'),
+    path('quote/create-order/', CreateQuoteRequestView.as_view(), name='create-quote-request'),
 
     path('fbi/options/', FbiOptionsView.as_view(), name='fbi_options'),
     path("create-stripe-session/", CreateStripeSessionView.as_view(), name="create_stripe_session"),
