@@ -17,7 +17,10 @@ from .serializers import (
     FbiApostilleOrderSerializer,
     MarriageOrderSerializer,
     EmbassyLegalizationOrderSerializer,
-    ApostilleOrderSerializer, I9OrderSerializer, TranslationOrderSerializer
+    ApostilleOrderSerializer,
+    I9OrderSerializer,
+    TranslationOrderSerializer,
+    QuoteRequestSerializer
 )
 from .models import (
     FbiApostilleOrder,
@@ -27,7 +30,9 @@ from .models import (
     MarriageOrder,
     MarriagePricingSettings,
     FileAttachment,
-    EmbassyLegalizationOrder, TranslationOrder, I9VerificationOrder
+    EmbassyLegalizationOrder,
+    TranslationOrder,
+    I9VerificationOrder
 )
 
 import stripe
@@ -294,6 +299,51 @@ class CreateTranslationOrderView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class CreateQuoteRequestView(APIView):
+    def post(self, request, format=None):
+        serializer = QuoteRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            order = serializer.save()
+            sync_order_to_zoho_task.delay(order.id, "quote")
+
+
+            # Send email to staff
+            today_str = datetime.utcnow().strftime("%Y-%m-%d")
+            thread_id = f"<quote-request-thread-{today_str}@dcmobilenotary.com>"
+
+            email_body = (
+                f"New Quote Request submitted! Request ID: {order.id}\n\n"
+                f"Name: {order.name}\n"
+                f"Email: {order.email}\n"
+                f"Phone: {order.phone}\n"
+                f"Date: {order.appointment_date}, Time: {order.appointment_time}\n"
+                f"Address: {order.address}\n"
+                f"Number of documents: {order.number}\n"
+                f"Services: {order.services}\n\n"
+                f"Message: \n{order.comments}\n"
+            )
+
+            email = EmailMessage(
+                subject=f"❓ New Quote Request — {today_str}",
+                body=email_body,
+                from_email=settings.EMAIL_HOST_USER,
+                to=settings.EMAIL_OFFICE_RECEIVER,
+                headers={
+                    "Message-ID": f"<quote-request-{order.id}@dcmobilenotary.com>",
+                    "In-Reply-To": thread_id,
+                    "References": thread_id,
+                }
+            )
+            email.send()
+
+            return Response({
+                'message': 'Quote request created',
+                'order_id': order.id,
+            }, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class CreateI9OrderView(APIView):
     def post(self, request, format=None):
         serializer = I9OrderSerializer(data=request.data)
@@ -352,9 +402,6 @@ class CreateI9OrderView(APIView):
             }, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-# TO-DO: I-9 Verification, Real Estate  |  ZOHO sinc Triple Seal Marriage
 
 
 stripe.api_key = settings.STRIPE_SECRET_KEY

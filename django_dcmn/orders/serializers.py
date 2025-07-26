@@ -13,6 +13,7 @@ from .models import (
     TranslationOrder,
     ApostilleOrder,
     I9VerificationOrder,
+    QuoteRequest,
 )
 
 
@@ -66,7 +67,6 @@ class MarriagePricingSettingsSerializer(serializers.ModelSerializer):
 class MarriageOrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = MarriageOrder
-        # Все поля, кроме служебных, для записи данных
         fields = [
             'id',
             'name', 'email', 'phone', 'address',
@@ -103,5 +103,12 @@ class ApostilleOrderSerializer(serializers.ModelSerializer):
 class I9OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = I9VerificationOrder
+        fields = '__all__'
+        read_only_fields = ('zoho_synced', 'created_at',)
+
+# ====== Order ======
+class QuoteRequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = QuoteRequest
         fields = '__all__'
         read_only_fields = ('zoho_synced', 'created_at',)

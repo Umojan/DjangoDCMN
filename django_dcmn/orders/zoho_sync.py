@@ -267,3 +267,30 @@ def sync_i9_order_to_zoho(order):
     }
 
     return sync_order_to_zoho(order, zoho_module, data, attach_files=True)
+
+
+def sync_quote_request_to_zoho(order):
+    contact_id = get_or_create_contact_id(order.name, order.email, order.phone)
+    zoho_module = 'Get_A_Quote_Leads'
+
+    data = {
+        "data": [
+            {
+                "Name": f"Quote ID{order.id}",
+                "Client_Name": order.name,
+                "Client_Email": order.email,
+                "Client_Phone": order.phone,
+                "Number_Of_Documents": str(order.number),
+                "Client_Address_Location": order.address,
+                "Date_Time": order.appointment_date + ' - ' + order.appointment_time,
+
+                'GET_A_QUOTE_LEADS': order.services,
+
+                "Client_Comments": order.comments or "",
+
+                "Name_of_Client": {"id": contact_id}
+            }
+        ]
+    }
+
+    return sync_order_to_zoho(order, zoho_module, data, attach_files=False)

@@ -17,6 +17,7 @@ from .models import (
     TranslationOrder,
     ApostilleOrder,
     I9VerificationOrder,
+    QuoteRequest,
 )
 
 
@@ -108,3 +109,10 @@ class I9VerificationOrderAdmin(admin.ModelAdmin):
     list_filter = ('zoho_synced', 'created_at')
     search_fields = ('name', 'email', 'phone', 'address')
     inlines = [FileAttachmentInline]
+
+# ====== QuoteRequest ======
+@admin.register(QuoteRequest)
+class QuoteRequestOrderAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'email', 'appointment_date', 'appointment_time', 'zoho_synced', 'created_at')
+    list_filter = ('zoho_synced', 'created_at')
+    search_fields = ('name', 'email', 'phone', 'address')
