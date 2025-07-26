@@ -8,7 +8,7 @@ from .zoho_sync import (
     sync_translation_order_to_zoho,
     sync_apostille_order_to_zoho,
     sync_marriage_order_to_zoho,
-    sync_i9_order_to_zoho
+    sync_i9_order_to_zoho, sync_quote_request_to_zoho
 )
 
 

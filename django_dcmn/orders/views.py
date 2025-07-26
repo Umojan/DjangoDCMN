@@ -304,7 +304,7 @@ class CreateQuoteRequestView(APIView):
         serializer = QuoteRequestSerializer(data=request.data)
         if serializer.is_valid():
             order = serializer.save()
-            # sync_order_to_zoho_task.delay(order.id, "quote")
+            sync_order_to_zoho_task.delay(order.id, "quote")
 
 
             # Send email to staff

@@ -261,7 +261,7 @@ class QuoteRequest(models.Model):
     number = models.CharField(max_length=50, default=1)
     appointment_date = models.CharField(max_length=50)
     appointment_time = models.CharField(max_length=50)
-    services = models.TextField(help_text="Comma-separated list of selected services")
+    services = models.TextField(help_text="selected service")
     comments = models.TextField(blank=True, null=True)
 
     zoho_synced = models.BooleanField(default=False)
