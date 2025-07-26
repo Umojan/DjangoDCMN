@@ -293,4 +293,4 @@ def sync_quote_request_to_zoho(order):
         ]
     }
 
-    return sync_order_to_zoho(order, zoho_module, data, attach_files=True)
+    return sync_order_to_zoho(order, zoho_module, data, attach_files=False)
