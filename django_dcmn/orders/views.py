@@ -318,6 +318,7 @@ class CreateQuoteRequestView(APIView):
                 f"Phone: {order.phone}\n"
                 f"Date: {order.appointment_date}, Time: {order.appointment_time}\n"
                 f"Address: {order.address}\n"
+                f"Number of documents: {order.number}\n"
                 f"Services: {order.services}\n\n"
                 f"Message: \n{order.comments}\n"
             )

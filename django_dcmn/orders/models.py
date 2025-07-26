@@ -257,10 +257,11 @@ class QuoteRequest(models.Model):
     name = models.CharField(max_length=255)
     email = models.EmailField()
     phone = models.CharField(max_length=50)
+    address = models.TextField(blank=True, null=True, help_text="Client address, if applicable")
+    number = models.CharField(max_length=50, default=1)
     appointment_date = models.CharField(max_length=50)
     appointment_time = models.CharField(max_length=50)
     services = models.TextField(help_text="Comma-separated list of selected services")
-    address = models.TextField(blank=True, null=True, help_text="Client address, if applicable")
     comments = models.TextField(blank=True, null=True)
 
     zoho_synced = models.BooleanField(default=False)
