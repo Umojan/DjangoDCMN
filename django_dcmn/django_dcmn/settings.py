@@ -64,6 +64,9 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='').split(',')
 CORS_ALLOWED_ORIGINS = [
     "https://dcmobilenotary.webflow.io",
     "https://www.dcmobilenotary.com",
+    "https://api.dcmobilenotary.net",
+    "https://django-test-production-0ded.up.railway.app",
+
 ]
 
 # Application definition
