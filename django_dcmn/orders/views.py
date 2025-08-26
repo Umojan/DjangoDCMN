@@ -640,28 +640,62 @@ def stripe_webhook(request):
     return HttpResponse(status=200)
 
 
+
+
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from django.core.mail import EmailMessage, get_connection
+from django.conf import settings
+import traceback, io, contextlib
+
+@csrf_exempt
 def test_email(request):
+    """
+    Диагностирует SMTP: открывает соединение с таймаутом,
+    включает smtplib debug и возвращает успех/ошибку в JSON.
+    """
+    smtp_debug = io.StringIO()
     try:
-        send_mail(
-            subject="🚀 Django Email Test",
-            message="If you're reading this, your email setup works perfectly!",
-            from_email="support@dcmobilenotary.net",
-            recipient_list=["support@dcmobilenotary.com"],
-            fail_silently=False,
-        )
-        return JsonResponse({"status": "✅ Email sent!"})
+        # важен таймаут — иначе зависнет на 30с и вернёт 500
+        conn = get_connection(timeout=10, fail_silently=False)
+
+        # откроем соединение и включим подробный дебаг в наш буфер
+        with contextlib.redirect_stderr(smtp_debug):
+            conn.open()  # поднимет socket/SSL/STARTTLS
+            if getattr(conn, "connection", None):
+                conn.connection.set_debuglevel(1)  # smtplib пишет в stderr
+
+            email = EmailMessage(
+                subject="🚀 Django Email Test",
+                body="If you're reading this, your email setup works perfectly!",
+                from_email=getattr(settings, "DEFAULT_FROM_EMAIL", settings.EMAIL_HOST_USER),
+                to=["support@dcmobilenotary.com"],
+                connection=conn,
+            )
+            email.send(fail_silently=False)
+
+        return JsonResponse({
+            "status": "✅ Email sent!",
+            "smtp_debug": smtp_debug.getvalue()[:4000],  # чтобы не раздувать ответ
+        })
+
     except Exception as e:
-        # лог + полный traceback
-        error_message = f"{e.__class__.__name__}: {str(e)}"
-        tb = traceback.format_exc()
-        return JsonResponse(
-            {
-                "status": "❌ Email failed",
-                "error": error_message,
-                "traceback": tb,
+        return JsonResponse({
+            "status": "❌ Email failed",
+            "error_type": e.__class__.__name__,
+            "error": str(e),
+            "stack": traceback.format_exc(),
+            "smtp_debug": smtp_debug.getvalue()[:4000],
+            # полезный минимум параметров (без секретов)
+            "smtp_settings": {
+                "host": getattr(settings, "EMAIL_HOST", None),
+                "port": getattr(settings, "EMAIL_PORT", None),
+                "use_tls": getattr(settings, "EMAIL_USE_TLS", None),
+                "use_ssl": getattr(settings, "EMAIL_USE_SSL", None),
+                "timeout": getattr(settings, "EMAIL_TIMEOUT", 10),
+                "from_email": getattr(settings, "DEFAULT_FROM_EMAIL", settings.EMAIL_HOST_USER),
             },
-            status=500
-        )
+        }, status=500)
 
 
 def zoho_callback(request):
