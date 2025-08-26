@@ -1,4 +1,6 @@
 # orders/views.py
+import traceback
+
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.shortcuts import get_object_or_404
@@ -334,12 +336,8 @@ class CreateQuoteRequestView(APIView):
                     "References": thread_id,
                 }
             )
-            import time, logging
-            start = time.time()
-            logging.info("save %.2fs", time.time() - start)
-            start = time.time()
+
             email.send()
-            logging.info("email %.2fs", time.time() - start)
 
             return Response({
                 'message': 'Quote request created',
@@ -643,14 +641,27 @@ def stripe_webhook(request):
 
 
 def test_email(request):
-    send_mail(
-        subject="🚀 Django Email Test",
-        message="If you're reading this, your email setup works perfectly!",
-        from_email="support@dcmobilenotary.net",
-        recipient_list=["support@dcmobilenotary.com"],
-        fail_silently=False,
-    )
-    return JsonResponse({"status": "✅ Email sent!"})
+    try:
+        send_mail(
+            subject="🚀 Django Email Test",
+            message="If you're reading this, your email setup works perfectly!",
+            from_email="support@dcmobilenotary.net",
+            recipient_list=["support@dcmobilenotary.com"],
+            fail_silently=False,
+        )
+        return JsonResponse({"status": "✅ Email sent!"})
+    except Exception as e:
+        # лог + полный traceback
+        error_message = f"{e.__class__.__name__}: {str(e)}"
+        tb = traceback.format_exc()
+        return JsonResponse(
+            {
+                "status": "❌ Email failed",
+                "error": error_message,
+                "traceback": tb,
+            },
+            status=500
+        )
 
 
 def zoho_callback(request):
