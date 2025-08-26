@@ -36,6 +36,7 @@ from .models import (
 )
 
 import stripe
+import logging
 
 from datetime import datetime
 
@@ -136,7 +137,10 @@ class CreateEmbassyOrderView(APIView):
         serializer = EmbassyLegalizationOrderSerializer(data=request.data)
         if serializer.is_valid():
             order = serializer.save()
-            sync_order_to_zoho_task.delay(order.id, "embassy")
+            try:
+                sync_order_to_zoho_task.delay(order.id, "embassy")
+            except Exception:
+                logging.exception("Failed to enqueue Zoho sync task for embassy order %s", order.id)
 
             file_urls = []
             if request.FILES:
@@ -180,7 +184,10 @@ class CreateEmbassyOrderView(APIView):
                     "References": thread_id,
                 }
             )
-            email.send()
+            try:
+                email.send()
+            except Exception:
+                logging.exception("Failed to send embassy order email for %s", order.id)
 
             return Response({
                 'message': 'Embassy legalization order created',
@@ -196,7 +203,10 @@ class CreateApostilleOrderView(APIView):
         serializer = ApostilleOrderSerializer(data=request.data)
         if serializer.is_valid():
             order = serializer.save()
-            sync_order_to_zoho_task.delay(order.id, "apostille")
+            try:
+                sync_order_to_zoho_task.delay(order.id, "apostille")
+            except Exception:
+                logging.exception("Failed to enqueue Zoho sync task for apostille order %s", order.id)
 
             # Send email to staff
             today_str = datetime.utcnow().strftime("%Y-%m-%d")
@@ -229,7 +239,10 @@ class CreateApostilleOrderView(APIView):
                     "References": thread_id,
                 }
             )
-            email.send()
+            try:
+                email.send()
+            except Exception:
+                logging.exception("Failed to send apostille order email for %s", order.id)
 
             return Response({
                 'message': 'Apostille order created',
@@ -244,7 +257,10 @@ class CreateTranslationOrderView(APIView):
         serializer = TranslationOrderSerializer(data=request.data)
         if serializer.is_valid():
             order = serializer.save()
-            sync_order_to_zoho_task.delay(order.id, "translation")
+            try:
+                sync_order_to_zoho_task.delay(order.id, "translation")
+            except Exception:
+                logging.exception("Failed to enqueue Zoho sync task for translation order %s", order.id)
 
             # Save uploaded files
             file_urls = []
@@ -288,7 +304,10 @@ class CreateTranslationOrderView(APIView):
                     "References": thread_id,
                 }
             )
-            email.send()
+            try:
+                email.send()
+            except Exception:
+                logging.exception("Failed to send translation order email for %s", order.id)
 
             return Response({
                 'message': 'Translation order created',
@@ -304,7 +323,10 @@ class CreateQuoteRequestView(APIView):
         serializer = QuoteRequestSerializer(data=request.data)
         if serializer.is_valid():
             order = serializer.save()
-            sync_order_to_zoho_task.delay(order.id, "quote")
+            try:
+                sync_order_to_zoho_task.delay(order.id, "quote")
+            except Exception:
+                logging.exception("Failed to enqueue Zoho sync task for quote request %s", order.id)
 
 
             # Send email to staff
@@ -334,7 +356,10 @@ class CreateQuoteRequestView(APIView):
                     "References": thread_id,
                 }
             )
-            email.send()
+            try:
+                email.send()
+            except Exception:
+                logging.exception("Failed to send quote request email for %s", order.id)
 
             return Response({
                 'message': 'Quote request created',
@@ -349,7 +374,10 @@ class CreateI9OrderView(APIView):
         serializer = I9OrderSerializer(data=request.data)
         if serializer.is_valid():
             order = serializer.save()
-            sync_order_to_zoho_task.delay(order.id, "I-9")
+            try:
+                sync_order_to_zoho_task.delay(order.id, "I-9")
+            except Exception:
+                logging.exception("Failed to enqueue Zoho sync task for I-9 order %s", order.id)
 
             file_urls = []
             if request.FILES:
@@ -394,7 +422,10 @@ class CreateI9OrderView(APIView):
                     "References": thread_id,
                 }
             )
-            email.send()
+            try:
+                email.send()
+            except Exception:
+                logging.exception("Failed to send I-9 order email for %s", order.id)
 
             return Response({
                 'message': 'I-9 Verification order created',
