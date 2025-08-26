@@ -173,18 +173,18 @@ class CreateEmbassyOrderView(APIView):
                 f"Files:\n{file_links or 'None'}"
             )
 
-            email = EmailMessage(
-                subject=f"📄 New Embassy Legalization Order — {today_str}",
-                body=email_body,
-                from_email=settings.EMAIL_HOST_USER,
-                to=settings.EMAIL_OFFICE_RECEIVER,
-                headers={
-                    "Message-ID": f"<embassy-order-{order.id}@dcmobilenotary.com>",
-                    "In-Reply-To": thread_id,
-                    "References": thread_id,
-                }
-            )
             try:
+                email = EmailMessage(
+                    subject=f"📄 New Embassy Legalization Order — {today_str}",
+                    body=email_body,
+                    from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "support@dcmobilenotary.net"),
+                    to=settings.EMAIL_OFFICE_RECEIVER,
+                    headers={
+                        "Message-ID": f"<embassy-order-{order.id}@dcmobilenotary.com>",
+                        "In-Reply-To": thread_id,
+                        "References": thread_id,
+                    }
+                )
                 email.send()
             except Exception:
                 logging.exception("Failed to send embassy order email for %s", order.id)
@@ -228,18 +228,18 @@ class CreateApostilleOrderView(APIView):
             if order.comments:
                 email_body += f"Comments: {order.comments}"
 
-            email = EmailMessage(
-                subject=f"📄 New Apostille Order — {today_str}",
-                body=email_body,
-                from_email=settings.EMAIL_HOST_USER,
-                to=settings.EMAIL_OFFICE_RECEIVER,
-                headers={
-                    "Message-ID": f"<apostille-order-{order.id}@dcmobilenotary.com>",
-                    "In-Reply-To": thread_id,
-                    "References": thread_id,
-                }
-            )
             try:
+                email = EmailMessage(
+                    subject=f"📄 New Apostille Order — {today_str}",
+                    body=email_body,
+                    from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "support@dcmobilenotary.net"),
+                    to=settings.EMAIL_OFFICE_RECEIVER,
+                    headers={
+                        "Message-ID": f"<apostille-order-{order.id}@dcmobilenotary.com>",
+                        "In-Reply-To": thread_id,
+                        "References": thread_id,
+                    }
+                )
                 email.send()
             except Exception:
                 logging.exception("Failed to send apostille order email for %s", order.id)
@@ -293,18 +293,18 @@ class CreateTranslationOrderView(APIView):
                 f"Files:\n{file_links if file_links else 'None'}"
             )
 
-            email = EmailMessage(
-                subject=f"📄 New Translation Order — {today_str}",
-                body=email_body,
-                from_email=settings.EMAIL_HOST_USER,
-                to=settings.EMAIL_OFFICE_RECEIVER,
-                headers={
-                    "Message-ID": f"<translation-order-{order.id}@dcmobilenotary.com>",
-                    "In-Reply-To": thread_id,
-                    "References": thread_id,
-                }
-            )
             try:
+                email = EmailMessage(
+                    subject=f"📄 New Translation Order — {today_str}",
+                    body=email_body,
+                    from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "support@dcmobilenotary.net"),
+                    to=settings.EMAIL_OFFICE_RECEIVER,
+                    headers={
+                        "Message-ID": f"<translation-order-{order.id}@dcmobilenotary.com>",
+                        "In-Reply-To": thread_id,
+                        "References": thread_id,
+                    }
+                )
                 email.send()
             except Exception:
                 logging.exception("Failed to send translation order email for %s", order.id)
@@ -345,18 +345,18 @@ class CreateQuoteRequestView(APIView):
                 f"Message: \n{order.comments}\n"
             )
 
-            email = EmailMessage(
-                subject=f"❓ New Quote Request — {today_str}",
-                body=email_body,
-                from_email=settings.EMAIL_HOST_USER,
-                to=settings.EMAIL_OFFICE_RECEIVER,
-                headers={
-                    "Message-ID": f"<quote-request-{order.id}@dcmobilenotary.com>",
-                    "In-Reply-To": thread_id,
-                    "References": thread_id,
-                }
-            )
             try:
+                email = EmailMessage(
+                    subject=f"❓ New Quote Request — {today_str}",
+                    body=email_body,
+                    from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "support@dcmobilenotary.net"),
+                    to=settings.EMAIL_OFFICE_RECEIVER,
+                    headers={
+                        "Message-ID": f"<quote-request-{order.id}@dcmobilenotary.com>",
+                        "In-Reply-To": thread_id,
+                        "References": thread_id,
+                    }
+                )
                 email.send()
             except Exception:
                 logging.exception("Failed to send quote request email for %s", order.id)
@@ -411,18 +411,18 @@ class CreateI9OrderView(APIView):
                 f"Files:\n{file_links if file_links else 'None'}"
             )
 
-            email = EmailMessage(
-                subject=f"📄 New I-9 Verification Order — {today_str}",
-                body=email_body,
-                from_email=settings.EMAIL_HOST_USER,
-                to=settings.EMAIL_OFFICE_RECEIVER,
-                headers={
-                    "Message-ID": f"<i9-order-{order.id}@dcmobilenotary.com>",
-                    "In-Reply-To": thread_id,
-                    "References": thread_id,
-                }
-            )
             try:
+                email = EmailMessage(
+                    subject=f"📄 New I-9 Verification Order — {today_str}",
+                    body=email_body,
+                    from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "support@dcmobilenotary.net"),
+                    to=settings.EMAIL_OFFICE_RECEIVER,
+                    headers={
+                        "Message-ID": f"<i9-order-{order.id}@dcmobilenotary.com>",
+                        "In-Reply-To": thread_id,
+                        "References": thread_id,
+                    }
+                )
                 email.send()
             except Exception:
                 logging.exception("Failed to send I-9 order email for %s", order.id)
@@ -542,18 +542,21 @@ def stripe_webhook(request):
                         f"Paid: ✅\n\n"
                         f"Files:\n{file_links if file_links else 'None'}"
                     )
-                    email = EmailMessage(
-                        subject=f"✅ New Paid FBI Apostille Order — {today_str}",
-                        body=email_body,
-                        from_email=settings.EMAIL_HOST_USER,
-                        to=settings.EMAIL_OFFICE_RECEIVER,
-                        headers={
-                            "Message-ID": f"<order-{order.id}@dcmobilenotary.com>",
-                            "In-Reply-To": thread_id,
-                            "References": thread_id,
-                        }
-                    )
-                    email.send()
+                    try:
+                        email = EmailMessage(
+                            subject=f"✅ New Paid FBI Apostille Order — {today_str}",
+                            body=email_body,
+                            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "support@dcmobilenotary.net"),
+                            to=settings.EMAIL_OFFICE_RECEIVER,
+                            headers={
+                                "Message-ID": f"<order-{order.id}@dcmobilenotary.com>",
+                                "In-Reply-To": thread_id,
+                                "References": thread_id,
+                            }
+                        )
+                        email.send()
+                    except Exception:
+                        logging.exception("Failed to send paid FBI order email for %s", order.id)
 
                     # Клиенту HTML-письмо (пример)
                     file_links_html = "".join([
@@ -572,7 +575,7 @@ def stripe_webhook(request):
                         send_mail(
                             subject="✅ Your Order Has Been Paid",
                             message="Order Has Been Paid",
-                            from_email=settings.EMAIL_HOST_USER,
+                            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "support@dcmobilenotary.net"),
                             recipient_list=[order.email],
                             html_message=html_content,
                             fail_silently=False,
@@ -620,18 +623,21 @@ def stripe_webhook(request):
                         f"Deposit: ${order.total_price}\n"
                         f"Paid: ✅\n\n"
                     )
-                    email = EmailMessage(
-                        subject=f"✅ New Paid Marriage Certificate Order — {today_str}",
-                        body=email_body,
-                        from_email=settings.EMAIL_HOST_USER,
-                        to=settings.EMAIL_OFFICE_RECEIVER,
-                        headers={
-                            "Message-ID": f"<marriage-order-{order.id}@dcmobilenotary.com>",
-                            "In-Reply-To": thread_id,
-                            "References": thread_id,
-                        }
-                    )
-                    email.send()
+                    try:
+                        email = EmailMessage(
+                            subject=f"✅ New Paid Marriage Certificate Order — {today_str}",
+                            body=email_body,
+                            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "support@dcmobilenotary.net"),
+                            to=settings.EMAIL_OFFICE_RECEIVER,
+                            headers={
+                                "Message-ID": f"<marriage-order-{order.id}@dcmobilenotary.com>",
+                                "In-Reply-To": thread_id,
+                                "References": thread_id,
+                            }
+                        )
+                        email.send()
+                    except Exception:
+                        logging.exception("Failed to send paid marriage order email for %s", order.id)
 
                     # Клиенту HTML-письмо (аналогично, если есть темплейт)
                     file_links_html = "".join([
@@ -650,7 +656,7 @@ def stripe_webhook(request):
                         send_mail(
                             subject="✅ Your Marriage Certificate Order Has Been Paid",
                             message="Order Has Been Paid",
-                            from_email=settings.EMAIL_HOST_USER,
+                            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "support@dcmobilenotary.net"),
                             recipient_list=[order.email],
                             html_message=html_content,
                             fail_silently=False,
