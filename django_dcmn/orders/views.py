@@ -334,7 +334,12 @@ class CreateQuoteRequestView(APIView):
                     "References": thread_id,
                 }
             )
+            import time, logging
+            start = time.time()
+            logging.info("save %.2fs", time.time() - start)
+            start = time.time()
             email.send()
+            logging.info("email %.2fs", time.time() - start)
 
             return Response({
                 'message': 'Quote request created',
