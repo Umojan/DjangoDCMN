@@ -674,7 +674,7 @@ def test_email(request):
             subject="🚀 Django Email Test via Resend",
             message="If you see this, Resend is working perfectly!",
             from_email="support@dcmobilenotary.net",
-            recipient_list=["твой_личный_email@gmail.com"],
+            recipient_list=["support@dcmobilenotary.com"],
             fail_silently=False,
         )
         return JsonResponse({"status": "✅ Email sent!"})
