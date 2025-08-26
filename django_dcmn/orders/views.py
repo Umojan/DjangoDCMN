@@ -669,14 +669,17 @@ def stripe_webhook(request):
 
 
 def test_email(request):
-    send_mail(
-        subject="🚀 Django Email Test",
-        message="If you're reading this, your email setup works perfectly!",
-        from_email="support@dcmobilenotary.net",
-        recipient_list=["support@dcmobilenotary.com"],
-        fail_silently=False,
-    )
-    return JsonResponse({"status": "✅ Email sent!"})
+    try:
+        send_mail(
+            subject="🚀 Django Email Test via Resend",
+            message="If you see this, Resend is working perfectly!",
+            from_email="support@dcmobilenotary.net",
+            recipient_list=["твой_личный_email@gmail.com"],
+            fail_silently=False,
+        )
+        return JsonResponse({"status": "✅ Email sent!"})
+    except Exception as e:
+        return JsonResponse({"status": "❌ Failed", "error": str(e)}, status=500)
 
 
 def zoho_callback(request):

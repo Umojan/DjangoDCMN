@@ -32,17 +32,24 @@ STRIPE_CANCEL_URL = "https://www.dcmobilenotary.com/cancel-page"
 
 
 # ====== EMAIL ======
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.hostinger.com"
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_USE_SSL = False
+EMAIL_BACKEND = "anymail.backends.resend.EmailBackend"
+ANYMAIL = {
+    "RESEND_API_KEY": os.getenv("RESEND_API_KEY"),
+}
 
-EMAIL_HOST_USER = config("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = "support@dcmobilenotary.net"
+EMAIL_TIMEOUT = 10
 
-EMAIL_OFFICE_RECEIVER = os.getenv('EMAIL_OFFICE_RECEIVER', '').split(',')
-EMAIL_CLIENT_FROM = config("EMAIL_CLIENT_FROM")
+# EMAIL_HOST = "smtp.hostinger.com"
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_USE_SSL = False
+#
+# EMAIL_HOST_USER = config("EMAIL_HOST_USER")
+# EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
+#
+# EMAIL_OFFICE_RECEIVER = os.getenv('EMAIL_OFFICE_RECEIVER', '').split(',')
+# EMAIL_CLIENT_FROM = config("EMAIL_CLIENT_FROM")
 
 
 # ====== ZOHO CRM ======
@@ -78,6 +85,8 @@ INSTALLED_APPS = [
 
     'corsheaders',
     'rest_framework',
+
+    'anymail',
 
     'orders',
 ]
