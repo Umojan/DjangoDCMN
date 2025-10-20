@@ -14,7 +14,11 @@ from .models import (
     ApostilleOrder,
     I9VerificationOrder,
     QuoteRequest,
+    Track,
 )
+
+from .constants import STAGE_DEFS
+from .utils import service_label
 
 
 # ====== FILES ======
@@ -112,3 +116,48 @@ class QuoteRequestSerializer(serializers.ModelSerializer):
         model = QuoteRequest
         fields = '__all__'
         read_only_fields = ('zoho_synced', 'created_at',)
+
+
+# ====== TRACKING ======
+class TrackSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Track
+        fields = ['tid', 'name', 'email', 'service', 'current_stage', 'comment', 'created_at', 'updated_at']
+
+
+class PublicTrackSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    service = serializers.CharField()
+    last_update = serializers.CharField()
+    steps = serializers.DictField(child=serializers.BooleanField())
+    current_step_name = serializers.CharField(allow_blank=True)
+    current_step_desc = serializers.CharField(allow_blank=True)
+    comment = serializers.CharField(allow_blank=True)
+
+    @staticmethod
+    def build_steps(track):
+        defs = STAGE_DEFS.get(track.service, [])
+        codes = [d['code'] for d in defs]
+        try:
+            current_idx = codes.index(track.current_stage) if track.current_stage in codes else -1
+        except ValueError:
+            current_idx = -1
+        steps = {}
+        for i, d in enumerate(defs):
+            steps[d['name']] = (i <= current_idx and current_idx >= 0)
+        current_name = defs[current_idx]['name'] if 0 <= current_idx < len(defs) else ''
+        current_desc = defs[current_idx]['desc'] if 0 <= current_idx < len(defs) else ''
+        return steps, current_name, current_desc
+
+    @classmethod
+    def from_track(cls, track):
+        steps, current_name, current_desc = cls.build_steps(track)
+        return cls({
+            "name": track.name or "",
+            "service": service_label(track.service),
+            "last_update": track.updated_at.isoformat(),
+            "steps": steps,
+            "current_step_name": current_name,
+            "current_step_desc": current_desc,
+            "comment": track.comment or "",
+        })

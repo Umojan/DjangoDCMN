@@ -1,6 +1,7 @@
 gunicorn
 django-cors-headers
 django-redis
+django-anymail
 
 celery[redis]
 

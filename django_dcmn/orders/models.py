@@ -234,7 +234,7 @@ class I9VerificationOrder(models.Model):
     appointment_date = models.CharField()
     appointment_time = models.CharField()
     comments = models.TextField(blank=True, null=True)
-
+    
     zoho_synced = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -273,3 +273,19 @@ class QuoteRequest(models.Model):
     class Meta:
         verbose_name = 'Quote — Request'
         verbose_name_plural = 'Quote — Requests'
+
+
+# --- Tracking ---
+class Track(models.Model):
+    tid = models.CharField(max_length=20, unique=True, db_index=True)
+    name = models.CharField(max_length=255, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+    service = models.CharField(max_length=50)
+    current_stage = models.CharField(max_length=50, blank=True, null=True)
+    comment = models.TextField(blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.tid} — {self.service}"

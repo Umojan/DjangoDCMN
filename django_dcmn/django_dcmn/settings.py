@@ -32,15 +32,22 @@ STRIPE_CANCEL_URL = "https://www.dcmobilenotary.com/cancel-page"
 
 
 # ====== EMAIL ======
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.hostinger.com"
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_USE_SSL = False
+EMAIL_BACKEND = "anymail.backends.resend.EmailBackend"
+ANYMAIL = {
+    "RESEND_API_KEY": os.getenv("RESEND_API_KEY"),
+}
 
-EMAIL_HOST_USER = config("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = "support@dcmobilenotary.net"
+EMAIL_TIMEOUT = 10
 
+# EMAIL_HOST = "smtp.hostinger.com"
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_USE_SSL = False
+#
+# EMAIL_HOST_USER = config("EMAIL_HOST_USER")
+# EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
+#
 EMAIL_OFFICE_RECEIVER = os.getenv('EMAIL_OFFICE_RECEIVER', '').split(',')
 EMAIL_CLIENT_FROM = config("EMAIL_CLIENT_FROM")
 
@@ -49,6 +56,7 @@ EMAIL_CLIENT_FROM = config("EMAIL_CLIENT_FROM")
 ZOHO_REFRESH_TOKEN = os.getenv('ZOHO_REFRESH_TOKEN')
 ZOHO_CLIENT_ID = os.getenv('ZOHO_CLIENT_ID')
 ZOHO_CLIENT_SECRET = os.getenv('ZOHO_CLIENT_SECRET')
+ZOHO_WEBHOOK_TOKEN = config('ZOHO_WEBHOOK_TOKEN', default='')
 
 
 # ====== CELERY ======
@@ -64,18 +72,11 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='').split(',')
 CORS_ALLOWED_ORIGINS = [
     "https://dcmobilenotary.webflow.io",
     "https://www.dcmobilenotary.com",
-    "https://api.dcmobilenotary.net",
-    "https://django-test-production-0ded.up.railway.app",
-
 ]
-
-CORS_ALLOW_HEADERS = ["*"]
-CORS_ALLOW_METHODS = ["GET", "POST", "OPTIONS"]
 
 # Application definition
 
 INSTALLED_APPS = [
-    'corsheaders',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -83,15 +84,19 @@ INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.staticfiles',
 
+    'corsheaders',
     'rest_framework',
+
+    'anymail',
+
     'orders',
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',

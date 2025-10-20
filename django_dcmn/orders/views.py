@@ -1,6 +1,4 @@
 # orders/views.py
-import traceback
-
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.shortcuts import get_object_or_404
@@ -15,6 +13,7 @@ from .tasks import sync_order_to_zoho_task
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import AllowAny
 from .serializers import (
     FbiApostilleOrderSerializer,
     MarriageOrderSerializer,
@@ -22,7 +21,9 @@ from .serializers import (
     ApostilleOrderSerializer,
     I9OrderSerializer,
     TranslationOrderSerializer,
-    QuoteRequestSerializer
+    QuoteRequestSerializer,
+    TrackSerializer,
+    PublicTrackSerializer
 )
 from .models import (
     FbiApostilleOrder,
@@ -34,10 +35,15 @@ from .models import (
     FileAttachment,
     EmbassyLegalizationOrder,
     TranslationOrder,
-    I9VerificationOrder
+    I9VerificationOrder,
+    Track
 )
+from .constants import STAGE_DEFS, CRM_STAGE_MAP
+from .utils import generate_tid, public_name
+from .tasks import write_tracking_id_to_zoho_task, send_tracking_email_task
 
 import stripe
+import logging
 
 from datetime import datetime
 
@@ -74,9 +80,30 @@ class CreateFbiOrderView(APIView):
                         )
                         file_urls.append(request.build_absolute_uri(attachment.file.url))
 
+                # Auto create tracking record
+                from .models import Track
+                from .utils import generate_tid
+                from .constants import STAGE_DEFS
+                codes = [d['code'] for d in STAGE_DEFS.get('fbi_apostille', [])]
+                start_stage = 'document_received' if 'document_received' in codes else (codes[0] if codes else None)
+                tid = generate_tid()
+                Track.objects.create(
+                    tid=tid,
+                    name=order.name,
+                    email=order.email,
+                    service='fbi_apostille',
+                    current_stage=start_stage,
+                    comment=order.comments or ''
+                )
+                try:
+                    send_tracking_email_task.delay(tid, 'created')
+                except Exception:
+                    pass
+
                 return Response({
                     'message': 'Order created',
                     'order_id': order.id,
+                    'tracking_id': tid,
                     'file_urls': file_urls or None,
                     'calculated_total': float(total),
                 }, status=status.HTTP_201_CREATED)
@@ -138,7 +165,10 @@ class CreateEmbassyOrderView(APIView):
         serializer = EmbassyLegalizationOrderSerializer(data=request.data)
         if serializer.is_valid():
             order = serializer.save()
-            sync_order_to_zoho_task.delay(order.id, "embassy")
+            try:
+                sync_order_to_zoho_task.delay(order.id, "embassy")
+            except Exception:
+                logging.exception("Failed to enqueue Zoho sync task for embassy order %s", order.id)
 
             file_urls = []
             if request.FILES:
@@ -171,22 +201,46 @@ class CreateEmbassyOrderView(APIView):
                 f"Files:\n{file_links or 'None'}"
             )
 
-            email = EmailMessage(
-                subject=f"📄 New Embassy Legalization Order — {today_str}",
-                body=email_body,
-                from_email=settings.EMAIL_HOST_USER,
-                to=settings.EMAIL_OFFICE_RECEIVER,
-                headers={
-                    "Message-ID": f"<embassy-order-{order.id}@dcmobilenotary.com>",
-                    "In-Reply-To": thread_id,
-                    "References": thread_id,
-                }
+            try:
+                email = EmailMessage(
+                    subject=f"📄 New Embassy Legalization Order — {today_str}",
+                    body=email_body,
+                    from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "support@dcmobilenotary.net"),
+                    to=settings.EMAIL_OFFICE_RECEIVER,
+                    headers={
+                        "Message-ID": f"<embassy-order-{order.id}@dcmobilenotary.com>",
+                        "In-Reply-To": thread_id,
+                        "References": thread_id,
+                    }
+                )
+                email.send()
+            except Exception:
+                logging.exception("Failed to send embassy order email for %s", order.id)
+
+            # Auto create tracking record
+            from .models import Track
+            from .utils import generate_tid
+            from .constants import STAGE_DEFS
+            codes = [d['code'] for d in STAGE_DEFS.get('embassy_legalization', [])]
+            start_stage = 'document_received' if 'document_received' in codes else (codes[0] if codes else None)
+            tid = generate_tid()
+            Track.objects.create(
+                tid=tid,
+                name=order.name,
+                email=order.email,
+                service='embassy_legalization',
+                current_stage=start_stage,
+                comment=order.comments or ''
             )
-            email.send()
+            try:
+                send_tracking_email_task.delay(tid, 'created')
+            except Exception:
+                pass
 
             return Response({
                 'message': 'Embassy legalization order created',
                 'order_id': order.id,
+                'tracking_id': tid,
                 'file_urls': file_urls or None
             }, status=status.HTTP_201_CREATED)
 
@@ -198,7 +252,10 @@ class CreateApostilleOrderView(APIView):
         serializer = ApostilleOrderSerializer(data=request.data)
         if serializer.is_valid():
             order = serializer.save()
-            sync_order_to_zoho_task.delay(order.id, "apostille")
+            try:
+                sync_order_to_zoho_task.delay(order.id, "apostille")
+            except Exception:
+                logging.exception("Failed to enqueue Zoho sync task for apostille order %s", order.id)
 
             # Send email to staff
             today_str = datetime.utcnow().strftime("%Y-%m-%d")
@@ -220,22 +277,46 @@ class CreateApostilleOrderView(APIView):
             if order.comments:
                 email_body += f"Comments: {order.comments}"
 
-            email = EmailMessage(
-                subject=f"📄 New Apostille Order — {today_str}",
-                body=email_body,
-                from_email=settings.EMAIL_HOST_USER,
-                to=settings.EMAIL_OFFICE_RECEIVER,
-                headers={
-                    "Message-ID": f"<apostille-order-{order.id}@dcmobilenotary.com>",
-                    "In-Reply-To": thread_id,
-                    "References": thread_id,
-                }
+            try:
+                email = EmailMessage(
+                    subject=f"📄 New Apostille Order — {today_str}",
+                    body=email_body,
+                    from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "support@dcmobilenotary.net"),
+                    to=settings.EMAIL_OFFICE_RECEIVER,
+                    headers={
+                        "Message-ID": f"<apostille-order-{order.id}@dcmobilenotary.com>",
+                        "In-Reply-To": thread_id,
+                        "References": thread_id,
+                    }
+                )
+                email.send()
+            except Exception:
+                logging.exception("Failed to send apostille order email for %s", order.id)
+
+            # Auto create tracking record (generic apostille)
+            from .models import Track
+            from .utils import generate_tid
+            from .constants import STAGE_DEFS
+            codes = [d['code'] for d in STAGE_DEFS.get('state_apostille', [])]
+            start_stage = 'document_received' if 'document_received' in codes else (codes[0] if codes else None)
+            tid = generate_tid()
+            Track.objects.create(
+                tid=tid,
+                name=order.name,
+                email=order.email,
+                service='state_apostille',
+                current_stage=start_stage,
+                comment=order.comments or ''
             )
-            email.send()
+            try:
+                send_tracking_email_task.delay(tid, 'created')
+            except Exception:
+                pass
 
             return Response({
                 'message': 'Apostille order created',
                 'order_id': order.id,
+                'tracking_id': tid,
             }, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -246,7 +327,10 @@ class CreateTranslationOrderView(APIView):
         serializer = TranslationOrderSerializer(data=request.data)
         if serializer.is_valid():
             order = serializer.save()
-            sync_order_to_zoho_task.delay(order.id, "translation")
+            try:
+                sync_order_to_zoho_task.delay(order.id, "translation")
+            except Exception:
+                logging.exception("Failed to enqueue Zoho sync task for translation order %s", order.id)
 
             # Save uploaded files
             file_urls = []
@@ -279,22 +363,46 @@ class CreateTranslationOrderView(APIView):
                 f"Files:\n{file_links if file_links else 'None'}"
             )
 
-            email = EmailMessage(
-                subject=f"📄 New Translation Order — {today_str}",
-                body=email_body,
-                from_email=settings.EMAIL_HOST_USER,
-                to=settings.EMAIL_OFFICE_RECEIVER,
-                headers={
-                    "Message-ID": f"<translation-order-{order.id}@dcmobilenotary.com>",
-                    "In-Reply-To": thread_id,
-                    "References": thread_id,
-                }
+            try:
+                email = EmailMessage(
+                    subject=f"📄 New Translation Order — {today_str}",
+                    body=email_body,
+                    from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "support@dcmobilenotary.net"),
+                    to=settings.EMAIL_OFFICE_RECEIVER,
+                    headers={
+                        "Message-ID": f"<translation-order-{order.id}@dcmobilenotary.com>",
+                        "In-Reply-To": thread_id,
+                        "References": thread_id,
+                    }
+                )
+                email.send()
+            except Exception:
+                logging.exception("Failed to send translation order email for %s", order.id)
+
+            # Auto create tracking record
+            from .models import Track
+            from .utils import generate_tid
+            from .constants import STAGE_DEFS
+            codes = [d['code'] for d in STAGE_DEFS.get('translation', [])]
+            start_stage = 'document_received' if 'document_received' in codes else (codes[0] if codes else None)
+            tid = generate_tid()
+            Track.objects.create(
+                tid=tid,
+                name=order.name,
+                email=order.email,
+                service='translation',
+                current_stage=start_stage,
+                comment=order.comments or ''
             )
-            email.send()
+            try:
+                send_tracking_email_task.delay(tid, 'created')
+            except Exception:
+                pass
 
             return Response({
                 'message': 'Translation order created',
                 'order_id': order.id,
+                'tracking_id': tid,
                 'file_urls': file_urls or None
             }, status=status.HTTP_201_CREATED)
 
@@ -306,7 +414,10 @@ class CreateQuoteRequestView(APIView):
         serializer = QuoteRequestSerializer(data=request.data)
         if serializer.is_valid():
             order = serializer.save()
-            sync_order_to_zoho_task.delay(order.id, "quote")
+            try:
+                sync_order_to_zoho_task.delay(order.id, "quote")
+            except Exception:
+                logging.exception("Failed to enqueue Zoho sync task for quote request %s", order.id)
 
 
             # Send email to staff
@@ -325,19 +436,21 @@ class CreateQuoteRequestView(APIView):
                 f"Message: \n{order.comments}\n"
             )
 
-            email = EmailMessage(
-                subject=f"❓ New Quote Request — {today_str}",
-                body=email_body,
-                from_email=settings.EMAIL_HOST_USER,
-                to=settings.EMAIL_OFFICE_RECEIVER,
-                headers={
-                    "Message-ID": f"<quote-request-{order.id}@dcmobilenotary.com>",
-                    "In-Reply-To": thread_id,
-                    "References": thread_id,
-                }
-            )
-
-            email.send()
+            try:
+                email = EmailMessage(
+                    subject=f"❓ New Quote Request — {today_str}",
+                    body=email_body,
+                    from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "support@dcmobilenotary.net"),
+                    to=settings.EMAIL_OFFICE_RECEIVER,
+                    headers={
+                        "Message-ID": f"<quote-request-{order.id}@dcmobilenotary.com>",
+                        "In-Reply-To": thread_id,
+                        "References": thread_id,
+                    }
+                )
+                email.send()
+            except Exception:
+                logging.exception("Failed to send quote request email for %s", order.id)
 
             return Response({
                 'message': 'Quote request created',
@@ -352,7 +465,10 @@ class CreateI9OrderView(APIView):
         serializer = I9OrderSerializer(data=request.data)
         if serializer.is_valid():
             order = serializer.save()
-            sync_order_to_zoho_task.delay(order.id, "I-9")
+            try:
+                sync_order_to_zoho_task.delay(order.id, "I-9")
+            except Exception:
+                logging.exception("Failed to enqueue Zoho sync task for I-9 order %s", order.id)
 
             file_urls = []
             if request.FILES:
@@ -386,18 +502,21 @@ class CreateI9OrderView(APIView):
                 f"Files:\n{file_links if file_links else 'None'}"
             )
 
-            email = EmailMessage(
-                subject=f"📄 New I-9 Verification Order — {today_str}",
-                body=email_body,
-                from_email=settings.EMAIL_HOST_USER,
-                to=settings.EMAIL_OFFICE_RECEIVER,
-                headers={
-                    "Message-ID": f"<i9-order-{order.id}@dcmobilenotary.com>",
-                    "In-Reply-To": thread_id,
-                    "References": thread_id,
-                }
-            )
-            email.send()
+            try:
+                email = EmailMessage(
+                    subject=f"📄 New I-9 Verification Order — {today_str}",
+                    body=email_body,
+                    from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "support@dcmobilenotary.net"),
+                    to=settings.EMAIL_OFFICE_RECEIVER,
+                    headers={
+                        "Message-ID": f"<i9-order-{order.id}@dcmobilenotary.com>",
+                        "In-Reply-To": thread_id,
+                        "References": thread_id,
+                    }
+                )
+                email.send()
+            except Exception:
+                logging.exception("Failed to send I-9 order email for %s", order.id)
 
             return Response({
                 'message': 'I-9 Verification order created',
@@ -514,18 +633,21 @@ def stripe_webhook(request):
                         f"Paid: ✅\n\n"
                         f"Files:\n{file_links if file_links else 'None'}"
                     )
-                    email = EmailMessage(
-                        subject=f"✅ New Paid FBI Apostille Order — {today_str}",
-                        body=email_body,
-                        from_email=settings.EMAIL_HOST_USER,
-                        to=settings.EMAIL_OFFICE_RECEIVER,
-                        headers={
-                            "Message-ID": f"<order-{order.id}@dcmobilenotary.com>",
-                            "In-Reply-To": thread_id,
-                            "References": thread_id,
-                        }
-                    )
-                    email.send()
+                    try:
+                        email = EmailMessage(
+                            subject=f"✅ New Paid FBI Apostille Order — {today_str}",
+                            body=email_body,
+                            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "support@dcmobilenotary.net"),
+                            to=settings.EMAIL_OFFICE_RECEIVER,
+                            headers={
+                                "Message-ID": f"<order-{order.id}@dcmobilenotary.com>",
+                                "In-Reply-To": thread_id,
+                                "References": thread_id,
+                            }
+                        )
+                        email.send()
+                    except Exception:
+                        logging.exception("Failed to send paid FBI order email for %s", order.id)
 
                     # Клиенту HTML-письмо (пример)
                     file_links_html = "".join([
@@ -544,7 +666,7 @@ def stripe_webhook(request):
                         send_mail(
                             subject="✅ Your Order Has Been Paid",
                             message="Order Has Been Paid",
-                            from_email=settings.EMAIL_HOST_USER,
+                            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "support@dcmobilenotary.net"),
                             recipient_list=[order.email],
                             html_message=html_content,
                             fail_silently=False,
@@ -592,18 +714,21 @@ def stripe_webhook(request):
                         f"Deposit: ${order.total_price}\n"
                         f"Paid: ✅\n\n"
                     )
-                    email = EmailMessage(
-                        subject=f"✅ New Paid Marriage Certificate Order — {today_str}",
-                        body=email_body,
-                        from_email=settings.EMAIL_HOST_USER,
-                        to=settings.EMAIL_OFFICE_RECEIVER,
-                        headers={
-                            "Message-ID": f"<marriage-order-{order.id}@dcmobilenotary.com>",
-                            "In-Reply-To": thread_id,
-                            "References": thread_id,
-                        }
-                    )
-                    email.send()
+                    try:
+                        email = EmailMessage(
+                            subject=f"✅ New Paid Marriage Certificate Order — {today_str}",
+                            body=email_body,
+                            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "support@dcmobilenotary.net"),
+                            to=settings.EMAIL_OFFICE_RECEIVER,
+                            headers={
+                                "Message-ID": f"<marriage-order-{order.id}@dcmobilenotary.com>",
+                                "In-Reply-To": thread_id,
+                                "References": thread_id,
+                            }
+                        )
+                        email.send()
+                    except Exception:
+                        logging.exception("Failed to send paid marriage order email for %s", order.id)
 
                     # Клиенту HTML-письмо (аналогично, если есть темплейт)
                     file_links_html = "".join([
@@ -622,7 +747,7 @@ def stripe_webhook(request):
                         send_mail(
                             subject="✅ Your Marriage Certificate Order Has Been Paid",
                             message="Order Has Been Paid",
-                            from_email=settings.EMAIL_HOST_USER,
+                            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "support@dcmobilenotary.net"),
                             recipient_list=[order.email],
                             html_message=html_content,
                             fail_silently=False,
@@ -640,62 +765,18 @@ def stripe_webhook(request):
     return HttpResponse(status=200)
 
 
-
-
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
-from django.core.mail import EmailMessage, get_connection
-from django.conf import settings
-import traceback, io, contextlib
-
-@csrf_exempt
 def test_email(request):
-    """
-    Диагностирует SMTP: открывает соединение с таймаутом,
-    включает smtplib debug и возвращает успех/ошибку в JSON.
-    """
-    smtp_debug = io.StringIO()
     try:
-        # важен таймаут — иначе зависнет на 30с и вернёт 500
-        conn = get_connection(timeout=10, fail_silently=False)
-
-        # откроем соединение и включим подробный дебаг в наш буфер
-        with contextlib.redirect_stderr(smtp_debug):
-            conn.open()  # поднимет socket/SSL/STARTTLS
-            if getattr(conn, "connection", None):
-                conn.connection.set_debuglevel(1)  # smtplib пишет в stderr
-
-            email = EmailMessage(
-                subject="🚀 Django Email Test",
-                body="If you're reading this, your email setup works perfectly!",
-                from_email=getattr(settings, "DEFAULT_FROM_EMAIL", settings.EMAIL_HOST_USER),
-                to=["support@dcmobilenotary.com"],
-                connection=conn,
-            )
-            email.send(fail_silently=False)
-
-        return JsonResponse({
-            "status": "✅ Email sent!",
-            "smtp_debug": smtp_debug.getvalue()[:4000],  # чтобы не раздувать ответ
-        })
-
+        send_mail(
+            subject="🚀 Django Email Test via Resend",
+            message="If you see this, Resend is working perfectly!",
+            from_email="support@dcmobilenotary.net",
+            recipient_list=["support@dcmobilenotary.com"],
+            fail_silently=False,
+        )
+        return JsonResponse({"status": "✅ Email sent!"})
     except Exception as e:
-        return JsonResponse({
-            "status": "❌ Email failed",
-            "error_type": e.__class__.__name__,
-            "error": str(e),
-            "stack": traceback.format_exc(),
-            "smtp_debug": smtp_debug.getvalue()[:4000],
-            # полезный минимум параметров (без секретов)
-            "smtp_settings": {
-                "host": getattr(settings, "EMAIL_HOST", None),
-                "port": getattr(settings, "EMAIL_PORT", None),
-                "use_tls": getattr(settings, "EMAIL_USE_TLS", None),
-                "use_ssl": getattr(settings, "EMAIL_USE_SSL", None),
-                "timeout": getattr(settings, "EMAIL_TIMEOUT", 10),
-                "from_email": getattr(settings, "DEFAULT_FROM_EMAIL", settings.EMAIL_HOST_USER),
-            },
-        }, status=500)
+        return JsonResponse({"status": "❌ Failed", "error": str(e)}, status=500)
 
 
 def zoho_callback(request):
@@ -703,3 +784,109 @@ def zoho_callback(request):
     if code:
         return HttpResponse(f'Authorization code: {code}')
     return HttpResponse('No code found', status=400)
+
+
+# ====== TRACKING (CRM + Public) ======
+def _check_zoho_token(request):
+    token = request.headers.get('X-ZOHO-TOKEN') or request.META.get('HTTP_X_ZOHO_TOKEN')
+    from django.conf import settings as dj_settings
+    expected = getattr(dj_settings, 'ZOHO_WEBHOOK_TOKEN', '')
+    return bool(token and expected and token == expected)
+
+
+class CreateTidFromCrmView(APIView):
+    def post(self, request, format=None):
+        if not _check_zoho_token(request):
+            return Response({'error': 'unauthorized'}, status=401)
+
+        name = request.data.get('name') or ''
+        email = request.data.get('email') or ''
+        service = request.data.get('service')
+        current_stage = request.data.get('current_stage') or 'document_received'
+        comment = request.data.get('comment') or ''
+        zoho_module = request.data.get('zoho_module')  # optional
+        zoho_record_id = request.data.get('record_id')  # optional
+
+        if service not in STAGE_DEFS:
+            return Response({'error': 'invalid service'}, status=400)
+
+        codes = [d['code'] for d in STAGE_DEFS.get(service, [])]
+        if current_stage not in codes:
+            current_stage = 'document_received'
+
+        tid = generate_tid()
+        track = Track.objects.create(
+            tid=tid,
+            name=name,
+            email=email,
+            service=service,
+            current_stage=current_stage,
+            comment=comment
+        )
+
+        # Optionally write TID back to Zoho asynchronously
+        if zoho_module and zoho_record_id:
+            write_tracking_id_to_zoho_task.delay(zoho_module, zoho_record_id, tid)
+
+        # welcome email
+        try:
+            send_tracking_email_task.delay(tid, 'created')
+        except Exception:
+            pass
+
+        ser = TrackSerializer(track)
+        return Response({'tid': tid, 'track': ser.data}, status=201)
+
+
+class CrmUpdateStageView(APIView):
+    def post(self, request, format=None):
+        if not _check_zoho_token(request):
+            return Response({'error': 'unauthorized'}, status=401)
+
+        tid = request.data.get('tid')
+        if not tid:
+            return Response({'error': 'tid required'}, status=400)
+
+        track = Track.objects.filter(tid=tid).first()
+        if not track:
+            return Response({'error': 'not found'}, status=404)
+
+        current_stage = request.data.get('current_stage')
+        crm_stage_name = request.data.get('crm_stage_name')
+        comment = request.data.get('comment')
+
+        if current_stage:
+            codes = [d['code'] for d in STAGE_DEFS.get(track.service, [])]
+            if current_stage not in codes:
+                return Response({'error': 'invalid stage for service'}, status=400)
+            track.current_stage = current_stage
+        elif crm_stage_name:
+            norm = (crm_stage_name or '').strip().lower()
+            mapped = CRM_STAGE_MAP.get(track.service, {}).get(norm)
+            if not mapped:
+                return Response({'error': 'mapping not found for crm_stage_name'}, status=422)
+            track.current_stage = mapped
+
+        if comment is not None:
+            track.comment = comment
+
+        track.save(update_fields=['current_stage', 'comment', 'updated_at'])
+
+        # email per key stage
+        try:
+            if current_stage:
+                send_tracking_email_task.delay(track.tid, current_stage)
+        except Exception:
+            pass
+        return Response({'ok': True})
+
+
+class PublicTrackView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, tid: str):
+        track = get_object_or_404(Track, tid=tid)
+        ser = PublicTrackSerializer.from_track(track)
+        payload = ser.data
+        payload['name'] = public_name(payload.get('name', ''))
+        return Response(payload)
