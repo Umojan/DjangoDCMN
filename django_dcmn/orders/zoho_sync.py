@@ -115,6 +115,55 @@ def sync_order_to_zoho(order, module_name, data_payload, attach_files=True):
     return True
 
 
+# -------- Generic helpers to read/update Zoho records --------
+def get_record_by_id(module_name: str, record_id: str, fields: list | None = None):
+    """Fetch Zoho CRM record by id. Optionally restrict fields with ?fields=A,B.
+    Returns parsed JSON dict or None on error.
+    """
+    for attempt in range(2):
+        access_token = get_access_token(force_refresh=(attempt == 1))
+        headers = {
+            "Authorization": f"Zoho-oauthtoken {access_token}",
+        }
+        params = {}
+        if fields:
+            params["fields"] = ",".join(fields)
+        url = f"{ZOHO_API_DOMAIN}/crm/v2/{module_name}/{record_id}"
+        resp = requests.get(url, headers=headers, params=params)
+        if resp.status_code == 401 and attempt == 0:
+            # token expired, retry once
+            continue
+        try:
+            data = resp.json()
+            if 'data' in data and len(data['data']) > 0:
+                return data['data'][0]
+        except Exception:
+            return None
+    return None
+
+
+def update_record_fields(module_name: str, record_id: str, fields_dict: dict) -> bool:
+    """Update Zoho CRM record fields with provided dict.
+    Returns True if update succeeded.
+    """
+    payload = {"data": [{"id": record_id, **fields_dict}]}
+    for attempt in range(2):
+        access_token = get_access_token(force_refresh=(attempt == 1))
+        headers = {
+            "Authorization": f"Zoho-oauthtoken {access_token}",
+            "Content-Type": "application/json",
+        }
+        url = f"{ZOHO_API_DOMAIN}/crm/v2/{module_name}"
+        resp = requests.put(url, headers=headers, json=payload)
+        try:
+            data = resp.json()
+            if 'data' in data and data['data'][0].get('status') == 'success':
+                return True
+        except Exception:
+            pass
+    return False
+
+
 def sync_fbi_order_to_zoho(order: FbiApostilleOrder):
     contact_id = get_or_create_contact_id(order.name, order.email, order.phone)
     zoho_module = 'Deals'

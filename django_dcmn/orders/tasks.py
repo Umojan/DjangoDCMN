@@ -1,5 +1,7 @@
 # orders/tasks.py
 from celery import shared_task
+from django.conf import settings
+from django.core.mail import send_mail
 from .models import FbiApostilleOrder, EmbassyLegalizationOrder, TranslationOrder, ApostilleOrder, MarriageOrder, \
     I9VerificationOrder, QuoteRequest
 from .zoho_sync import (
@@ -8,8 +10,11 @@ from .zoho_sync import (
     sync_translation_order_to_zoho,
     sync_apostille_order_to_zoho,
     sync_marriage_order_to_zoho,
-    sync_i9_order_to_zoho, sync_quote_request_to_zoho
+    sync_i9_order_to_zoho, sync_quote_request_to_zoho,
+    update_record_fields,
 )
+from .models import Track
+from .utils import service_label
 
 
 @shared_task
@@ -51,3 +56,42 @@ def sync_order_to_zoho_task(order_id, order_type):
                 sync_quote_request_to_zoho(order)
     except Exception as e:
         print(f"[Celery Task Error] Failed to sync {order_type} order #{order_id} to Zoho: {e}")
+
+
+@shared_task
+def write_tracking_id_to_zoho_task(module_name: str, record_id: str, tracking_id: str) -> bool:
+    """Persist TID to Zoho record using configured custom field name.
+    Adjust the field key below to your Zoho module custom field.
+    """
+    # Example: custom field API name 'Tracking_ID'
+    fields = {"Tracking_ID": tracking_id}
+    try:
+        return update_record_fields(module_name, record_id, fields)
+    except Exception:
+        return False
+
+
+@shared_task
+def send_tracking_email_task(tid: str, stage_code: str):
+    track = Track.objects.filter(tid=tid).first()
+    if not track or not track.email:
+        return
+
+    svc = service_label(track.service)
+    subject = "Order update"
+    if stage_code == 'created':
+        subject = f"We received your documents — {svc}"
+    elif stage_code == 'delivered':
+        subject = f"Delivered — {svc}"
+    elif stage_code in (
+        'notarized', 'submitted', 'processed_dos', 'processed_state',
+        'translated', 'quality_approved'
+    ):
+        subject = f"In Progress — {svc}"
+
+    url = f"{settings.BASE_URL}/track/{track.tid}"
+    body = f"Update: {svc} — {stage_code}. View tracking: {url}"
+    try:
+        send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [track.email], fail_silently=True)
+    except Exception:
+        pass
