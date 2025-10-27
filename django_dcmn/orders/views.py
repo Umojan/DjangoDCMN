@@ -837,21 +837,29 @@ class CreateTidFromCrmView(APIView):
         if not _check_zoho_token(request):
             return Response({'error': 'unauthorized'}, status=401)
 
-        name = request.data.get('name') or ''
-        email = request.data.get('email') or ''
-        service = request.data.get('service')
+        body = request.data
+        node = body.get('data') if isinstance(body.get('data'), dict) else {}
+
+        name = node.get('name') or body.get('name') or ''
+        email = node.get('email') or body.get('email') or ''
+        service = node.get('service') or body.get('service')
         # accept alias 'stage' for initial stage
-        current_stage = request.data.get('current_stage') or request.data.get('stage') or 'document_received'
-        comment = request.data.get('comment') or ''
-        zoho_module = request.data.get('zoho_module')  # optional
-        zoho_record_id = request.data.get('record_id')  # optional
+        current_stage = (
+            node.get('current_stage') or node.get('stage') or body.get('current_stage') or body.get('stage') or 'document_received'
+        )
+        # do not include form comment on create
+        comment = None
+        zoho_module = node.get('zoho_module') or body.get('zoho_module')  # optional
+        zoho_record_id = node.get('record_id') or body.get('record_id')  # optional
 
         if service not in STAGE_DEFS:
             return Response({'error': 'invalid service'}, status=400)
 
         codes = [d['code'] for d in STAGE_DEFS.get(service, [])]
         if current_stage not in codes:
-            current_stage = 'document_received'
+            norm = str(current_stage or '').strip().lower()
+            mapped = CRM_STAGE_MAP.get(service, {}).get(norm)
+            current_stage = mapped if mapped in codes else 'document_received'
 
         tid = generate_tid()
         payload = {
@@ -859,16 +867,11 @@ class CreateTidFromCrmView(APIView):
             'email': email,
             'service': service,
             'current_stage': current_stage,
-            'comment': comment,
         }
-        # захватываем любые дополнительные поля из запроса в JSON
-        try:
-            extra = dict(request.data)
-            for key in ['name', 'email', 'service', 'current_stage', 'comment', 'token']:
-                extra.pop(key, None)
-            payload.update(extra)
-        except Exception:
-            pass
+        # merge selected extra fields from data wrapper
+        for k in ['shipping', 'translation_r']:
+            if node.get(k) is not None:
+                payload[k] = node.get(k)
 
         track = Track.objects.create(
             tid=tid,
@@ -895,8 +898,10 @@ class CrmUpdateStageView(APIView):
         if not _check_zoho_token(request):
             return Response({'error': 'unauthorized'}, status=401)
 
+        body = request.data
+        node = body.get('data') if isinstance(body.get('data'), dict) else {}
         # accept aliases for tid
-        tid = request.data.get('tid') or request.data.get('tracking_id') or request.data.get('Tracking_ID')
+        tid = body.get('tid') or body.get('tracking_id') or body.get('Tracking_ID')
         if not tid:
             return Response({'error': 'tid required'}, status=400)
 
@@ -904,10 +909,10 @@ class CrmUpdateStageView(APIView):
         if not track:
             return Response({'error': 'not found'}, status=404)
 
-        current_stage = request.data.get('current_stage')
+        current_stage = body.get('current_stage') or node.get('current_stage')
         # accept alias 'stage' for crm_stage_name
-        crm_stage_name = request.data.get('crm_stage_name') or request.data.get('stage')
-        comment = request.data.get('comment')
+        crm_stage_name = body.get('crm_stage_name') or body.get('stage') or node.get('crm_stage_name') or node.get('stage')
+        comment = body.get('comment') or node.get('comment')
 
         track_data = track.data or {}
         service_key = track_data.get('service')
@@ -927,14 +932,15 @@ class CrmUpdateStageView(APIView):
         if comment is not None:
             track_data['comment'] = comment
 
-        # passthrough дополнительных полей (shipping, translation_r и т.п.) в JSON
-        try:
-            for k, v in dict(request.data).items():
-                if k in ('tid', 'tracking_id', 'Tracking_ID', 'crm_stage_name', 'current_stage', 'stage', 'token'):
-                    continue
-                track_data[k] = v
-        except Exception:
-            pass
+        # passthrough дополнительных полей из data и из корня (shipping, translation_r и т.п.)
+        for src in (node, body):
+            try:
+                for k, v in dict(src).items():
+                    if k in ('tid', 'tracking_id', 'Tracking_ID', 'crm_stage_name', 'current_stage', 'stage', 'token', 'data'):
+                        continue
+                    track_data[k] = v
+            except Exception:
+                pass
 
         track.data = track_data
         track.save(update_fields=['data', 'updated_at'])
