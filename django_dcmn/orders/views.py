@@ -789,6 +789,12 @@ def zoho_callback(request):
 # ====== TRACKING (CRM + Public) ======
 def _check_zoho_token(request):
     token = request.headers.get('X-ZOHO-TOKEN') or request.META.get('HTTP_X_ZOHO_TOKEN')
+    # fallback: allow token in JSON body for setups without headers
+    if not token:
+        try:
+            token = request.data.get('token')
+        except Exception:
+            token = None
     from django.conf import settings as dj_settings
     expected = getattr(dj_settings, 'ZOHO_WEBHOOK_TOKEN', '')
     return bool(token and expected and token == expected)
@@ -802,7 +808,8 @@ class CreateTidFromCrmView(APIView):
         name = request.data.get('name') or ''
         email = request.data.get('email') or ''
         service = request.data.get('service')
-        current_stage = request.data.get('current_stage') or 'document_received'
+        # accept alias 'stage' for initial stage
+        current_stage = request.data.get('current_stage') or request.data.get('stage') or 'document_received'
         comment = request.data.get('comment') or ''
         zoho_module = request.data.get('zoho_module')  # optional
         zoho_record_id = request.data.get('record_id')  # optional
@@ -843,7 +850,8 @@ class CrmUpdateStageView(APIView):
         if not _check_zoho_token(request):
             return Response({'error': 'unauthorized'}, status=401)
 
-        tid = request.data.get('tid')
+        # accept aliases for tid
+        tid = request.data.get('tid') or request.data.get('tracking_id') or request.data.get('Tracking_ID')
         if not tid:
             return Response({'error': 'tid required'}, status=400)
 
@@ -852,7 +860,8 @@ class CrmUpdateStageView(APIView):
             return Response({'error': 'not found'}, status=404)
 
         current_stage = request.data.get('current_stage')
-        crm_stage_name = request.data.get('crm_stage_name')
+        # accept alias 'stage' for crm_stage_name
+        crm_stage_name = request.data.get('crm_stage_name') or request.data.get('stage')
         comment = request.data.get('comment')
 
         if current_stage:
