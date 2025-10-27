@@ -164,7 +164,7 @@ def update_record_fields(module_name: str, record_id: str, fields_dict: dict) ->
     return False
 
 
-def sync_fbi_order_to_zoho(order: FbiApostilleOrder):
+def sync_fbi_order_to_zoho(order: FbiApostilleOrder, tracking_id: str | None = None):
     contact_id = get_or_create_contact_id(order.name, order.email, order.phone)
     zoho_module = 'Deals'
     data = {
@@ -186,13 +186,14 @@ def sync_fbi_order_to_zoho(order: FbiApostilleOrder):
                 "Payment_Status": "Fully Paid" if order.is_paid else "Not Paid",
                 "Submission_Date": order.created_at.date().isoformat(),
                 "Client_Contact": {"id": contact_id},
+                **({"Tracking_ID": tracking_id} if tracking_id else {}),
             }
         ]
     }
     return sync_order_to_zoho(order, zoho_module, data, attach_files=True)
 
 
-def sync_embassy_order_to_zoho(order: EmbassyLegalizationOrder):
+def sync_embassy_order_to_zoho(order: EmbassyLegalizationOrder, tracking_id: str | None = None):
     zoho_module = 'Embassy_Legalization'
     data = {
         "data": [
@@ -210,13 +211,14 @@ def sync_embassy_order_to_zoho(order: EmbassyLegalizationOrder):
                 "Payment_Status": "Not Paid",
 
                 "Client_Comment": order.comments,
+                **({"Tracking_ID": tracking_id} if tracking_id else {}),
             }
         ]
     }
     return sync_order_to_zoho(order, zoho_module, data, attach_files=True)
 
 
-def sync_translation_order_to_zoho(order: TranslationOrder):
+def sync_translation_order_to_zoho(order: TranslationOrder, tracking_id: str | None = None):
     zoho_module = 'Translation_Services'
     data = {
         "data": [
@@ -229,13 +231,14 @@ def sync_translation_order_to_zoho(order: TranslationOrder):
                 "Languages": order.languages,
                 "Client_Comments": order.comments,
                 "Translation_Status": "Client Placed Request",
+                **({"Tracking_ID": tracking_id} if tracking_id else {}),
             }
         ]
     }
     return sync_order_to_zoho(order, zoho_module, data, attach_files=True)
 
 
-def sync_apostille_order_to_zoho(order: ApostilleOrder):
+def sync_apostille_order_to_zoho(order: ApostilleOrder, tracking_id: str | None = None):
     zoho_module = 'Apostille_Services'
 
     data = {
@@ -251,6 +254,7 @@ def sync_apostille_order_to_zoho(order: ApostilleOrder):
                 "Client_Comments": order.comments or "",
                 "Status": "Client placed the request",
                 "Process_Stage": "Submission Received",
+                **({"Tracking_ID": tracking_id} if tracking_id else {}),
             }
         ]
     }

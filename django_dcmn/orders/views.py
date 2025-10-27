@@ -80,7 +80,7 @@ class CreateFbiOrderView(APIView):
                         )
                         file_urls.append(request.build_absolute_uri(attachment.file.url))
 
-                # Auto create tracking record
+                # Auto create tracking record (TID first)
                 from .models import Track
                 from .utils import generate_tid
                 from .constants import STAGE_DEFS
@@ -93,11 +93,16 @@ class CreateFbiOrderView(APIView):
                         'name': order.name,
                         'email': order.email,
                         'service': 'fbi_apostille',
-                        'current_stage': start_stage,
-                        'comment': order.comments or ''
+                        'current_stage': start_stage
                     },
                     service='fbi_apostille'
                 )
+                # Push to Zoho with Tracking_ID included
+                try:
+                    from .zoho_sync import sync_fbi_order_to_zoho
+                    sync_fbi_order_to_zoho(order, tracking_id=tid)
+                except Exception:
+                    logging.exception("Failed to sync FBI order with tracking to Zoho: %s", order.id)
                 try:
                     send_tracking_email_task.delay(tid, 'created')
                 except Exception:
@@ -220,7 +225,7 @@ class CreateEmbassyOrderView(APIView):
             except Exception:
                 logging.exception("Failed to send embassy order email for %s", order.id)
 
-            # Auto create tracking record
+            # Auto create tracking record (TID first)
             from .models import Track
             from .utils import generate_tid
             from .constants import STAGE_DEFS
@@ -233,11 +238,16 @@ class CreateEmbassyOrderView(APIView):
                     'name': order.name,
                     'email': order.email,
                     'service': 'embassy_legalization',
-                    'current_stage': start_stage,
-                    'comment': order.comments or ''
+                    'current_stage': start_stage
                 },
                 service='embassy_legalization'
             )
+            # Push to Zoho with Tracking_ID included
+            try:
+                from .zoho_sync import sync_embassy_order_to_zoho
+                sync_embassy_order_to_zoho(order, tracking_id=tid)
+            except Exception:
+                logging.exception("Failed to sync Embassy order with tracking to Zoho: %s", order.id)
             try:
                 send_tracking_email_task.delay(tid, 'created')
             except Exception:
@@ -299,7 +309,7 @@ class CreateApostilleOrderView(APIView):
             except Exception:
                 logging.exception("Failed to send apostille order email for %s", order.id)
 
-            # Auto create tracking record (generic apostille)
+            # Auto create tracking record (generic apostille) — TID first
             from .models import Track
             from .utils import generate_tid
             from .constants import STAGE_DEFS
@@ -312,11 +322,16 @@ class CreateApostilleOrderView(APIView):
                     'name': order.name,
                     'email': order.email,
                     'service': 'state_apostille',
-                    'current_stage': start_stage,
-                    'comment': order.comments or ''
+                    'current_stage': start_stage
                 },
                 service='state_apostille'
             )
+            # Push to Zoho with Tracking_ID included
+            try:
+                from .zoho_sync import sync_apostille_order_to_zoho
+                sync_apostille_order_to_zoho(order, tracking_id=tid)
+            except Exception:
+                logging.exception("Failed to sync Apostille order with tracking to Zoho: %s", order.id)
             try:
                 send_tracking_email_task.delay(tid, 'created')
             except Exception:
@@ -388,7 +403,7 @@ class CreateTranslationOrderView(APIView):
             except Exception:
                 logging.exception("Failed to send translation order email for %s", order.id)
 
-            # Auto create tracking record
+            # Auto create tracking record — TID first
             from .models import Track
             from .utils import generate_tid
             from .constants import STAGE_DEFS
@@ -401,11 +416,16 @@ class CreateTranslationOrderView(APIView):
                     'name': order.name,
                     'email': order.email,
                     'service': 'translation',
-                    'current_stage': start_stage,
-                    'comment': order.comments or ''
+                    'current_stage': start_stage
                 },
                 service='translation'
             )
+            # Push to Zoho with Tracking_ID included
+            try:
+                from .zoho_sync import sync_translation_order_to_zoho
+                sync_translation_order_to_zoho(order, tracking_id=tid)
+            except Exception:
+                logging.exception("Failed to sync Translation order with tracking to Zoho: %s", order.id)
             try:
                 send_tracking_email_task.delay(tid, 'created')
             except Exception:
