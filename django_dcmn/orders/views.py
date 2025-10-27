@@ -89,11 +89,14 @@ class CreateFbiOrderView(APIView):
                 tid = generate_tid()
                 Track.objects.create(
                     tid=tid,
-                    name=order.name,
-                    email=order.email,
-                    service='fbi_apostille',
-                    current_stage=start_stage,
-                    comment=order.comments or ''
+                    data={
+                        'name': order.name,
+                        'email': order.email,
+                        'service': 'fbi_apostille',
+                        'current_stage': start_stage,
+                        'comment': order.comments or ''
+                    },
+                    service='fbi_apostille'
                 )
                 try:
                     send_tracking_email_task.delay(tid, 'created')
@@ -226,11 +229,14 @@ class CreateEmbassyOrderView(APIView):
             tid = generate_tid()
             Track.objects.create(
                 tid=tid,
-                name=order.name,
-                email=order.email,
-                service='embassy_legalization',
-                current_stage=start_stage,
-                comment=order.comments or ''
+                data={
+                    'name': order.name,
+                    'email': order.email,
+                    'service': 'embassy_legalization',
+                    'current_stage': start_stage,
+                    'comment': order.comments or ''
+                },
+                service='embassy_legalization'
             )
             try:
                 send_tracking_email_task.delay(tid, 'created')
@@ -302,11 +308,14 @@ class CreateApostilleOrderView(APIView):
             tid = generate_tid()
             Track.objects.create(
                 tid=tid,
-                name=order.name,
-                email=order.email,
-                service='state_apostille',
-                current_stage=start_stage,
-                comment=order.comments or ''
+                data={
+                    'name': order.name,
+                    'email': order.email,
+                    'service': 'state_apostille',
+                    'current_stage': start_stage,
+                    'comment': order.comments or ''
+                },
+                service='state_apostille'
             )
             try:
                 send_tracking_email_task.delay(tid, 'created')
@@ -388,11 +397,14 @@ class CreateTranslationOrderView(APIView):
             tid = generate_tid()
             Track.objects.create(
                 tid=tid,
-                name=order.name,
-                email=order.email,
-                service='translation',
-                current_stage=start_stage,
-                comment=order.comments or ''
+                data={
+                    'name': order.name,
+                    'email': order.email,
+                    'service': 'translation',
+                    'current_stage': start_stage,
+                    'comment': order.comments or ''
+                },
+                service='translation'
             )
             try:
                 send_tracking_email_task.delay(tid, 'created')
@@ -822,13 +834,26 @@ class CreateTidFromCrmView(APIView):
             current_stage = 'document_received'
 
         tid = generate_tid()
+        payload = {
+            'name': name,
+            'email': email,
+            'service': service,
+            'current_stage': current_stage,
+            'comment': comment,
+        }
+        # захватываем любые дополнительные поля из запроса в JSON
+        try:
+            extra = dict(request.data)
+            for key in ['name', 'email', 'service', 'current_stage', 'comment', 'token']:
+                extra.pop(key, None)
+            payload.update(extra)
+        except Exception:
+            pass
+
         track = Track.objects.create(
             tid=tid,
-            name=name,
-            email=email,
             service=service,
-            current_stage=current_stage,
-            comment=comment
+            data=payload
         )
 
         # Optionally write TID back to Zoho asynchronously
@@ -864,27 +889,40 @@ class CrmUpdateStageView(APIView):
         crm_stage_name = request.data.get('crm_stage_name') or request.data.get('stage')
         comment = request.data.get('comment')
 
+        track_data = track.data or {}
+        service_key = track_data.get('service')
+
         if current_stage:
-            codes = [d['code'] for d in STAGE_DEFS.get(track.service, [])]
+            codes = [d['code'] for d in STAGE_DEFS.get(service_key, [])]
             if current_stage not in codes:
                 return Response({'error': 'invalid stage for service'}, status=400)
-            track.current_stage = current_stage
+            track_data['current_stage'] = current_stage
         elif crm_stage_name:
             norm = (crm_stage_name or '').strip().lower()
-            mapped = CRM_STAGE_MAP.get(track.service, {}).get(norm)
+            mapped = CRM_STAGE_MAP.get(service_key, {}).get(norm)
             if not mapped:
                 return Response({'error': 'mapping not found for crm_stage_name'}, status=422)
-            track.current_stage = mapped
+            track_data['current_stage'] = mapped
 
         if comment is not None:
-            track.comment = comment
+            track_data['comment'] = comment
 
-        track.save(update_fields=['current_stage', 'comment', 'updated_at'])
+        # passthrough дополнительных полей (shipping, translation_r и т.п.) в JSON
+        try:
+            for k, v in dict(request.data).items():
+                if k in ('tid', 'tracking_id', 'Tracking_ID', 'crm_stage_name', 'current_stage', 'stage', 'token'):
+                    continue
+                track_data[k] = v
+        except Exception:
+            pass
+
+        track.data = track_data
+        track.save(update_fields=['data', 'updated_at'])
 
         # email per key stage
         try:
-            if current_stage:
-                send_tracking_email_task.delay(track.tid, current_stage)
+            if track_data.get('current_stage'):
+                send_tracking_email_task.delay(track.tid, track_data.get('current_stage'))
         except Exception:
             pass
         return Response({'ok': True})

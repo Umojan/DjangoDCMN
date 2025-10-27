@@ -278,14 +278,13 @@ class QuoteRequest(models.Model):
 # --- Tracking ---
 class Track(models.Model):
     tid = models.CharField(max_length=20, unique=True, db_index=True)
-    name = models.CharField(max_length=255, blank=True, null=True)
-    email = models.EmailField(blank=True, null=True)
-    service = models.CharField(max_length=50)
-    current_stage = models.CharField(max_length=50, blank=True, null=True)
-    comment = models.TextField(blank=True, null=True)
+    service = models.CharField(max_length=50, blank=True, null=True, db_index=True)
+    # Храним все данные для фронта в одном JSON-объекте
+    # Ожидаемые ключи (по желанию): name, email, service, current_stage, comment, shipping, translation_r, и др.
+    data = models.JSONField(default=dict, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.tid} — {self.service}"
+        return f"{self.tid}"

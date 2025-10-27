@@ -122,7 +122,7 @@ class QuoteRequestSerializer(serializers.ModelSerializer):
 class TrackSerializer(serializers.ModelSerializer):
     class Meta:
         model = Track
-        fields = ['tid', 'name', 'email', 'service', 'current_stage', 'comment', 'created_at', 'updated_at']
+        fields = ['tid', 'data', 'created_at', 'updated_at']
 
 
 class PublicTrackSerializer(serializers.Serializer):
@@ -136,10 +136,12 @@ class PublicTrackSerializer(serializers.Serializer):
 
     @staticmethod
     def build_steps(track):
-        defs = STAGE_DEFS.get(track.service, [])
+        service = (track.data or {}).get('service')
+        current_stage = (track.data or {}).get('current_stage')
+        defs = STAGE_DEFS.get(service, [])
         codes = [d['code'] for d in defs]
         try:
-            current_idx = codes.index(track.current_stage) if track.current_stage in codes else -1
+            current_idx = codes.index(current_stage) if current_stage in codes else -1
         except ValueError:
             current_idx = -1
         steps = {}
@@ -152,12 +154,13 @@ class PublicTrackSerializer(serializers.Serializer):
     @classmethod
     def from_track(cls, track):
         steps, current_name, current_desc = cls.build_steps(track)
+        service = (track.data or {}).get('service')
         return cls({
-            "name": track.name or "",
-            "service": service_label(track.service),
+            "name": (track.data or {}).get('name') or "",
+            "service": service_label(service) if service else "",
             "last_update": track.updated_at.isoformat(),
             "steps": steps,
             "current_step_name": current_name,
             "current_step_desc": current_desc,
-            "comment": track.comment or "",
+            "comment": (track.data or {}).get('comment') or "",
         })

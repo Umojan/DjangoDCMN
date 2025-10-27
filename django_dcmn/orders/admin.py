@@ -121,6 +121,5 @@ class QuoteRequestOrderAdmin(admin.ModelAdmin):
 
 @admin.register(Track)
 class TrackAdmin(admin.ModelAdmin):
-    list_display = ('tid', 'service', 'name', 'email', 'current_stage', 'updated_at', 'created_at')
-    list_filter = ('service', 'current_stage', 'created_at')
-    search_fields = ('tid', 'email', 'name')
+    list_display = ('tid', 'updated_at', 'created_at')
+    search_fields = ('tid',)
