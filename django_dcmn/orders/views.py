@@ -921,17 +921,18 @@ class CrmUpdateStageView(APIView):
         track_data = track.data or {}
         service_key = track_data.get('service') or track.service
 
+        stage_changed = False
+        codes = [d['code'] for d in STAGE_DEFS.get(service_key, [])]
         if current_stage:
-            codes = [d['code'] for d in STAGE_DEFS.get(service_key, [])]
-            if current_stage not in codes:
-                return Response({'error': 'invalid stage for service'}, status=400)
-            track_data['current_stage'] = current_stage
+            if current_stage in codes:
+                track_data['current_stage'] = current_stage
+                stage_changed = True
         elif crm_stage_name:
             norm = (crm_stage_name or '').strip().lower()
             mapped = CRM_STAGE_MAP.get(service_key, {}).get(norm)
-            if not mapped:
-                return Response({'error': 'mapping not found for crm_stage_name'}, status=422)
-            track_data['current_stage'] = mapped
+            if mapped in codes:
+                track_data['current_stage'] = mapped
+                stage_changed = True
 
         if comment is not None:
             track_data['comment'] = str(comment)
@@ -958,7 +959,7 @@ class CrmUpdateStageView(APIView):
 
         # email per key stage
         try:
-            if track_data.get('current_stage'):
+            if stage_changed and track_data.get('current_stage'):
                 send_tracking_email_task.delay(track.tid, track_data.get('current_stage'))
         except Exception:
             pass
