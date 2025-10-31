@@ -869,9 +869,13 @@ class CreateTidFromCrmView(APIView):
             'current_stage': current_stage,
         }
         # merge selected extra fields from data wrapper
-        for k in ['shipping', 'translation_r']:
-            if node.get(k) is not None:
-                payload[k] = node.get(k)
+        if node.get('shipping') is not None:
+            payload['shipping'] = str(node.get('shipping'))
+        if node.get('translation_r') is not None:
+            tr_raw = str(node.get('translation_r')).strip().lower()
+            payload['translation_r'] = True if tr_raw in (
+                'yes - translate', 'yes', 'true', '1'
+            ) else False
 
         track = Track.objects.create(
             tid=tid,
@@ -915,7 +919,7 @@ class CrmUpdateStageView(APIView):
         comment = body.get('comment') or node.get('comment')
 
         track_data = track.data or {}
-        service_key = track_data.get('service')
+        service_key = track_data.get('service') or track.service
 
         if current_stage:
             codes = [d['code'] for d in STAGE_DEFS.get(service_key, [])]
@@ -930,7 +934,7 @@ class CrmUpdateStageView(APIView):
             track_data['current_stage'] = mapped
 
         if comment is not None:
-            track_data['comment'] = comment
+            track_data['comment'] = str(comment)
 
         # passthrough дополнительных полей из data и из корня (shipping, translation_r и т.п.)
         for src in (node, body):
@@ -941,6 +945,13 @@ class CrmUpdateStageView(APIView):
                     track_data[k] = v
             except Exception:
                 pass
+
+        # normalize translation_r to boolean if present
+        if 'translation_r' in track_data:
+            tr_raw = str(track_data.get('translation_r')).strip().lower()
+            track_data['translation_r'] = True if tr_raw in (
+                'yes - translate', 'yes', 'true', '1'
+            ) else False
 
         track.data = track_data
         track.save(update_fields=['data', 'updated_at'])
