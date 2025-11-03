@@ -173,10 +173,6 @@ class CreateEmbassyOrderView(APIView):
         serializer = EmbassyLegalizationOrderSerializer(data=request.data)
         if serializer.is_valid():
             order = serializer.save()
-            try:
-                sync_order_to_zoho_task.delay(order.id, "embassy")
-            except Exception:
-                logging.exception("Failed to enqueue Zoho sync task for embassy order %s", order.id)
 
             file_urls = []
             if request.FILES:
@@ -268,10 +264,6 @@ class CreateApostilleOrderView(APIView):
         serializer = ApostilleOrderSerializer(data=request.data)
         if serializer.is_valid():
             order = serializer.save()
-            try:
-                sync_order_to_zoho_task.delay(order.id, "apostille")
-            except Exception:
-                logging.exception("Failed to enqueue Zoho sync task for apostille order %s", order.id)
 
             # Send email to staff
             today_str = datetime.utcnow().strftime("%Y-%m-%d")
@@ -351,10 +343,6 @@ class CreateTranslationOrderView(APIView):
         serializer = TranslationOrderSerializer(data=request.data)
         if serializer.is_valid():
             order = serializer.save()
-            try:
-                sync_order_to_zoho_task.delay(order.id, "translation")
-            except Exception:
-                logging.exception("Failed to enqueue Zoho sync task for translation order %s", order.id)
 
             # Save uploaded files
             file_urls = []
@@ -883,10 +871,10 @@ class CreateTidFromCrmView(APIView):
             data=payload
         )
 
-        # Optionally write TID back to Zoho (sync first, fallback async)
+        # Write TID back to Zoho SYNCHRONOUSLY (если есть zoho_module и record_id)
         if zoho_module and zoho_record_id:
+            # Сохраняем zoho_module/record_id в data для отладки
             try:
-                # persist linkage for future troubleshooting/idempotency
                 d = track.data or {}
                 d['zoho_module'] = zoho_module
                 d['record_id'] = str(zoho_record_id)
@@ -895,17 +883,24 @@ class CreateTidFromCrmView(APIView):
             except Exception:
                 pass
 
+            # Синхронно отправляем TID в Zoho CRM
             try:
-                from .zoho_sync import update_record_fields, resolve_record_id
-                ok = update_record_fields(str(zoho_module), str(zoho_record_id), {"Tracking_ID": tid})
-                if not ok:
-                    # Attempt to resolve actual record id via custom id fields then update again
-                    resolved_id = resolve_record_id(str(zoho_module), str(zoho_record_id))
-                    if resolved_id:
-                        ok = update_record_fields(str(zoho_module), resolved_id, {"Tracking_ID": tid})
-                if not ok:
+                from .zoho_sync import update_record_fields
+                import logging
+                logger = logging.getLogger(__name__)
+                
+                logger.info(f"[CreateTID] Attempting to write TID={tid} to Zoho {zoho_module}/{zoho_record_id}")
+                success = update_record_fields(str(zoho_module), str(zoho_record_id), {"Tracking_ID": tid})
+                
+                if success:
+                    logger.info(f"[CreateTID] ✅ Successfully wrote TID={tid} to Zoho")
+                else:
+                    logger.warning(f"[CreateTID] ⚠️ Failed to write TID={tid} to Zoho (returned False), enqueueing Celery task")
                     write_tracking_id_to_zoho_task.delay(zoho_module, zoho_record_id, tid)
-            except Exception:
+            except Exception as e:
+                logger = logging.getLogger(__name__)
+                logger.exception(f"[CreateTID] ❌ Exception writing TID={tid} to Zoho: {e}")
+                # Фоллбэк через Celery
                 write_tracking_id_to_zoho_task.delay(zoho_module, zoho_record_id, tid)
 
         # welcome email
