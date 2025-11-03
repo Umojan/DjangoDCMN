@@ -896,8 +896,13 @@ class CreateTidFromCrmView(APIView):
                 pass
 
             try:
-                from .zoho_sync import update_record_fields
+                from .zoho_sync import update_record_fields, resolve_record_id
                 ok = update_record_fields(str(zoho_module), str(zoho_record_id), {"Tracking_ID": tid})
+                if not ok:
+                    # Attempt to resolve actual record id via custom id fields then update again
+                    resolved_id = resolve_record_id(str(zoho_module), str(zoho_record_id))
+                    if resolved_id:
+                        ok = update_record_fields(str(zoho_module), resolved_id, {"Tracking_ID": tid})
                 if not ok:
                     write_tracking_id_to_zoho_task.delay(zoho_module, zoho_record_id, tid)
             except Exception:

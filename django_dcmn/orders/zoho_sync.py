@@ -164,6 +164,55 @@ def update_record_fields(module_name: str, record_id: str, fields_dict: dict) ->
     return False
 
 
+# -------- Helpers to resolve record id by custom fields --------
+# Fallback field API names used to resolve a record when external id is not the native Zoho record ID
+MODULE_ID_FALLBACK_FIELDS = {
+    'FBI_Background_Checks': ['_Order_ID', 'Order_ID'],
+    'Deals': ['Order_ID'],
+    'Embassy_Legalization': ['Order_ID'],
+    'Translation_Services': ['Order_ID'],
+    'Apostille_Services': ['Order_ID'],
+}
+
+
+def search_record_by_field(module_name: str, field_api_name: str, value: str):
+    """Use Zoho search API to find a record id by a custom field exact match."""
+    for attempt in range(2):
+        access_token = get_access_token(force_refresh=(attempt == 1))
+        headers = {
+            "Authorization": f"Zoho-oauthtoken {access_token}",
+        }
+        criteria = f"({field_api_name}:equals:{value})"
+        url = f"{ZOHO_API_DOMAIN}/crm/v2/{module_name}/search"
+        resp = requests.get(url, headers=headers, params={"criteria": criteria})
+        if resp.status_code == 204:
+            return None
+        try:
+            data = resp.json()
+            if 'data' in data and len(data['data']) > 0:
+                return data['data'][0]['id']
+        except Exception:
+            return None
+    return None
+
+
+def resolve_record_id(module_name: str, raw_record_id: str, candidates: list[str] | None = None) -> str | None:
+    """Resolve actual Zoho record id.
+    Tries direct get by id; if not found, tries search by custom field candidates.
+    """
+    # First try direct id
+    rec = get_record_by_id(module_name, str(raw_record_id))
+    if rec and rec.get('id'):
+        return rec.get('id')
+
+    fields = candidates if candidates else MODULE_ID_FALLBACK_FIELDS.get(module_name, [])
+    for f in fields:
+        rid = search_record_by_field(module_name, f, str(raw_record_id))
+        if rid:
+            return rid
+    return None
+
+
 def sync_fbi_order_to_zoho(order: FbiApostilleOrder, tracking_id: str | None = None):
     contact_id = get_or_create_contact_id(order.name, order.email, order.phone)
     zoho_module = 'Deals'

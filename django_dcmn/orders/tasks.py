@@ -11,7 +11,7 @@ from .zoho_sync import (
     sync_apostille_order_to_zoho,
     sync_marriage_order_to_zoho,
     sync_i9_order_to_zoho, sync_quote_request_to_zoho,
-    update_record_fields,
+    update_record_fields, resolve_record_id,
 )
 from .models import Track
 from .utils import service_label
@@ -67,6 +67,10 @@ def write_tracking_id_to_zoho_task(module_name: str, record_id: str, tracking_id
     fields = {"Tracking_ID": tracking_id}
     try:
         ok = update_record_fields(module_name, record_id, fields)
+        if not ok:
+            rid = resolve_record_id(module_name, record_id)
+            if rid:
+                ok = update_record_fields(module_name, rid, fields)
         if not ok:
             print(f"[Zoho] Failed to write Tracking_ID sync. module={module_name} id={record_id}")
         return ok
