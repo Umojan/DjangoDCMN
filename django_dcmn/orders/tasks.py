@@ -85,7 +85,11 @@ def write_tracking_id_to_zoho_task(module_name: str, record_id: str, tracking_id
 @shared_task
 def send_tracking_email_task(tid: str, stage_code: str):
     track = Track.objects.filter(tid=tid).first()
-    if not track or not track.email:
+    if not track:
+        return
+    
+    email = (track.data or {}).get('email')
+    if not email:
         return
 
     svc = service_label(track.service)
@@ -103,6 +107,6 @@ def send_tracking_email_task(tid: str, stage_code: str):
     url = f"{settings.BASE_URL}/track/{track.tid}"
     body = f"Update: {svc} — {stage_code}. View tracking: {url}"
     try:
-        send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [track.email], fail_silently=True)
+        send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [email], fail_silently=True)
     except Exception:
         pass

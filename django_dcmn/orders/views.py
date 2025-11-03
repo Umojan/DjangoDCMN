@@ -38,7 +38,7 @@ from .models import (
     I9VerificationOrder,
     Track
 )
-from .constants import STAGE_DEFS, CRM_STAGE_MAP
+from .constants import STAGE_DEFS, CRM_STAGE_MAP, ZOHO_MODULE_MAP
 from .utils import generate_tid, public_name
 from .tasks import write_tracking_id_to_zoho_task, send_tracking_email_task
 
@@ -889,19 +889,23 @@ class CreateTidFromCrmView(APIView):
                 import logging
                 logger = logging.getLogger(__name__)
                 
-                logger.info(f"[CreateTID] Attempting to write TID={tid} to Zoho {zoho_module}/{zoho_record_id}")
-                success = update_record_fields(str(zoho_module), str(zoho_record_id), {"Tracking_ID": tid})
+                # Конвертируем название модуля из webhook в API имя
+                api_module_name = ZOHO_MODULE_MAP.get(zoho_module, zoho_module)
+                
+                logger.info(f"[CreateTID] Attempting to write TID={tid} to Zoho {zoho_module} (API: {api_module_name})/{zoho_record_id}")
+                success = update_record_fields(api_module_name, str(zoho_record_id), {"Tracking_ID": tid})
                 
                 if success:
                     logger.info(f"[CreateTID] ✅ Successfully wrote TID={tid} to Zoho")
                 else:
                     logger.warning(f"[CreateTID] ⚠️ Failed to write TID={tid} to Zoho (returned False), enqueueing Celery task")
-                    write_tracking_id_to_zoho_task.delay(zoho_module, zoho_record_id, tid)
+                    write_tracking_id_to_zoho_task.delay(api_module_name, zoho_record_id, tid)
             except Exception as e:
                 logger = logging.getLogger(__name__)
                 logger.exception(f"[CreateTID] ❌ Exception writing TID={tid} to Zoho: {e}")
                 # Фоллбэк через Celery
-                write_tracking_id_to_zoho_task.delay(zoho_module, zoho_record_id, tid)
+                api_module_name = ZOHO_MODULE_MAP.get(zoho_module, zoho_module)
+                write_tracking_id_to_zoho_task.delay(api_module_name, zoho_record_id, tid)
 
         # welcome email
         try:

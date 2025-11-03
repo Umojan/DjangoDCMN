@@ -38,6 +38,17 @@ SERVICE_LABELS = {
     'translation': 'Translation',
 }
 
+# Маппинг названий модулей из Zoho webhook → API имена модулей для Zoho API
+ZOHO_MODULE_MAP = {
+    'FBI_Background_Checks': 'Deals',
+    'Embassy_Legalization': 'Embassy_Legalization',
+    'Translation_Services': 'Translation_Services',
+    'Apostille_Services': 'Apostille_Services',
+    'Triple_Seal_Apostilles': 'Triple_Seal_Apostilles',
+    'I_9_Verification': 'I_9_Verification',
+    'Get_A_Quote_Leads': 'Get_A_Quote_Leads',
+}
+
 # Маппинг названий стадий из Zoho → канонические коды
 # Ключи нормализуются в нижний регистр для устойчивости к регистру
 CRM_STAGE_MAP = {
