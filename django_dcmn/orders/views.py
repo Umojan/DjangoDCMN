@@ -861,9 +861,8 @@ class CreateTidFromCrmView(APIView):
             payload['shipping'] = str(node.get('shipping'))
         if node.get('translation_r') is not None:
             tr_raw = str(node.get('translation_r')).strip().lower()
-            payload['translation_r'] = True if tr_raw in (
-                'yes - translate', 'yes', 'true', '1'
-            ) else False
+            # Match both "Yes -Translate" and "Yes - Translate" variants
+            payload['translation_r'] = True if ('translate' in tr_raw and 'yes' in tr_raw) or tr_raw in ('yes', 'true', '1') else False
 
         track = Track.objects.create(
             tid=tid,
@@ -970,9 +969,8 @@ class CrmUpdateStageView(APIView):
         # normalize translation_r to boolean if present
         if 'translation_r' in track_data:
             tr_raw = str(track_data.get('translation_r')).strip().lower()
-            track_data['translation_r'] = True if tr_raw in (
-                'yes - translate', 'yes', 'true', '1'
-            ) else False
+            # Match both "Yes -Translate" and "Yes - Translate" variants
+            track_data['translation_r'] = True if ('translate' in tr_raw and 'yes' in tr_raw) or tr_raw in ('yes', 'true', '1') else False
 
         track.data = track_data
         track.save(update_fields=['data', 'updated_at'])
