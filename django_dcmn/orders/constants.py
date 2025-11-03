@@ -1,33 +1,121 @@
 STAGE_DEFS = {
     'fbi_apostille': [
-        {'code': 'document_received', 'name': 'Document Received', 'desc': 'We received your documents.'},
-        {'code': 'notarized', 'name': 'Notarized', 'desc': 'Documents notarized.'},
-        {'code': 'submitted', 'name': 'Submitted', 'desc': 'Documents submitted to processing.'},
-        {'code': 'processed_dos', 'name': 'Processed at U.S. DoS', 'desc': 'Processing at U.S. Department of State.'},
-        {'code': 'translated', 'name': 'Translated (Optional)', 'desc': 'Documents translated if required.'},
-        {'code': 'delivered', 'name': 'Delivered', 'desc': 'Order delivered to you.'},
+        {
+            'code': 'document_received',
+            'name': 'Document Recieved',
+            'desc': 'We have received your documents and are preparing them for the next stage of processing.'
+        },
+        {
+            'code': 'notarized',
+            'name': 'Notarized',
+            'desc': 'Your documents have been notarized by a certified notary public and are ready for submission.'
+        },
+        {
+            'code': 'submitted',
+            'name': 'Submitted to the State Authority',
+            'desc': 'Your documents have been submitted to the appropriate state authority for authentication.'
+        },
+        {
+            'code': 'processed_dos',
+            'name': 'Processed at U.S. DoS',
+            'desc': 'The notarized documents have been delivered to the U.S. Department of State for federal authentication. Our liaison is closely monitoring the review and certification process to ensure everything proceeds smoothly.'
+        },
+        {
+            'code': 'translated',
+            'name': 'Translated',
+            'desc': 'Your documents are currently being translated by our certified translators to meet the requirements of the destination country.'
+        },
+        {
+            'code': 'delivered',
+            'name': 'Delivered',
+            'desc': 'Your documents have been successfully delivered. Thank you for choosing our services!'
+        },
     ],
     'state_apostille': [
-        {'code': 'document_received', 'name': 'Document Received', 'desc': 'We received your documents.'},
-        {'code': 'notarized', 'name': 'Notarized', 'desc': 'Documents notarized.'},
-        {'code': 'submitted', 'name': 'Submitted', 'desc': 'Documents submitted to state authority.'},
-        {'code': 'processed_state', 'name': 'Processed at State Authority', 'desc': 'Processing at state authority.'},
-        {'code': 'delivered', 'name': 'Delivered', 'desc': 'Order delivered to you.'},
+        {
+            'code': 'document_received',
+            'name': 'Document Recieved',
+            'desc': 'We have received your documents and are preparing them for the next stage of processing.'
+        },
+        {
+            'code': 'notarized',
+            'name': 'Notarized',
+            'desc': 'Your documents have been notarized by a certified notary public and are ready for submission.'
+        },
+        {
+            'code': 'submitted',
+            'name': 'Submitted to the State Authority',
+            'desc': 'Your documents have been submitted to the state authority for apostille certification.'
+        },
+        {
+            'code': 'processed_state',
+            'name': 'Processed at State Authority',
+            'desc': 'Your documents are being processed by the state authority. We are monitoring the progress to ensure timely completion.'
+        },
+        {
+            'code': 'delivered',
+            'name': 'Delivered',
+            'desc': 'Your documents have been successfully delivered. Thank you for choosing our services!'
+        },
     ],
     'embassy_legalization': [
-        {'code': 'document_received', 'name': 'Document Received', 'desc': 'We received your documents.'},
-        {'code': 'notarized', 'name': 'Notarized', 'desc': 'Documents notarized.'},
-        {'code': 'state_authenticated', 'name': 'State Authenticated', 'desc': 'State authentication completed.'},
-        {'code': 'federal_authenticated', 'name': 'Federal DoS Authenticated', 'desc': 'Federal DoS authentication completed.'},
-        {'code': 'embassy_legalized', 'name': 'Embassy / Consulate Legalized', 'desc': 'Legalized by embassy/consulate.'},
-        {'code': 'translated', 'name': 'Translated (Optional)', 'desc': 'Documents translated if required.'},
-        {'code': 'delivered', 'name': 'Delivered', 'desc': 'Order delivered to you.'},
+        {
+            'code': 'document_received',
+            'name': 'Document Recieved',
+            'desc': 'We have received your documents and are preparing them for the embassy legalization process.'
+        },
+        {
+            'code': 'notarized',
+            'name': 'Notarized',
+            'desc': 'Your documents have been notarized by a certified notary public.'
+        },
+        {
+            'code': 'state_authenticated',
+            'name': 'State Authenticated',
+            'desc': 'Your documents have been authenticated by the state authority and are ready for federal processing.'
+        },
+        {
+            'code': 'federal_authenticated',
+            'name': 'Federal DoS Authenticated',
+            'desc': 'Your documents have been authenticated by the U.S. Department of State and are ready for embassy legalization.'
+        },
+        {
+            'code': 'embassy_legalized',
+            'name': 'Embassy / Consulate Legalized',
+            'desc': 'Your documents have been legalized by the embassy or consulate of the destination country.'
+        },
+        {
+            'code': 'translated',
+            'name': 'Translated',
+            'desc': 'Your documents are being translated by certified translators to meet the requirements of the destination country.'
+        },
+        {
+            'code': 'delivered',
+            'name': 'Delivered',
+            'desc': 'Your documents have been successfully delivered. Thank you for choosing our services!'
+        },
     ],
     'translation': [
-        {'code': 'document_received', 'name': 'Document Received', 'desc': 'We received your documents.'},
-        {'code': 'translated', 'name': 'Translated', 'desc': 'Translation completed.'},
-        {'code': 'quality_approved', 'name': 'Quality Approved', 'desc': 'Quality check approved.'},
-        {'code': 'delivered', 'name': 'Delivered', 'desc': 'Order delivered to you.'},
+        {
+            'code': 'document_received',
+            'name': 'Document Recieved',
+            'desc': 'We have received your documents and are preparing them for translation.'
+        },
+        {
+            'code': 'translated',
+            'name': 'Translated',
+            'desc': 'Your documents have been translated by our certified translators and are undergoing quality review.'
+        },
+        {
+            'code': 'quality_approved',
+            'name': 'Quality Approved',
+            'desc': 'The translation has been reviewed and approved by our quality assurance team. Your documents are ready for delivery.'
+        },
+        {
+            'code': 'delivered',
+            'name': 'Delivered',
+            'desc': 'Your translated documents have been successfully delivered. Thank you for choosing our services!'
+        },
     ],
 }
 

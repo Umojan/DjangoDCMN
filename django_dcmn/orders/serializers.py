@@ -126,41 +126,99 @@ class TrackSerializer(serializers.ModelSerializer):
 
 
 class PublicTrackSerializer(serializers.Serializer):
+    """
+    Serializer для публичной страницы трекинга.
+    Возвращает полный timeline с статусами каждого этапа.
+    """
     name = serializers.CharField()
     service = serializers.CharField()
+    service_label = serializers.CharField()
+    created_at = serializers.CharField()
     last_update = serializers.CharField()
-    steps = serializers.DictField(child=serializers.BooleanField())
-    current_step_name = serializers.CharField(allow_blank=True)
-    current_step_desc = serializers.CharField(allow_blank=True)
-    comment = serializers.CharField(allow_blank=True)
+    
+    # Timeline с детальной информацией о каждом этапе
+    timeline = serializers.ListField()
+    
+    # Текущий этап
+    current_stage = serializers.DictField()
+    
+    # Комментарий (если есть)
+    comment = serializers.CharField(allow_blank=True, allow_null=True)
+    
+    # Дополнительные данные
+    shipping = serializers.CharField(allow_blank=True, allow_null=True)
+    translation_required = serializers.BooleanField()
 
     @staticmethod
-    def build_steps(track):
-        service = (track.data or {}).get('service')
-        current_stage = (track.data or {}).get('current_stage')
+    def build_timeline(track):
+        """
+        Строит timeline для трекинга.
+        Возвращает список этапов с их статусами (без описаний).
+        Детальное описание только для текущего этапа.
+        """
+        data = track.data or {}
+        service = data.get('service')
+        current_stage_code = data.get('current_stage')
+        translation_required = data.get('translation_r', False)
+        comment = data.get('comment', '')
+        
+        # Получаем определения этапов для сервиса
         defs = STAGE_DEFS.get(service, [])
-        codes = [d['code'] for d in defs]
+        
+        # Фильтруем этапы: убираем "translated" если перевод не нужен
+        filtered_defs = []
+        for d in defs:
+            if d['code'] == 'translated' and not translation_required:
+                continue
+            filtered_defs.append(d)
+        
+        # Находим индекс текущего этапа
+        codes = [d['code'] for d in filtered_defs]
         try:
-            current_idx = codes.index(current_stage) if current_stage in codes else -1
-        except ValueError:
-            current_idx = -1
-        steps = {}
-        for i, d in enumerate(defs):
-            steps[d['name']] = (i <= current_idx and current_idx >= 0)
-        current_name = defs[current_idx]['name'] if 0 <= current_idx < len(defs) else ''
-        current_desc = defs[current_idx]['desc'] if 0 <= current_idx < len(defs) else ''
-        return steps, current_name, current_desc
+            current_idx = codes.index(current_stage_code) if current_stage_code in codes else 0
+        except (ValueError, AttributeError):
+            current_idx = 0
+        
+        # Строим timeline (только название и статус)
+        timeline = []
+        for i, stage_def in enumerate(filtered_defs):
+            # Определяем статус этапа
+            if i < current_idx:
+                status = 'completed'  # Пройденный этап (черная галочка)
+            elif i == current_idx:
+                status = 'current'    # Текущий этап (синий с часиками)
+            else:
+                status = 'pending'    # Будущий этап (серый)
+            
+            timeline.append({
+                'name': stage_def['name'],
+                'status': status,
+            })
+        
+        # Текущий этап с развернутым описанием
+        current_stage_info = {
+            'name': filtered_defs[current_idx]['name'] if current_idx < len(filtered_defs) else '',
+            'description': comment if comment else (filtered_defs[current_idx]['desc'] if current_idx < len(filtered_defs) else ''),
+        }
+        
+        return timeline, current_stage_info
 
     @classmethod
     def from_track(cls, track):
-        steps, current_name, current_desc = cls.build_steps(track)
-        service = (track.data or {}).get('service')
+        data = track.data or {}
+        service = data.get('service', '')
+        
+        timeline, current_stage_info = cls.build_timeline(track)
+        
         return cls({
-            "name": (track.data or {}).get('name') or "",
-            "service": service_label(service) if service else "",
-            "last_update": track.updated_at.isoformat(),
-            "steps": steps,
-            "current_step_name": current_name,
-            "current_step_desc": current_desc,
-            "comment": (track.data or {}).get('comment') or "",
+            "name": data.get('name', ''),
+            "service": service,
+            "service_label": service_label(service) if service else '',
+            "created_at": track.created_at.isoformat() if track.created_at else '',
+            "last_update": track.updated_at.isoformat() if track.updated_at else '',
+            "timeline": timeline,
+            "current_stage": current_stage_info,
+            "comment": data.get('comment', ''),
+            "shipping": data.get('shipping', ''),
+            "translation_required": data.get('translation_r', False),
         })
