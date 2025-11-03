@@ -883,9 +883,25 @@ class CreateTidFromCrmView(APIView):
             data=payload
         )
 
-        # Optionally write TID back to Zoho asynchronously
+        # Optionally write TID back to Zoho (sync first, fallback async)
         if zoho_module and zoho_record_id:
-            write_tracking_id_to_zoho_task.delay(zoho_module, zoho_record_id, tid)
+            try:
+                # persist linkage for future troubleshooting/idempotency
+                d = track.data or {}
+                d['zoho_module'] = zoho_module
+                d['record_id'] = str(zoho_record_id)
+                track.data = d
+                track.save(update_fields=['data'])
+            except Exception:
+                pass
+
+            try:
+                from .zoho_sync import update_record_fields
+                ok = update_record_fields(str(zoho_module), str(zoho_record_id), {"Tracking_ID": tid})
+                if not ok:
+                    write_tracking_id_to_zoho_task.delay(zoho_module, zoho_record_id, tid)
+            except Exception:
+                write_tracking_id_to_zoho_task.delay(zoho_module, zoho_record_id, tid)
 
         # welcome email
         try:

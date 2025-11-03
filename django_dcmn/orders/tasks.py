@@ -66,8 +66,12 @@ def write_tracking_id_to_zoho_task(module_name: str, record_id: str, tracking_id
     # Example: custom field API name 'Tracking_ID'
     fields = {"Tracking_ID": tracking_id}
     try:
-        return update_record_fields(module_name, record_id, fields)
-    except Exception:
+        ok = update_record_fields(module_name, record_id, fields)
+        if not ok:
+            print(f"[Zoho] Failed to write Tracking_ID sync. module={module_name} id={record_id}")
+        return ok
+    except Exception as e:
+        print(f"[Zoho] Exception while writing Tracking_ID: module={module_name} id={record_id} err={e}")
         return False
 
 
