@@ -103,10 +103,11 @@ class CreateFbiOrderView(APIView):
                     sync_fbi_order_to_zoho(order, tracking_id=tid)
                 except Exception:
                     logging.exception("Failed to sync FBI order with tracking to Zoho: %s", order.id)
-                try:
-                    send_tracking_email_task.delay(tid, 'created')
-                except Exception:
-                    pass
+                # Temporarily disabled email notifications
+                # try:
+                #     send_tracking_email_task.delay(tid, 'created')
+                # except Exception:
+                #     pass
 
                 return Response({
                     'message': 'Order created',
@@ -244,10 +245,11 @@ class CreateEmbassyOrderView(APIView):
                 sync_embassy_order_to_zoho(order, tracking_id=tid)
             except Exception:
                 logging.exception("Failed to sync Embassy order with tracking to Zoho: %s", order.id)
-            try:
-                send_tracking_email_task.delay(tid, 'created')
-            except Exception:
-                pass
+            # Temporarily disabled email notifications
+            # try:
+            #     send_tracking_email_task.delay(tid, 'created')
+            # except Exception:
+            #     pass
 
             return Response({
                 'message': 'Embassy legalization order created',
@@ -324,10 +326,11 @@ class CreateApostilleOrderView(APIView):
                 sync_apostille_order_to_zoho(order, tracking_id=tid)
             except Exception:
                 logging.exception("Failed to sync Apostille order with tracking to Zoho: %s", order.id)
-            try:
-                send_tracking_email_task.delay(tid, 'created')
-            except Exception:
-                pass
+            # Temporarily disabled email notifications
+            # try:
+            #     send_tracking_email_task.delay(tid, 'created')
+            # except Exception:
+            #     pass
 
             return Response({
                 'message': 'Apostille order created',
@@ -414,10 +417,11 @@ class CreateTranslationOrderView(APIView):
                 sync_translation_order_to_zoho(order, tracking_id=tid)
             except Exception:
                 logging.exception("Failed to sync Translation order with tracking to Zoho: %s", order.id)
-            try:
-                send_tracking_email_task.delay(tid, 'created')
-            except Exception:
-                pass
+            # Temporarily disabled email notifications
+            # try:
+            #     send_tracking_email_task.delay(tid, 'created')
+            # except Exception:
+            #     pass
 
             return Response({
                 'message': 'Translation order created',
@@ -906,11 +910,11 @@ class CreateTidFromCrmView(APIView):
                 api_module_name = ZOHO_MODULE_MAP.get(zoho_module, zoho_module)
                 write_tracking_id_to_zoho_task.delay(api_module_name, zoho_record_id, tid)
 
-        # welcome email
-        try:
-            send_tracking_email_task.delay(tid, 'created')
-        except Exception:
-            pass
+        # Temporarily disabled email notifications
+        # try:
+        #     send_tracking_email_task.delay(tid, 'created')
+        # except Exception:
+        #     pass
 
         ser = TrackSerializer(track)
         return Response({'tid': tid, 'track': ser.data}, status=201)
@@ -976,11 +980,12 @@ class CrmUpdateStageView(APIView):
         track.save(update_fields=['data', 'updated_at'])
 
         # email per key stage
-        try:
-            if stage_changed and track_data.get('current_stage'):
-                send_tracking_email_task.delay(track.tid, track_data.get('current_stage'))
-        except Exception:
-            pass
+        # Temporarily disabled email notifications
+        # try:
+        #     if stage_changed and track_data.get('current_stage'):
+        #         send_tracking_email_task.delay(track.tid, track_data.get('current_stage'))
+        # except Exception:
+        #     pass
         return Response({'ok': True})
 
 
