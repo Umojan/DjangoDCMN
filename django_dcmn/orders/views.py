@@ -99,12 +99,11 @@ class CreateFbiOrderView(APIView):
                     },
                     service='fbi_apostille'
                 )
-                # Push to Zoho with Tracking_ID included
+                # Push to Zoho with Tracking_ID included (ASYNC)
                 try:
-                    from .zoho_sync import sync_fbi_order_to_zoho
-                    sync_fbi_order_to_zoho(order, tracking_id=tid)
+                    sync_order_to_zoho_task.delay(order.id, 'fbi', tracking_id=tid)
                 except Exception:
-                    logging.exception("Failed to sync FBI order with tracking to Zoho: %s", order.id)
+                    logging.exception("Failed to queue Zoho sync for FBI order: %s", order.id)
                 # Temporarily disabled email notifications
                 # try:
                 #     send_tracking_email_task.delay(tid, 'created')
@@ -243,12 +242,11 @@ class CreateEmbassyOrderView(APIView):
                 },
                 service='embassy_legalization'
             )
-            # Push to Zoho with Tracking_ID included
+            # Push to Zoho with Tracking_ID included (ASYNC)
             try:
-                from .zoho_sync import sync_embassy_order_to_zoho
-                sync_embassy_order_to_zoho(order, tracking_id=tid)
+                sync_order_to_zoho_task.delay(order.id, 'embassy', tracking_id=tid)
             except Exception:
-                logging.exception("Failed to sync Embassy order with tracking to Zoho: %s", order.id)
+                logging.exception("Failed to queue Zoho sync for Embassy order: %s", order.id)
             # Temporarily disabled email notifications
             # try:
             #     send_tracking_email_task.delay(tid, 'created')
@@ -326,12 +324,11 @@ class CreateApostilleOrderView(APIView):
                 },
                 service='state_apostille'
             )
-            # Push to Zoho with Tracking_ID included
+            # Push to Zoho with Tracking_ID included (ASYNC)
             try:
-                from .zoho_sync import sync_apostille_order_to_zoho
-                sync_apostille_order_to_zoho(order, tracking_id=tid)
+                sync_order_to_zoho_task.delay(order.id, 'apostille', tracking_id=tid)
             except Exception:
-                logging.exception("Failed to sync Apostille order with tracking to Zoho: %s", order.id)
+                logging.exception("Failed to queue Zoho sync for Apostille order: %s", order.id)
             # Temporarily disabled email notifications
             # try:
             #     send_tracking_email_task.delay(tid, 'created')
@@ -419,12 +416,11 @@ class CreateTranslationOrderView(APIView):
                 },
                 service='translation'
             )
-            # Push to Zoho with Tracking_ID included
+            # Push to Zoho with Tracking_ID included (ASYNC)
             try:
-                from .zoho_sync import sync_translation_order_to_zoho
-                sync_translation_order_to_zoho(order, tracking_id=tid)
+                sync_order_to_zoho_task.delay(order.id, 'translation', tracking_id=tid)
             except Exception:
-                logging.exception("Failed to sync Translation order with tracking to Zoho: %s", order.id)
+                logging.exception("Failed to queue Zoho sync for Translation order: %s", order.id)
             # Temporarily disabled email notifications
             # try:
             #     send_tracking_email_task.delay(tid, 'created')

@@ -24,32 +24,32 @@ def test_celery_task():
 
 
 @shared_task
-def sync_order_to_zoho_task(order_id, order_type):
+def sync_order_to_zoho_task(order_id, order_type, tracking_id=None):
     try:
         if order_type == "fbi":
             order = FbiApostilleOrder.objects.get(id=order_id)
             if not order.zoho_synced:
-                sync_fbi_order_to_zoho(order)
+                sync_fbi_order_to_zoho(order, tracking_id=tracking_id)
         elif order_type == "embassy":
             order = EmbassyLegalizationOrder.objects.get(id=order_id)
             if not order.zoho_synced:
-                sync_embassy_order_to_zoho(order)
+                sync_embassy_order_to_zoho(order, tracking_id=tracking_id)
         elif order_type == "apostille":
             order = ApostilleOrder.objects.get(id=order_id)
             if not order.zoho_synced:
-                sync_apostille_order_to_zoho(order)
+                sync_apostille_order_to_zoho(order, tracking_id=tracking_id)
         elif order_type == "translation":
             order = TranslationOrder.objects.get(id=order_id)
             if not order.zoho_synced:
-                sync_translation_order_to_zoho(order)
+                sync_translation_order_to_zoho(order, tracking_id=tracking_id)
         elif order_type == "marriage":
             order = MarriageOrder.objects.get(id=order_id)
             if not order.zoho_synced:
-                sync_marriage_order_to_zoho(order)
+                sync_marriage_order_to_zoho(order, tracking_id=tracking_id)
         elif order_type == "I-9":
             order = I9VerificationOrder.objects.get(id=order_id)
             if not order.zoho_synced:
-                sync_i9_order_to_zoho(order)
+                sync_i9_order_to_zoho(order, tracking_id=tracking_id)
         elif order_type == "quote":
             order = QuoteRequest.objects.get(id=order_id)
             if not order.zoho_synced:
