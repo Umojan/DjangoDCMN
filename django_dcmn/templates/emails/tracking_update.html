@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #f8f9fa;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9fa; padding: 40px 0; font-family: Arial, sans-serif;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-width: 600px;">
+                    <!-- Header -->
+                    <tr style="background: #003e9c;">
+                        <td style="padding: 30px 20px; text-align: center;">
+                            <img src="https://cdn.prod.website-files.com/6432b1408e9cf5532f6bc77b/6433b649d57930296844cac0_dcmobilenotarylogo.png"
+                                 alt="DC Mobile Notary" width="80" style="display: block; margin: 0 auto;">
+                        </td>
+                    </tr>
+                    
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px 30px;">
+                            <h2 style="color: #003e9c; margin-top: 0; margin-bottom: 10px; font-size: 24px;">{{ title }}</h2>
+                            <p style="font-size: 16px; color: #333; line-height: 1.6;">Hi <strong>{{ name }}</strong>,</p>
+                            <p style="font-size: 16px; color: #333; line-height: 1.6;">{{ message }}</p>
+                            
+                            {% if current_stage %}
+                            <div style="background: #f8f9fa; border-left: 4px solid #003e9c; padding: 20px; margin: 25px 0; border-radius: 4px;">
+                                <h3 style="color: #003e9c; margin: 0 0 10px 0; font-size: 18px;">Current Status</h3>
+                                <p style="font-size: 15px; color: #444; margin: 0; line-height: 1.6;"><strong>{{ current_stage }}</strong></p>
+                                {% if comment %}
+                                <p style="font-size: 14px; color: #666; margin: 10px 0 0 0; line-height: 1.6;">{{ comment }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                            
+                            <hr style="margin: 30px 0; border: none; border-top: 1px solid #e0e0e0;">
+                            
+                            <h3 style="color: #003e9c; margin-bottom: 15px; font-size: 18px;">Order Details</h3>
+                            <p style="font-size: 15px; color: #444; line-height: 1.8; margin: 0;">
+                                <strong>Service:</strong> {{ service_label }}<br>
+                                <strong>Tracking ID:</strong> {{ tid }}<br>
+                                {% if shipping %}
+                                <strong>Shipping:</strong> {{ shipping }}<br>
+                                {% endif %}
+                            </p>
+                            
+                            <!-- CTA Button -->
+                            <div style="text-align: center; margin: 35px 0 25px 0;">
+                                <a href="{{ tracking_url }}" 
+                                   style="display: inline-block; background: #003e9c; color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-size: 16px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,62,156,0.3);">
+                                    Track My Order
+                                </a>
+                            </div>
+                            
+                            <p style="font-size: 14px; color: #666; line-height: 1.6; margin-top: 25px;">
+                                If you have any questions, feel free to contact us at 
+                                <a href="mailto:support@dcmobilenotary.com" style="color: #003e9c; text-decoration: none;">support@dcmobilenotary.com</a>
+                            </p>
+                            
+                            <p style="font-size: 14px; color: #666; line-height: 1.6; margin-top: 15px;">
+                                Thank you for choosing <strong>DC Mobile Notary</strong>!
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr style="background: #f1f1f1;">
+                        <td style="padding: 25px 20px; text-align: center; font-size: 13px; color: #999; line-height: 1.6;">
+                            <strong>DC Mobile Notary</strong><br>
+                            Washington DC, USA<br>
+                            <a href="mailto:support@dcmobilenotary.com" style="color: #999; text-decoration: none;">support@dcmobilenotary.com</a><br>
+                            <a href="https://www.dcmobilenotary.com" style="color: #999; text-decoration: none;">www.dcmobilenotary.com</a>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+

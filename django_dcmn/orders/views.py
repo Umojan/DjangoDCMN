@@ -104,11 +104,11 @@ class CreateFbiOrderView(APIView):
                     sync_order_to_zoho_task.delay(order.id, 'fbi', tracking_id=tid)
                 except Exception:
                     logging.exception("Failed to queue Zoho sync for FBI order: %s", order.id)
-                # Temporarily disabled email notifications
-                # try:
-                #     send_tracking_email_task.delay(tid, 'created')
-                # except Exception:
-                #     pass
+                # Send welcome email
+                try:
+                    send_tracking_email_task.delay(tid, 'created')
+                except Exception:
+                    logging.exception("Failed to queue tracking email for FBI order: %s", order.id)
 
                 return Response({
                     'message': 'Order created',
@@ -247,11 +247,11 @@ class CreateEmbassyOrderView(APIView):
                 sync_order_to_zoho_task.delay(order.id, 'embassy', tracking_id=tid)
             except Exception:
                 logging.exception("Failed to queue Zoho sync for Embassy order: %s", order.id)
-            # Temporarily disabled email notifications
-            # try:
-            #     send_tracking_email_task.delay(tid, 'created')
-            # except Exception:
-            #     pass
+            # Send welcome email
+            try:
+                send_tracking_email_task.delay(tid, 'created')
+            except Exception:
+                logging.exception("Failed to queue tracking email for Embassy order: %s", order.id)
 
             return Response({
                 'message': 'Embassy legalization order created',
@@ -329,11 +329,11 @@ class CreateApostilleOrderView(APIView):
                 sync_order_to_zoho_task.delay(order.id, 'apostille', tracking_id=tid)
             except Exception:
                 logging.exception("Failed to queue Zoho sync for Apostille order: %s", order.id)
-            # Temporarily disabled email notifications
-            # try:
-            #     send_tracking_email_task.delay(tid, 'created')
-            # except Exception:
-            #     pass
+            # Send welcome email
+            try:
+                send_tracking_email_task.delay(tid, 'created')
+            except Exception:
+                logging.exception("Failed to queue tracking email for Apostille order: %s", order.id)
 
             return Response({
                 'message': 'Apostille order created',
@@ -421,11 +421,11 @@ class CreateTranslationOrderView(APIView):
                 sync_order_to_zoho_task.delay(order.id, 'translation', tracking_id=tid)
             except Exception:
                 logging.exception("Failed to queue Zoho sync for Translation order: %s", order.id)
-            # Temporarily disabled email notifications
-            # try:
-            #     send_tracking_email_task.delay(tid, 'created')
-            # except Exception:
-            #     pass
+            # Send welcome email
+            try:
+                send_tracking_email_task.delay(tid, 'created')
+            except Exception:
+                logging.exception("Failed to queue tracking email for Translation order: %s", order.id)
 
             return Response({
                 'message': 'Translation order created',
@@ -934,11 +934,11 @@ class CreateTidFromCrmView(APIView):
                 api_module_name = ZOHO_MODULE_MAP.get(zoho_module, zoho_module)
                 write_tracking_id_to_zoho_task.delay(api_module_name, zoho_record_id, tid)
 
-        # Temporarily disabled email notifications
-        # try:
-        #     send_tracking_email_task.delay(tid, 'created')
-        # except Exception:
-        #     pass
+        # Send welcome email
+        try:
+            send_tracking_email_task.delay(tid, 'created')
+        except Exception:
+            logger.exception(f"[CreateTID] Failed to queue tracking email for TID={tid}")
 
         ser = TrackSerializer(track)
         return Response({'tid': tid, 'track': ser.data}, status=201)
@@ -1003,13 +1003,13 @@ class CrmUpdateStageView(APIView):
         track.data = track_data
         track.save(update_fields=['data', 'updated_at'])
 
-        # email per key stage
-        # Temporarily disabled email notifications
-        # try:
-        #     if stage_changed and track_data.get('current_stage'):
-        #         send_tracking_email_task.delay(track.tid, track_data.get('current_stage'))
-        # except Exception:
-        #     pass
+        # Send email notification if stage changed
+        try:
+            if stage_changed and track_data.get('current_stage'):
+                send_tracking_email_task.delay(track.tid, track_data.get('current_stage'))
+        except Exception:
+            logging.exception(f"Failed to queue tracking email for TID={track.tid}")
+        
         return Response({'ok': True})
 
 

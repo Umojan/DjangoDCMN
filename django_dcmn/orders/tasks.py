@@ -84,29 +84,119 @@ def write_tracking_id_to_zoho_task(module_name: str, record_id: str, tracking_id
 
 @shared_task
 def send_tracking_email_task(tid: str, stage_code: str):
+    """
+    Отправляет HTML email с обновлением статуса заказа.
+    Все письма группируются в одну ветку по TID.
+    """
+    from django.template.loader import render_to_string
+    from django.core.mail import EmailMessage
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
     track = Track.objects.filter(tid=tid).first()
     if not track:
+        logger.warning(f"Track not found for TID: {tid}")
         return
     
-    email = (track.data or {}).get('email')
+    data = track.data or {}
+    email = data.get('email')
+    name = data.get('name', 'Customer')
+    
     if not email:
+        logger.warning(f"No email found for TID: {tid}")
         return
 
     svc = service_label(track.service)
-    subject = "Order update"
+    
+    # Определяем заголовок и сообщение в зависимости от стадии
     if stage_code == 'created':
-        subject = f"We received your documents — {svc}"
+        title = "We Received Your Order! 📋"
+        message = "Thank you for choosing DC Mobile Notary! We have received your order and will begin processing it shortly."
+    elif stage_code == 'document_received':
+        title = "Documents Received ✅"
+        message = "We have successfully received your documents and they are now in our processing queue."
+    elif stage_code == 'notarized':
+        title = "Documents Notarized 📝"
+        message = "Your documents have been notarized and are ready for the next step in the apostille process."
+    elif stage_code == 'submitted':
+        title = "Submitted to State Authority 🏛️"
+        message = "Your documents have been submitted to the appropriate state authority for authentication."
+    elif stage_code == 'processed_dos':
+        title = "Processed at U.S. Department of State ✅"
+        message = "Great news! Your documents have been processed by the U.S. Department of State."
+    elif stage_code == 'processed_state':
+        title = "Processed at State Authority ✅"
+        message = "Your documents have been successfully processed by the state authority."
+    elif stage_code == 'state_authenticated':
+        title = "State Authentication Complete ✅"
+        message = "Your documents have been authenticated at the state level."
+    elif stage_code == 'federal_authenticated':
+        title = "Federal Authentication Complete ✅"
+        message = "Your documents have been authenticated by the U.S. Department of State."
+    elif stage_code == 'embassy_legalized':
+        title = "Embassy Legalization Complete ✅"
+        message = "Your documents have been legalized by the embassy/consulate."
+    elif stage_code == 'translated':
+        title = "Translation Complete 🌐"
+        message = "Your documents have been professionally translated and are ready for delivery."
+    elif stage_code == 'quality_approved':
+        title = "Quality Check Approved ✅"
+        message = "Your translation has passed our quality assurance review."
     elif stage_code == 'delivered':
-        subject = f"Delivered — {svc}"
-    elif stage_code in (
-        'notarized', 'submitted', 'processed_dos', 'processed_state',
-        'translated', 'quality_approved'
-    ):
-        subject = f"In Progress — {svc}"
-
-    url = f"{settings.BASE_URL}/track/{track.tid}"
-    body = f"Update: {svc} — {stage_code}. View tracking: {url}"
+        title = "Order Delivered! 🎉"
+        message = "Your order has been delivered! We hope you're satisfied with our service."
+    else:
+        title = "Order Update"
+        message = f"Your order status has been updated to: {stage_code}"
+    
+    # Получаем текущую стадию и комментарий
+    from .constants import STAGE_DEFS
+    current_stage_name = ""
+    comment = data.get('comment', '')
+    
+    defs = STAGE_DEFS.get(track.service, [])
+    for stage_def in defs:
+        if stage_def['code'] == stage_code:
+            current_stage_name = stage_def['name']
+            break
+    
+    # URL для трекинга
+    tracking_url = f"{settings.FRONTEND_URL}/tracking?tid={tid}"
+    
+    # Рендерим HTML шаблон
+    html_content = render_to_string('emails/tracking_update.html', {
+        'title': title,
+        'name': name,
+        'message': message,
+        'current_stage': current_stage_name,
+        'comment': comment,
+        'service_label': svc,
+        'tid': tid,
+        'shipping': data.get('shipping', ''),
+        'tracking_url': tracking_url,
+    })
+    
+    # Формируем subject
+    subject = f"{title} — {svc}"
+    
+    # Email threading: все письма по одному TID в одной ветке
+    thread_id = f"<tracking-{tid}@dcmobilenotary.com>"
+    
     try:
-        send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [email], fail_silently=True)
-    except Exception:
-        pass
+        email_message = EmailMessage(
+            subject=subject,
+            body=html_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[email],
+            headers={
+                'Message-ID': f"<tracking-{tid}-{stage_code}@dcmobilenotary.com>",
+                'In-Reply-To': thread_id,
+                'References': thread_id,
+            }
+        )
+        email_message.content_subtype = 'html'
+        email_message.send(fail_silently=False)
+        logger.info(f"✅ Tracking email sent to {email} for TID {tid}, stage: {stage_code}")
+    except Exception as e:
+        logger.exception(f"❌ Failed to send tracking email for TID {tid}: {e}")
