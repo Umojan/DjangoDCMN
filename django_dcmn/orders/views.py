@@ -93,7 +93,9 @@ class CreateFbiOrderView(APIView):
                         'name': order.name,
                         'email': order.email,
                         'service': 'fbi_apostille',
-                        'current_stage': start_stage
+                        'current_stage': start_stage,
+                        'order_id': order.id,
+                        'order_type': 'fbi'
                     },
                     service='fbi_apostille'
                 )
@@ -235,7 +237,9 @@ class CreateEmbassyOrderView(APIView):
                     'name': order.name,
                     'email': order.email,
                     'service': 'embassy_legalization',
-                    'current_stage': start_stage
+                    'current_stage': start_stage,
+                    'order_id': order.id,
+                    'order_type': 'embassy'
                 },
                 service='embassy_legalization'
             )
@@ -316,7 +320,9 @@ class CreateApostilleOrderView(APIView):
                     'name': order.name,
                     'email': order.email,
                     'service': 'state_apostille',
-                    'current_stage': start_stage
+                    'current_stage': start_stage,
+                    'order_id': order.id,
+                    'order_type': 'apostille'
                 },
                 service='state_apostille'
             )
@@ -407,7 +413,9 @@ class CreateTranslationOrderView(APIView):
                     'name': order.name,
                     'email': order.email,
                     'service': 'translation',
-                    'current_stage': start_stage
+                    'current_stage': start_stage,
+                    'order_id': order.id,
+                    'order_type': 'translation'
                 },
                 service='translation'
             )
@@ -574,7 +582,26 @@ class CreateStripeSessionView(APIView):
         else:
             return Response({"error": "Invalid order_type"}, status=400)
 
+        # Получаем TID для этого заказа (по order_id и order_type)
         try:
+            track = Track.objects.filter(
+                data__order_id=order_id,
+                data__order_type=order_type
+            ).order_by('-created_at').first()
+            tracking_id = track.tid if track else None
+        except Exception:
+            tracking_id = None
+            logging.exception(f"Failed to retrieve TID for order {order_id} ({order_type})")
+
+        try:
+            # Формируем success_url с TID
+            if tracking_id:
+                # Редирект на страницу трекинга с TID
+                success_url = f"{settings.FRONTEND_URL}/tracking?tid={tracking_id}"
+            else:
+                # Fallback на обычную success страницу
+                success_url = f"{settings.STRIPE_SUCCESS_URL}?session_id={{CHECKOUT_SESSION_ID}}"
+
             session = stripe.checkout.Session.create(
                 payment_method_types=["card"],
                 line_items=[{
@@ -588,11 +615,12 @@ class CreateStripeSessionView(APIView):
                     "quantity": 1,
                 }],
                 mode="payment",
-                success_url=f"{settings.STRIPE_SUCCESS_URL}?session_id={{CHECKOUT_SESSION_ID}}",
+                success_url=success_url,
                 cancel_url=settings.STRIPE_CANCEL_URL,
                 metadata={
                     "order_id": str(order.id),
                     "order_type": order_type,
+                    "tracking_id": tracking_id or "",
                 },
                 customer_email=customer_email,
                 payment_intent_data={
