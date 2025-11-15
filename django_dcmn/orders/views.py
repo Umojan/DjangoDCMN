@@ -968,18 +968,25 @@ class CrmUpdateStageView(APIView):
         track_data = track.data or {}
         service_key = track_data.get('service') or track.service
 
+        # Сохраняем старую стадию для проверки реального изменения
+        old_stage = track_data.get('current_stage')
         stage_changed = False
         codes = [d['code'] for d in STAGE_DEFS.get(service_key, [])]
+        
         if current_stage:
             if current_stage in codes:
-                track_data['current_stage'] = current_stage
-                stage_changed = True
+                # Проверяем, действительно ли стадия изменилась
+                if old_stage != current_stage:
+                    track_data['current_stage'] = current_stage
+                    stage_changed = True
         elif crm_stage_name:
             norm = (crm_stage_name or '').strip().lower()
             mapped = CRM_STAGE_MAP.get(service_key, {}).get(norm)
             if mapped in codes:
-                track_data['current_stage'] = mapped
-                stage_changed = True
+                # Проверяем, действительно ли стадия изменилась
+                if old_stage != mapped:
+                    track_data['current_stage'] = mapped
+                    stage_changed = True
 
         if comment is not None:
             track_data['comment'] = str(comment)
@@ -1003,10 +1010,11 @@ class CrmUpdateStageView(APIView):
         track.data = track_data
         track.save(update_fields=['data', 'updated_at'])
 
-        # Send email notification if stage changed
+        # Send email notification ONLY if stage actually changed
         try:
             if stage_changed and track_data.get('current_stage'):
                 send_tracking_email_task.delay(track.tid, track_data.get('current_stage'))
+                logging.info(f"📧 Stage changed for TID={track.tid}: {old_stage} → {track_data.get('current_stage')}")
         except Exception:
             logging.exception(f"Failed to queue tracking email for TID={track.tid}")
         

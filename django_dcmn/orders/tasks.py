@@ -177,11 +177,25 @@ def send_tracking_email_task(tid: str, stage_code: str):
         'tracking_url': tracking_url,
     })
     
-    # Формируем subject
-    subject = f"{title} — {svc}"
+    # Формируем subject - одинаковый для всей ветки
+    subject = f"Order Status: {svc} — {tid}"
     
     # Email threading: все письма по одному TID в одной ветке
+    # Первое письмо (created) создает ветку, остальные отвечают на него
     thread_id = f"<tracking-{tid}@dcmobilenotary.com>"
+    message_id = f"<tracking-{tid}-{stage_code}@dcmobilenotary.com>"
+    
+    headers = {
+        'Message-ID': message_id,
+    }
+    
+    # Для всех писем кроме первого добавляем In-Reply-To и References
+    if stage_code != 'created':
+        headers['In-Reply-To'] = thread_id
+        headers['References'] = thread_id
+    else:
+        # Первое письмо само становится корнем ветки
+        headers['Message-ID'] = thread_id
     
     try:
         email_message = EmailMessage(
@@ -189,11 +203,7 @@ def send_tracking_email_task(tid: str, stage_code: str):
             body=html_content,
             from_email=settings.DEFAULT_FROM_EMAIL,
             to=[email],
-            headers={
-                'Message-ID': f"<tracking-{tid}-{stage_code}@dcmobilenotary.com>",
-                'In-Reply-To': thread_id,
-                'References': thread_id,
-            }
+            headers=headers
         )
         email_message.content_subtype = 'html'
         email_message.send(fail_silently=False)
