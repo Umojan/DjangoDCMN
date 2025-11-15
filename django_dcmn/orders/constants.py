@@ -162,7 +162,7 @@ CRM_STAGE_MAP = {
         'documents dropped off at ups store or client’s address': 'processed_dos',
         "documents dropped off at ups store or client's address": 'processed_dos',
         'under translation': 'translated',
-        'no label / not yet dropped off': 'processed_dos',
+        'no label / not yet dropped off': 'delivered',
         'fully refunded ( cancelled orders)': 'delivered',
         'from apostille request': 'document_received',
         'notarization': 'notarized',
