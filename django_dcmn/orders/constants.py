@@ -144,15 +144,6 @@ ZOHO_MODULE_MAP = {
 # Ключи нормализуются в нижний регистр для устойчивости к регистру
 CRM_STAGE_MAP = {
     'fbi_apostille': {
-        # canonical
-        # 'order received': 'document_received',
-        # 'document received': 'document_received',
-        # 'notarized': 'notarized',
-        # 'submitted': 'submitted',
-        # 'processed at u.s. dos': 'processed_dos',
-        # 'translated': 'translated',
-        # 'delivered': 'delivered',
-        # zoho picklist (exact values lowercased)
         'pending submission': 'submitted',
         'order submission stage ( automation email)': 'submitted',
         'state department submission with drop-off/pick-up slip': 'submitted',
@@ -197,8 +188,8 @@ CRM_STAGE_MAP = {
     'translation': {
         'client placed request': 'document_received',
         'document received': 'document_received',
-        'translated': 'translated',
-        'quality approved': 'quality_approved',
+        'in translation': 'translated',
+        'under review': 'quality_approved',
         'delivered': 'delivered',
     },
 }
