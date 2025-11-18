@@ -136,26 +136,18 @@ ZOHO_MODULE_MAP = {
 # Ключи нормализуются в нижний регистр для устойчивости к регистру
 CRM_STAGE_MAP = {
     'fbi_apostille': {
-        # canonical
-        # 'order received': 'document_received',
-        # 'document received': 'document_received',
-        # 'notarized': 'notarized',
-        # 'submitted': 'submitted',
-        # 'processed at u.s. dos': 'processed_dos',
-        # 'translated': 'translated',
-        # 'delivered': 'delivered',
+        # canonical stages: document_received → submitted → processed_dos → [translated] → delivered
         # zoho picklist (exact values lowercased)
         'pending submission': 'submitted',
         'order submission stage ( automation email)': 'submitted',
         'state department submission with drop-off/pick-up slip': 'submitted',
         'pick-up of documents from the state department': 'processed_dos',
-        'ups label has been generated (automation email)': 'processed_dos',
+        'ups label has been generated (automation email)': 'delivered',
         'resubmissions on company cost': 'submitted',
         'rejected': 'document_received',
         'send review (happy clients) (automation emails)': 'delivered',
         'no review ( unhappy client)': 'delivered',
-        'documents dropped off at ups store or client’s address': 'processed_dos',
-        "documents dropped off at ups store or client's address": 'processed_dos',
+        'documents dropped off at ups store or client’s address': 'delivered',
         'under translation': 'translated',
         'no label / not yet dropped off': 'submitted',
         'fully refunded ( cancelled orders)': 'delivered',
@@ -166,7 +158,7 @@ CRM_STAGE_MAP = {
         'usdos': 'processed_dos',
         'translation': 'translated',
         'embassy': 'processed_dos',
-        'ups/fedex/dhl drop off': 'processed_dos',
+        'ups/fedex/dhl drop off': 'delivered',
         'delivery and reviews': 'delivered',
     },
     'state_apostille': {
@@ -188,6 +180,8 @@ CRM_STAGE_MAP = {
         'delivered': 'delivered',
     },
     'translation': {
+        # canonical stages: document_received → translated → quality_approved → delivered
+        # zoho field: Translation Status (exact values lowercased)
         'client placed request': 'document_received',
         'document received': 'document_received',
         'translated': 'translated',
