@@ -183,10 +183,20 @@ CRM_STAGE_MAP = {
         # canonical stages: document_received → translated → quality_approved → delivered
         # zoho field: Translation Status (exact values lowercased)
         'client placed request': 'document_received',
-        'document received': 'document_received',
-        'translated': 'translated',
-        'quality approved': 'quality_approved',
-        'delivered': 'delivered',
+        'translation leads from get quote pipeline': 'document_received',
+        'initial contact': 'document_received',
+        'call follow up': 'document_received',
+        'email 1. follow up': 'document_received',
+        'email 2. follow up': 'document_received',
+        'in progress ✅ (client agreed to proceed, notarization (if required)': 'translated',
+        'completed': 'quality_approved',
+        'shipping/ drop off': 'quality_approved',
+        'completed ✅ (send review)': 'delivered',
+        'no review ❌ ( uncertified client)': 'delivered',
+        'from fbi translation requets': 'document_received',
+        # ignored stages (client lost, cancelled)
+        'client lost ❌ (silent or chose another provider)': 'document_received',
+        'cancelled': 'document_received',
     },
 }
 
