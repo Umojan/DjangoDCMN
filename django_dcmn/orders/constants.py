@@ -2,92 +2,92 @@ STAGE_DEFS = {
     'fbi_apostille': [
         {
             'code': 'document_received',
-            'name': 'Document Recieved',
+            'name': 'Document Received',
             'desc': 'We have received your documents and are preparing them for the next stage of processing.'
         },
         {
             'code': 'submitted',
-            'name': 'Submitted at U.S. DoS',
-            'desc': 'Your documents have been submitted to the appropriate U.S. Department of State for authentication.'
+            'name': 'Submission at U.S. DoS',
+            'desc': 'Your documents are currently being submitted to the U.S. Department of State for federal authentication.'
         },
         {
             'code': 'processed_dos',
-            'name': 'Processed at U.S. DoS',
-            'desc': 'The notarized documents have been delivered to the U.S. Department of State for federal authentication. Our liaison is closely monitoring the review and certification process to ensure everything proceeds smoothly.'
+            'name': 'Processing at U.S. DoS',
+            'desc': 'Your documents are currently under review at the U.S. Department of State. Our liaison is monitoring the process to ensure timely federal authentication.'
         },
         {
             'code': 'translated',
-            'name': 'Translated',
-            'desc': 'Your documents are currently being translated by our certified translators to meet the requirements of the destination country.'
+            'name': 'Translation',
+            'desc': 'Your documents are currently being translated by our certified translators in accordance with the destination country’s requirements.'
         },
         {
             'code': 'delivered',
-            'name': 'Delivered',
-            'desc': 'Your documents have been successfully delivered. Thank you for choosing our services!'
+            'name': 'Delivery',
+            'desc': 'Your documents are currently on their way to you. Thank you for choosing our services!'
         },
     ],
     'state_apostille': [
         {
             'code': 'document_received',
-            'name': 'Document Recieved',
+            'name': 'Document Received',
             'desc': 'We have received your documents and are preparing them for the next stage of processing.'
         },
         {
             'code': 'notarized',
-            'name': 'Notarized',
-            'desc': 'Your documents have been notarized by a certified notary public and are ready for submission.'
+            'name': 'Notarization',
+            'desc': 'Your documents are being notarized by a certified notary public to prepare for state authentication.'
         },
         {
             'code': 'submitted',
-            'name': 'Submitted to the State Authority',
-            'desc': 'Your documents have been submitted to the state authority for apostille certification.'
+            'name': 'Submission to State Authority',
+            'desc': 'Your documents are being submitted to the state authority for apostille certification.'
         },
         {
             'code': 'processed_state',
-            'name': 'Processed at State Authority',
+            'name': 'Processing at State Authority',
             'desc': 'Your documents are being processed by the state authority. We are monitoring the progress to ensure timely completion.'
         },
         {
             'code': 'delivered',
-            'name': 'Delivered',
-            'desc': 'Your documents have been successfully delivered. Thank you for choosing our services!'
+            'name': 'Delivery',
+            'desc': 'Your documents are being delivered to you. Thank you for choosing our services!'
         },
     ],
     'embassy_legalization': [
         {
             'code': 'document_received',
-            'name': 'Document Recieved',
+            'name': 'Document Received',
             'desc': 'We have received your documents and are preparing them for the embassy legalization process.'
         },
         {
             'code': 'notarized',
-            'name': 'Notarized',
-            'desc': 'Your documents have been notarized by a certified notary public.'
+            'name': 'Notarization',
+            'desc': 'Your documents are being notarized by a certified notary public.'
         },
         {
             'code': 'state_authenticated',
-            'name': 'State Authenticated',
-            'desc': 'Your documents have been authenticated by the state authority and are ready for federal processing.'
+            'name': 'State Authentication',
+            'desc': 'Your documents are being authenticated by the state authority to prepare for federal processing.'
         },
         {
             'code': 'federal_authenticated',
-            'name': 'Federal DoS Authenticated',
-            'desc': 'Your documents have been authenticated by the U.S. Department of State and are ready for embassy legalization.'
+            'name': 'Federal DoS Authentication',
+            'desc': 'Your documents are being authenticated by the U.S. Department of State to prepare for embassy legalization.'
         },
         {
             'code': 'embassy_legalized',
-            'name': 'Embassy / Consulate Legalized',
-            'desc': 'Your documents have been legalized by the embassy or consulate of the destination country.'
+            'name': 'Embassy / Consulate Legalization',
+            'desc': 'Your documents are being legalized by the embassy or consulate of the destination country.'
         },
         {
             'code': 'translated',
-            'name': 'Translated',
+            'name': 'Translation',
             'desc': 'Your documents are being translated by certified translators to meet the requirements of the destination country.'
         },
         {
             'code': 'delivered',
-            'name': 'Delivered',
-            'desc': 'Your documents have been successfully delivered. Thank you for choosing our services!'
+            'name': 'Delivery',
+            'desc': 'Your documents are being delivered to you. Thank you for choosing our services!'
         },
     ],
     'translation': [
@@ -97,24 +97,19 @@ STAGE_DEFS = {
             'desc': 'We have received your documents and are preparing them for translation.'
         },
         {
-            'code': 'in_translation',
-            'name': 'In Translation',
-            'desc': 'Your documents are currently being translated by our certified translators.'
-        },
-        {
             'code': 'translated',
-            'name': 'Translated',
-            'desc': 'Your documents have been translated and are undergoing quality review.'
+            'name': 'Translation in Progress',
+            'desc': 'Your documents are being translated by our certified translators.'
         },
         {
             'code': 'quality_approved',
-            'name': 'Quality Approved',
-            'desc': 'The translation has been reviewed and approved by our quality assurance team. Your documents are ready for delivery.'
+            'name': 'Quality Review',
+            'desc': 'The translation is being reviewed and approved by our quality assurance team.'
         },
         {
             'code': 'delivered',
-            'name': 'Delivered',
-            'desc': 'Your translated documents have been successfully delivered. Thank you for choosing our services!'
+            'name': 'Delivery',
+            'desc': 'Your translated documents are being delivered to you. Thank you for choosing our services!'
         },
     ],
 }
@@ -201,5 +196,3 @@ CRM_STAGE_MAP = {
         'cancelled': 'document_received',
     },
 }
-
-
