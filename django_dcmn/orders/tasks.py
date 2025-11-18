@@ -137,12 +137,15 @@ def send_tracking_email_task(tid: str, stage_code: str):
     elif stage_code == 'embassy_legalized':
         title = "Embassy Legalization Complete ✅"
         message = "Your documents have been legalized by the embassy/consulate."
+    elif stage_code == 'in_translation':
+        title = "Translation in Progress 📝"
+        message = "Your documents are currently being translated by our certified translators. We'll notify you once the translation is complete."
     elif stage_code == 'translated':
         title = "Translation Complete 🌐"
-        message = "Your documents have been professionally translated and are ready for delivery."
+        message = "Your documents have been professionally translated and are undergoing quality review."
     elif stage_code == 'quality_approved':
         title = "Quality Check Approved ✅"
-        message = "Your translation has passed our quality assurance review."
+        message = "Your translation has passed our quality assurance review and is ready for delivery."
     elif stage_code == 'delivered':
         title = "Order Delivered! 🎉"
         message = "Your order has been delivered! We hope you're satisfied with our service."

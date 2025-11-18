@@ -93,13 +93,18 @@ STAGE_DEFS = {
     'translation': [
         {
             'code': 'document_received',
-            'name': 'Document Recieved',
+            'name': 'Document Received',
             'desc': 'We have received your documents and are preparing them for translation.'
+        },
+        {
+            'code': 'in_translation',
+            'name': 'In Translation',
+            'desc': 'Your documents are currently being translated by our certified translators.'
         },
         {
             'code': 'translated',
             'name': 'Translated',
-            'desc': 'Your documents have been translated by our certified translators and are undergoing quality review.'
+            'desc': 'Your documents have been translated and are undergoing quality review.'
         },
         {
             'code': 'quality_approved',
@@ -136,10 +141,8 @@ ZOHO_MODULE_MAP = {
 # Ключи нормализуются в нижний регистр для устойчивости к регистру
 CRM_STAGE_MAP = {
     'fbi_apostille': {
-        # canonical stages: document_received → submitted → processed_dos → [translated] → delivered
-        # zoho picklist (exact values lowercased)
-        'pending submission': 'submitted',
-        'order submission stage ( automation email)': 'submitted',
+        'pending submission': 'document_received',
+        'order submission stage ( automation email)': 'document_received',
         'state department submission with drop-off/pick-up slip': 'submitted',
         'pick-up of documents from the state department': 'processed_dos',
         'ups label has been generated (automation email)': 'delivered',
@@ -180,7 +183,7 @@ CRM_STAGE_MAP = {
         'delivered': 'delivered',
     },
     'translation': {
-        # canonical stages: document_received → translated → quality_approved → delivered
+        # canonical stages: document_received → in_translation → translated → quality_approved → delivered
         # zoho field: Translation Status (exact values lowercased)
         'client placed request': 'document_received',
         'translation leads from get quote pipeline': 'document_received',
@@ -188,13 +191,12 @@ CRM_STAGE_MAP = {
         'call follow up': 'document_received',
         'email 1. follow up': 'document_received',
         'email 2. follow up': 'document_received',
-        'in progress ✅ (client agreed to proceed, notarization (if required)': 'translated',
-        'completed': 'quality_approved',
+        'in progress ✅ (client agreed to proceed, notarization (if required)': 'in_translation',
+        'completed': 'translated',
         'shipping/ drop off': 'quality_approved',
         'completed ✅ (send review)': 'delivered',
         'no review ❌ ( uncertified client)': 'delivered',
         'from fbi translation requets': 'document_received',
-        # ignored stages (client lost, cancelled)
         'client lost ❌ (silent or chose another provider)': 'document_received',
         'cancelled': 'document_received',
     },

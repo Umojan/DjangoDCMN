@@ -85,7 +85,8 @@ class CreateFbiOrderView(APIView):
                 from .utils import generate_tid
                 from .constants import STAGE_DEFS
                 codes = [d['code'] for d in STAGE_DEFS.get('fbi_apostille', [])]
-                start_stage = 'document_received' if 'document_received' in codes else (codes[0] if codes else None)
+                # Start with second stage (document_received is always considered completed)
+                start_stage = codes[1] if len(codes) > 1 else (codes[0] if codes else None)
                 tid = generate_tid()
                 Track.objects.create(
                     tid=tid,
@@ -228,7 +229,8 @@ class CreateEmbassyOrderView(APIView):
             from .utils import generate_tid
             from .constants import STAGE_DEFS
             codes = [d['code'] for d in STAGE_DEFS.get('embassy_legalization', [])]
-            start_stage = 'document_received' if 'document_received' in codes else (codes[0] if codes else None)
+            # Start with second stage (document_received is always considered completed)
+            start_stage = codes[1] if len(codes) > 1 else (codes[0] if codes else None)
             tid = generate_tid()
             Track.objects.create(
                 tid=tid,
@@ -310,7 +312,8 @@ class CreateApostilleOrderView(APIView):
             from .utils import generate_tid
             from .constants import STAGE_DEFS
             codes = [d['code'] for d in STAGE_DEFS.get('state_apostille', [])]
-            start_stage = 'document_received' if 'document_received' in codes else (codes[0] if codes else None)
+            # Start with second stage (document_received is always considered completed)
+            start_stage = codes[1] if len(codes) > 1 else (codes[0] if codes else None)
             tid = generate_tid()
             Track.objects.create(
                 tid=tid,
@@ -402,7 +405,8 @@ class CreateTranslationOrderView(APIView):
             from .utils import generate_tid
             from .constants import STAGE_DEFS
             codes = [d['code'] for d in STAGE_DEFS.get('translation', [])]
-            start_stage = 'document_received' if 'document_received' in codes else (codes[0] if codes else None)
+            # Start with second stage (document_received is always considered completed)
+            start_stage = codes[1] if len(codes) > 1 else (codes[0] if codes else None)
             tid = generate_tid()
             Track.objects.create(
                 tid=tid,
