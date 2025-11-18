@@ -179,16 +179,36 @@ class PublicTrackSerializer(serializers.Serializer):
         except (ValueError, AttributeError):
             current_idx = 0
         
+        # Специальная логика для document_received:
+        # Если текущая стадия = document_received (первая), то показываем её как completed,
+        # а следующую как current, но описание берём от document_received
+        display_mode = 'normal'
+        display_idx = current_idx
+        
+        if current_idx == 0 and len(filtered_defs) > 0 and filtered_defs[0]['code'] == 'document_received':
+            display_mode = 'first_stage_special'
+            display_idx = 0  # Описание от первой стадии
+        
         # Строим timeline (только название и статус)
         timeline = []
         for i, stage_def in enumerate(filtered_defs):
             # Определяем статус этапа
-            if i < current_idx:
-                status = 'completed'  # Пройденный этап (черная галочка)
-            elif i == current_idx:
-                status = 'current'    # Текущий этап (синий с часиками)
+            if display_mode == 'first_stage_special':
+                # Специальный режим: первая стадия = completed, вторая = current
+                if i == 0:
+                    status = 'completed'  # Document Received с галочкой
+                elif i == 1:
+                    status = 'current'    # Следующая стадия как "в процессе"
+                else:
+                    status = 'pending'    # Остальные = pending
             else:
-                status = 'pending'    # Будущий этап (серый)
+                # Обычный режим
+                if i < current_idx:
+                    status = 'completed'  # Пройденный этап (черная галочка)
+                elif i == current_idx:
+                    status = 'current'    # Текущий этап (синий с часиками)
+                else:
+                    status = 'pending'    # Будущий этап (серый)
             
             timeline.append({
                 'name': stage_def['name'],
@@ -197,8 +217,8 @@ class PublicTrackSerializer(serializers.Serializer):
         
         # Текущий этап с развернутым описанием
         current_stage_info = {
-            'name': filtered_defs[current_idx]['name'] if current_idx < len(filtered_defs) else '',
-            'description': comment if comment else (filtered_defs[current_idx]['desc'] if current_idx < len(filtered_defs) else ''),
+            'name': filtered_defs[display_idx]['name'] if display_idx < len(filtered_defs) else '',
+            'description': comment if comment else (filtered_defs[display_idx]['desc'] if display_idx < len(filtered_defs) else ''),
         }
         
         return timeline, current_stage_info
