@@ -142,7 +142,7 @@ CRM_STAGE_MAP = {
         'pick-up of documents from the state department': 'processed_dos',
         'ups label has been generated (automation email)': 'delivered',
         'resubmissions on company cost': 'submitted',
-        'rejected': 'document_received',
+        'rejected': 'submitted',
         'send review (happy clients) (automation emails)': 'delivered',
         'no review ( unhappy client)': 'delivered',
         'documents dropped off at ups store or client’s address': 'delivered',
