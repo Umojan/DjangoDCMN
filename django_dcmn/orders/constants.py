@@ -111,6 +111,11 @@ STAGE_DEFS = {
             'name': 'Delivery',
             'desc': 'Your translated documents are being delivered to you. Thank you for choosing our services!'
         },
+        {
+            'code': 'completed',
+            'name': 'Order Completed',
+            'desc': 'Your order has been successfully completed. Thank you!'
+        },
     ],
 }
 
@@ -162,7 +167,7 @@ CRM_STAGE_MAP = {
         'delivered': 'delivered',
     },
     'translation': {
-        # canonical stages: document_received → in_translation → translated → quality_approved → delivered
+        # canonical stages: document_received → in_translation → quality_approved → delivered → completed
         # zoho field: Translation Status (exact values lowercased)
         'client placed request': 'document_received',
         'translation leads from get quote pipeline': 'document_received',
@@ -171,10 +176,10 @@ CRM_STAGE_MAP = {
         'email 1. follow up': 'document_received',
         'email 2. follow up': 'document_received',
         'in progress ✅ (client agreed to proceed, notarization (if required)': 'in_translation',
-        'completed': 'translated',
-        'shipping/ drop off': 'quality_approved',
-        'completed ✅ (send review)': 'delivered',
-        'no review ❌ ( uncertified client)': 'delivered',
+        'completed': 'quality_approved',
+        'shipping/ drop off': 'delivered',
+        'completed ✅ (send review)': 'completed',
+        'no review ❌ ( uncertified client)': 'completed',
         'from fbi translation requets': 'document_received',
         'client lost ❌ (silent or chose another provider)': 'document_received',
         'cancelled': 'document_received',

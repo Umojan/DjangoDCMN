@@ -111,44 +111,44 @@ def send_tracking_email_task(tid: str, stage_code: str):
     
     # Определяем заголовок и сообщение в зависимости от стадии
     if stage_code == 'created':
-        title = "We Received Your Order! 📋"
+        title = "Order Received 📋"
         message = "Thank you for choosing DC Mobile Notary! We have received your order and will begin processing it shortly."
     elif stage_code == 'document_received':
         title = "Documents Received ✅"
         message = "We have successfully received your documents and they are now in our processing queue."
     elif stage_code == 'notarized':
-        title = "Documents Notarized 📝"
-        message = "Your documents have been notarized and are ready for the next step in the apostille process."
+        title = "Notarization in Progress 📝"
+        message = "Your documents are currently being notarized and prepared for the next step in the process."
     elif stage_code == 'submitted':
-        title = "Submitted to State Authority 🏛️"
-        message = "Your documents have been submitted to the appropriate state authority for authentication."
+        title = "Submission in Progress 🏛️"
+        message = "Your documents are being submitted to the appropriate state authority for authentication."
     elif stage_code == 'processed_dos':
-        title = "Processed at U.S. Department of State ✅"
-        message = "Great news! Your documents have been processed by the U.S. Department of State."
+        title = "Processing at U.S. DoS 🏛️"
+        message = "Your documents are currently being processed by the U.S. Department of State."
     elif stage_code == 'processed_state':
-        title = "Processed at State Authority ✅"
-        message = "Your documents have been successfully processed by the state authority."
+        title = "Processing at State Authority 🏛️"
+        message = "Your documents are being processed by the state authority."
     elif stage_code == 'state_authenticated':
-        title = "State Authentication Complete ✅"
-        message = "Your documents have been authenticated at the state level."
+        title = "State Authentication in Progress 🏛️"
+        message = "Your documents are currently undergoing state authentication."
     elif stage_code == 'federal_authenticated':
-        title = "Federal Authentication Complete ✅"
-        message = "Your documents have been authenticated by the U.S. Department of State."
+        title = "Federal Authentication in Progress 🏛️"
+        message = "Your documents are currently undergoing federal authentication."
     elif stage_code == 'embassy_legalized':
-        title = "Embassy Legalization Complete ✅"
-        message = "Your documents have been legalized by the embassy/consulate."
+        title = "Embassy Legalization in Progress 🏛️"
+        message = "Your documents are being legalized by the embassy/consulate."
     elif stage_code == 'in_translation':
         title = "Translation in Progress 📝"
-        message = "Your documents are currently being translated by our certified translators. We'll notify you once the translation is complete."
+        message = "Your documents are currently being translated by our certified translators."
     elif stage_code == 'translated':
-        title = "Translation Complete 🌐"
-        message = "Your documents have been professionally translated and are undergoing quality review."
+        title = "Translation Review in Progress 🌐"
+        message = "Your translation is complete and is now undergoing quality review."
     elif stage_code == 'quality_approved':
-        title = "Quality Check Approved ✅"
-        message = "Your translation has passed our quality assurance review and is ready for delivery."
+        title = "Preparing for Delivery 📦"
+        message = "Your order has passed quality review and is being prepared for delivery."
     elif stage_code == 'delivered':
-        title = "Order Delivered! 🎉"
-        message = "Your order has been delivered! We hope you're satisfied with our service."
+        title = "Order Out for Delivery 🚚"
+        message = "Your order is on its way to you! We hope you're satisfied with our service."
     elif stage_code == 'completed':
         title = "Order Completed 🎉"
         message = "Your order has been successfully completed. Thank you for choosing our services!"
