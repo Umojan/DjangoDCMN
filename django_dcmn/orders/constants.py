@@ -8,22 +8,27 @@ STAGE_DEFS = {
         {
             'code': 'submitted',
             'name': 'Submission at U.S. DoS',
-            'desc': 'Your documents are currently being submitted to the U.S. Department of State for federal authentication.'
+            'desc': 'Your documents are being submitted to the U.S. Department of State for federal authentication.'
         },
         {
             'code': 'processed_dos',
             'name': 'Processing at U.S. DoS',
-            'desc': 'Your documents are currently under review at the U.S. Department of State. Our liaison is monitoring the process to ensure timely federal authentication.'
+            'desc': 'Your documents are currently being processed by the U.S. Department of State. Our liaison is closely monitoring the review and certification process to ensure everything proceeds smoothly.'
         },
         {
             'code': 'translated',
             'name': 'Translation',
-            'desc': 'Your documents are currently being translated by our certified translators in accordance with the destination country’s requirements.'
+            'desc': 'Your documents are being translated by our certified translators to meet the requirements of the destination country.'
         },
         {
             'code': 'delivered',
             'name': 'Delivery',
-            'desc': 'Your documents are currently on their way to you. Thank you for choosing our services!'
+            'desc': 'Your documents are being delivered to you. Thank you for choosing our services!'
+        },
+        {
+            'code': 'completed',
+            'name': 'Order Completed',
+            'desc': 'Your order has been successfully completed. Thank you!'
         },
     ],
     'state_apostille': [
@@ -34,7 +39,7 @@ STAGE_DEFS = {
         },
         {
             'code': 'notarized',
-            'name': 'Notarization',
+            'name': 'Notarization (if required)',
             'desc': 'Your documents are being notarized by a certified notary public to prepare for state authentication.'
         },
         {
@@ -61,7 +66,7 @@ STAGE_DEFS = {
         },
         {
             'code': 'notarized',
-            'name': 'Notarization',
+            'name': 'Notarization (if required)',
             'desc': 'Your documents are being notarized by a certified notary public.'
         },
         {
@@ -80,11 +85,6 @@ STAGE_DEFS = {
             'desc': 'Your documents are being legalized by the embassy or consulate of the destination country.'
         },
         {
-            'code': 'translated',
-            'name': 'Translation',
-            'desc': 'Your documents are being translated by certified translators to meet the requirements of the destination country.'
-        },
-        {
             'code': 'delivered',
             'name': 'Delivery',
             'desc': 'Your documents are being delivered to you. Thank you for choosing our services!'
@@ -97,7 +97,7 @@ STAGE_DEFS = {
             'desc': 'We have received your documents and are preparing them for translation.'
         },
         {
-            'code': 'translated',
+            'code': 'in_translation',
             'name': 'Translation in Progress',
             'desc': 'Your documents are being translated by our certified translators.'
         },
@@ -136,28 +136,12 @@ ZOHO_MODULE_MAP = {
 # Ключи нормализуются в нижний регистр для устойчивости к регистру
 CRM_STAGE_MAP = {
     'fbi_apostille': {
-        'pending submission': 'document_received',
+        'order received': 'document_received',
         'order submission stage ( automation email)': 'document_received',
         'state department submission with drop-off/pick-up slip': 'submitted',
-        'pick-up of documents from the state department': 'processed_dos',
-        'ups label has been generated (automation email)': 'delivered',
-        'resubmissions on company cost': 'submitted',
-        'rejected': 'submitted',
-        'send review (happy clients) (automation emails)': 'delivered',
-        'no review ( unhappy client)': 'delivered',
-        'documents dropped off at ups store or client’s address': 'delivered',
         'under translation': 'translated',
-        'no label / not yet dropped off': 'submitted',
-        'fully refunded ( cancelled orders)': 'delivered',
-        'from apostille request': 'document_received',
-        'notarization': 'submitted',
-        'court': 'submitted',
-        'secretary of state': 'processed_dos',
-        'usdos': 'processed_dos',
-        'translation': 'translated',
-        'embassy': 'processed_dos',
-        'ups/fedex/dhl drop off': 'delivered',
-        'delivery and reviews': 'delivered',
+        'ups label has been generated (automation email)': 'delivered',
+        'send review (happy clients) (automation emails)': 'completed',
     },
     'state_apostille': {
         'order received': 'document_received',
@@ -196,3 +180,5 @@ CRM_STAGE_MAP = {
         'cancelled': 'document_received',
     },
 }
+
+

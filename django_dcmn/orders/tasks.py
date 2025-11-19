@@ -149,6 +149,9 @@ def send_tracking_email_task(tid: str, stage_code: str):
     elif stage_code == 'delivered':
         title = "Order Delivered! 🎉"
         message = "Your order has been delivered! We hope you're satisfied with our service."
+    elif stage_code == 'completed':
+        title = "Order Completed 🎉"
+        message = "Your order has been successfully completed. Thank you for choosing our services!"
     else:
         title = "Order Update"
         message = f"Your order status has been updated to: {stage_code}"

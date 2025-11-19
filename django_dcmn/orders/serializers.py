@@ -166,18 +166,26 @@ class PublicTrackSerializer(serializers.Serializer):
         defs = STAGE_DEFS.get(service, [])
         
         # Фильтруем этапы: убираем "translated" если перевод не нужен
+        # И убираем "completed" (она скрытая, используется только для статуса)
         filtered_defs = []
         for d in defs:
             if d['code'] == 'translated' and not translation_required:
+                continue
+            if d['code'] == 'completed':
                 continue
             filtered_defs.append(d)
         
         # Находим индекс текущего этапа
         codes = [d['code'] for d in filtered_defs]
-        try:
-            current_idx = codes.index(current_stage_code) if current_stage_code in codes else 0
-        except (ValueError, AttributeError):
-            current_idx = 0
+        
+        if current_stage_code == 'completed':
+            # Если стадия completed, то все визуальные этапы пройдены
+            current_idx = len(filtered_defs)
+        else:
+            try:
+                current_idx = codes.index(current_stage_code) if current_stage_code in codes else 0
+            except (ValueError, AttributeError):
+                current_idx = 0
         
         # Специальная логика для document_received:
         # Если текущая стадия = document_received (первая), то показываем её как completed,
@@ -185,7 +193,7 @@ class PublicTrackSerializer(serializers.Serializer):
         display_mode = 'normal'
         display_idx = current_idx
         
-        if current_idx == 0 and len(filtered_defs) > 0 and filtered_defs[0]['code'] == 'document_received':
+        if current_stage_code != 'completed' and current_idx == 0 and len(filtered_defs) > 0 and filtered_defs[0]['code'] == 'document_received':
             display_mode = 'first_stage_special'
             display_idx = 0  # Описание от первой стадии
         
@@ -216,9 +224,18 @@ class PublicTrackSerializer(serializers.Serializer):
             })
         
         # Текущий этап с развернутым описанием
+        if current_stage_code == 'completed':
+            # Находим определение completed стадии в исходном списке
+            completed_def = next((d for d in defs if d['code'] == 'completed'), None)
+            stage_name = completed_def['name'] if completed_def else 'Order Completed'
+            stage_desc = comment if comment else (completed_def['desc'] if completed_def else '')
+        else:
+            stage_name = filtered_defs[display_idx]['name'] if display_idx < len(filtered_defs) else ''
+            stage_desc = comment if comment else (filtered_defs[display_idx]['desc'] if display_idx < len(filtered_defs) else '')
+
         current_stage_info = {
-            'name': filtered_defs[display_idx]['name'] if display_idx < len(filtered_defs) else '',
-            'description': comment if comment else (filtered_defs[display_idx]['desc'] if display_idx < len(filtered_defs) else ''),
+            'name': stage_name,
+            'description': stage_desc,
         }
         
         return timeline, current_stage_info
