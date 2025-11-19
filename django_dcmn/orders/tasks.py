@@ -144,8 +144,8 @@ def send_tracking_email_task(tid: str, stage_code: str):
         title = "Translation Review in Progress 🌐"
         message = "Your translation is complete and is now undergoing quality review."
     elif stage_code == 'quality_approved':
-        title = "Preparing for Delivery 📦"
-        message = "Your order has passed quality review and is being prepared for delivery."
+        title = "Quality Review in Progress 🔍"
+        message = "Your translation is currently undergoing a rigorous quality assurance review to ensure accuracy."
     elif stage_code == 'delivered':
         title = "Order Out for Delivery 🚚"
         message = "Your order is on its way to you! We hope you're satisfied with our service."
