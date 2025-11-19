@@ -115,7 +115,10 @@ def send_tracking_email_task(tid: str, stage_code: str):
         message = "Thank you for choosing DC Mobile Notary! We have received your order and will begin processing it shortly."
     elif stage_code == 'document_received':
         title = "Documents Received ✅"
-        message = "We have successfully received your documents and they are now in our processing queue."
+        if svc == 'FBI Apostille':
+            message = "We have successfully received your documents and they are now in our processing queue."
+        else:
+            message = "We have received your documents and will review them shortly. Our team will be in touch with you soon."
     elif stage_code == 'notarized':
         title = "Notarization in Progress 📝"
         message = "Your documents are currently being notarized and prepared for the next step in the process."

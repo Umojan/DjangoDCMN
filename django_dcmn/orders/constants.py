@@ -94,7 +94,7 @@ STAGE_DEFS = {
         {
             'code': 'document_received',
             'name': 'Document Received',
-            'desc': 'We have received your documents and are preparing them for translation.'
+            'desc': 'We have received your documents and will review them shortly. Our team will be in touch with you soon.'
         },
         {
             'code': 'in_translation',
