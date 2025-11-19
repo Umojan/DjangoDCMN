@@ -137,8 +137,8 @@ ZOHO_MODULE_MAP = {
 CRM_STAGE_MAP = {
     'fbi_apostille': {
         'order received': 'document_received',
-        'order submission stage ( automation email)': 'document_received',
-        'state department submission with drop-off/pick-up slip': 'submitted',
+        'order submission stage ( automation email)': 'submitted',
+        'state department submission with drop-off/pick-up slip': 'processed_dos',
         'under translation': 'translated',
         'ups label has been generated (automation email)': 'delivered',
         'send review (happy clients) (automation emails)': 'completed',
