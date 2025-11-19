@@ -124,7 +124,7 @@ def send_tracking_email_task(tid: str, stage_code: str):
         message = "Your documents are currently being notarized and prepared for the next step in the process."
     elif stage_code == 'submitted':
         title = "Submission in Progress 🏛️"
-        message = "Your documents are being submitted to the appropriate state authority for authentication."
+        message = "Your documents are under Review for Federal authentication."
     elif stage_code == 'processed_dos':
         title = "Processing at U.S. DoS 🏛️"
         message = "Your documents are currently being processed by the U.S. Department of State."

@@ -8,7 +8,7 @@ STAGE_DEFS = {
         {
             'code': 'submitted',
             'name': 'Submission at U.S. DoS',
-            'desc': 'Your documents are being submitted to the U.S. Department of State for federal authentication.'
+            'desc': 'Your documents are under Review for Federal authentication.'
         },
         {
             'code': 'processed_dos',
@@ -168,19 +168,10 @@ CRM_STAGE_MAP = {
     },
     'translation': {
         'client placed request': 'document_received',
-        # 'translation leads from get quote pipeline': 'document_received',
-        # 'initial contact': 'document_received',
-        # 'call follow up': 'document_received',
-        # 'email 1. follow up': 'document_received',
-        # 'email 2. follow up': 'document_received',
         'in progress ✅ (client agreed to proceed, notarization (if required)': 'in_translation',
         'completed': 'quality_approved',
         'shipping/ drop off': 'delivered',
         'completed ✅ (send review)': 'completed',
-        # 'no review ❌ ( uncertified client)': 'completed',
-        # 'from fbi translation requets': 'document_received',
-        # 'client lost ❌ (silent or chose another provider)': 'document_received',
-        # 'cancelled': 'document_received',
     },
 }
 
