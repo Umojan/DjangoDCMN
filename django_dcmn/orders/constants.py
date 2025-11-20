@@ -153,7 +153,7 @@ CRM_STAGE_MAP = {
         'apostile leads from get quote pipeline': 'document_received',
         'fbi - federal apostille requests': 'document_received',
         'in progress ✅ (client agreed to proceed)': 'in_progress',
-        'delivered': 'delivered',
+        'shipping/drop off': 'delivered',
         'completed ✅ (send review) (automation email)': 'completed',
     },
     'embassy_legalization': {
