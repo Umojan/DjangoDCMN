@@ -120,40 +120,43 @@ def send_tracking_email_task(tid: str, stage_code: str):
         else:
             message = "We have received your documents and will review them shortly. Our team will be in touch with you soon."
     elif stage_code == 'notarized':
-        title = "Notarization in Progress 📝"
+        title = "Notarization in Progress"
         message = "Your documents are currently being notarized and prepared for the next step in the process."
     elif stage_code == 'submitted':
-        title = "Submission in Progress 🏛️"
+        title = "Submission in Progress"
         message = "Your documents are under Review for Federal authentication."
     elif stage_code == 'processed_dos':
-        title = "Processing at U.S. DoS 🏛️"
+        title = "Processing at U.S. DoS"
         message = "Your documents are currently being processed by the U.S. Department of State."
     elif stage_code == 'processed_state':
-        title = "Processing at State Authority 🏛️"
+        title = "Processing at State Authority"
         message = "Your documents are being processed by the state authority."
     elif stage_code == 'state_authenticated':
-        title = "State Authentication in Progress 🏛️"
+        title = "State Authentication in Progress"
         message = "Your documents are currently undergoing state authentication."
     elif stage_code == 'federal_authenticated':
-        title = "Federal Authentication in Progress 🏛️"
+        title = "Federal Authentication in Progress"
         message = "Your documents are currently undergoing federal authentication."
     elif stage_code == 'embassy_legalized':
-        title = "Embassy Legalization in Progress 🏛️"
+        title = "Embassy Legalization in Progress"
         message = "Your documents are being legalized by the embassy/consulate."
     elif stage_code == 'in_translation':
-        title = "Translation in Progress 📝"
+        title = "Translation in Progress"
         message = "Your documents are currently being translated by our certified translators."
     elif stage_code == 'translated':
-        title = "Translation Review in Progress 🌐"
+        title = "Translation Review in Progress"
         message = "Your translation is complete and is now undergoing quality review."
     elif stage_code == 'quality_approved':
-        title = "Quality Review in Progress 🔍"
+        title = "Quality Review in Progress"
         message = "Your translation is currently undergoing a rigorous quality assurance review to ensure accuracy."
+    elif stage_code == 'in_progress':
+        title = "Order in Progress"
+        message = "Your order is being processed. We will notify you once it is ready for delivery."
     elif stage_code == 'delivered':
-        title = "Order Out for Delivery 🚚"
+        title = "Order Out for Delivery"
         message = "Your order is on its way to you! We hope you're satisfied with our service."
     elif stage_code == 'completed':
-        title = "Order Completed 🎉"
+        title = "Order Completed"
         message = "Your order has been successfully completed. Thank you for choosing our services!"
     else:
         title = "Order Update"

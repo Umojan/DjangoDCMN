@@ -38,24 +38,19 @@ STAGE_DEFS = {
             'desc': 'We have received your documents and are preparing them for the next stage of processing.'
         },
         {
-            'code': 'notarized',
-            'name': 'Notarization (if required)',
-            'desc': 'Your documents are being notarized by a certified notary public to prepare for state authentication.'
-        },
-        {
-            'code': 'submitted',
-            'name': 'Submission to State Authority',
-            'desc': 'Your documents are being submitted to the state authority for apostille certification.'
-        },
-        {
-            'code': 'processed_state',
-            'name': 'Processing at State Authority',
-            'desc': 'Your documents are being processed by the state authority. We are monitoring the progress to ensure timely completion.'
+            'code': 'in_progress',
+            'name': 'Order in Progress',
+            'desc': 'Your order is being processed. We will notify you once it is ready for delivery.'
         },
         {
             'code': 'delivered',
             'name': 'Delivery',
-            'desc': 'Your documents are being delivered to you. Thank you for choosing our services!'
+            'desc': 'Your documents are being delivered to you.'
+        },
+        {
+            'code': 'completed',
+            'name': 'Order Completed',
+            'desc': 'Your order has been successfully completed. Thank you for choosing our services!'
         },
     ],
     'embassy_legalization': [
@@ -154,15 +149,16 @@ CRM_STAGE_MAP = {
         'send review (happy clients) (automation emails)': 'completed',
     },
     'state_apostille': {
-        'order received': 'document_received',
-        'document received': 'document_received',
-        'notarized': 'notarized',
-        'submitted': 'submitted',
-        'processed at state authority': 'processed_state',
+        'client placed the request': 'document_received',
+        'apostile leads from get quote pipeline': 'document_received',
+        'fbi - federal apostille requests': 'document_received',
+        'in progress ✅ (client agreed to proceed)': 'in_progress',
         'delivered': 'delivered',
+        'completed ✅ (send review) (automation email)': 'completed',
     },
     'embassy_legalization': {
         'order received': 'document_received',
+        'embassy leads from get quote pipeline': 'document_received',
         'in progress ✅ (client agreed to proceed, notarization (if required)': 'notarized',
         'state authentication': 'state_authenticated',
         'federal authentication': 'federal_authenticated',
@@ -178,5 +174,3 @@ CRM_STAGE_MAP = {
         'completed ✅ (send review)': 'completed',
     },
 }
-
-

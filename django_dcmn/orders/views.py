@@ -871,6 +871,11 @@ class CreateTidFromCrmView(APIView):
         # Alias for embassy -> embassy_legalization to support webhook JSON
         if service == 'embassy':
             service = 'embassy_legalization'
+
+        # Alias for apostille -> state_apostille if not specified explicitly
+        # (Usually CreateApostilleOrderView creates as 'state_apostille', but check webhook)
+        if service == 'apostille':
+            service = 'state_apostille'
         
         # do not include form comment on create
         comment = None
