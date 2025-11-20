@@ -87,7 +87,12 @@ STAGE_DEFS = {
         {
             'code': 'delivered',
             'name': 'Delivery',
-            'desc': 'Your documents are being delivered to you. Thank you for choosing our services!'
+            'desc': 'Your documents are being delivered to you.'
+        },
+        {
+            'code': 'completed',
+            'name': 'Order Completed',
+            'desc': 'Your order has been successfully completed. Thank you for choosing our services!'
         },
     ],
     'translation': [
@@ -158,13 +163,15 @@ CRM_STAGE_MAP = {
     },
     'embassy_legalization': {
         'order received': 'document_received',
+        'embassy leads from get quote pipeline': 'document_received',
         'document received': 'document_received',
-        'notarized': 'notarized',
-        'state authenticated': 'state_authenticated',
-        'federal dos authenticated': 'federal_authenticated',
-        'embassy / consulate legalized': 'embassy_legalized',
-        'translated': 'translated',
-        'delivered': 'delivered',
+        'in progress ✅ (client agreed to proceed, notarization (if required)': 'notarized',
+        'state authentication': 'state_authenticated',
+        'federal authentication': 'federal_authenticated',
+        'embassy/consulate legalization': 'embassy_legalized',
+        'shipping/ drop off': 'delivered',
+        'completed ✅ (send review) ( automation email)': 'completed',
+        'completed': 'completed',
     },
     'translation': {
         'client placed request': 'document_received',

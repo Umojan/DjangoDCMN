@@ -867,6 +867,11 @@ class CreateTidFromCrmView(APIView):
         current_stage = (
             node.get('current_stage') or node.get('stage') or body.get('current_stage') or body.get('stage') or 'document_received'
         )
+
+        # Alias for embassy -> embassy_legalization to support webhook JSON
+        if service == 'embassy':
+            service = 'embassy_legalization'
+        
         # do not include form comment on create
         comment = None
         zoho_module = node.get('zoho_module') or body.get('zoho_module')  # optional
