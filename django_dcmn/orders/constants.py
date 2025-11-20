@@ -163,15 +163,12 @@ CRM_STAGE_MAP = {
     },
     'embassy_legalization': {
         'order received': 'document_received',
-        'embassy leads from get quote pipeline': 'document_received',
-        'document received': 'document_received',
         'in progress ✅ (client agreed to proceed, notarization (if required)': 'notarized',
         'state authentication': 'state_authenticated',
         'federal authentication': 'federal_authenticated',
         'embassy/consulate legalization': 'embassy_legalized',
         'shipping/ drop off': 'delivered',
         'completed ✅ (send review) ( automation email)': 'completed',
-        'completed': 'completed',
     },
     'translation': {
         'client placed request': 'document_received',
