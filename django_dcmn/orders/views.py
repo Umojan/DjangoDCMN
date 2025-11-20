@@ -13,6 +13,7 @@ from .tasks import sync_order_to_zoho_task
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import AllowAny
 from .serializers import (
     FbiApostilleOrderSerializer,
     MarriageOrderSerializer,
@@ -20,7 +21,9 @@ from .serializers import (
     ApostilleOrderSerializer,
     I9OrderSerializer,
     TranslationOrderSerializer,
-    QuoteRequestSerializer
+    QuoteRequestSerializer,
+    TrackSerializer,
+    PublicTrackSerializer
 )
 from .models import (
     FbiApostilleOrder,
@@ -32,8 +35,12 @@ from .models import (
     FileAttachment,
     EmbassyLegalizationOrder,
     TranslationOrder,
-    I9VerificationOrder
+    I9VerificationOrder,
+    Track
 )
+from .constants import STAGE_DEFS, CRM_STAGE_MAP, ZOHO_MODULE_MAP
+from .utils import generate_tid, public_name
+from .tasks import write_tracking_id_to_zoho_task, send_tracking_email_task
 
 import stripe
 import logging
@@ -73,9 +80,41 @@ class CreateFbiOrderView(APIView):
                         )
                         file_urls.append(request.build_absolute_uri(attachment.file.url))
 
+                # Auto create tracking record (TID first)
+                from .models import Track
+                from .utils import generate_tid
+                from .constants import STAGE_DEFS
+                codes = [d['code'] for d in STAGE_DEFS.get('fbi_apostille', [])]
+                # Start with first stage (document_received)
+                start_stage = codes[0] if codes else None
+                tid = generate_tid()
+                Track.objects.create(
+                    tid=tid,
+                    data={
+                        'name': order.name,
+                        'email': order.email,
+                        'service': 'fbi_apostille',
+                        'current_stage': start_stage,
+                        'order_id': order.id,
+                        'order_type': 'fbi'
+                    },
+                    service='fbi_apostille'
+                )
+                # Push to Zoho with Tracking_ID included (ASYNC)
+                try:
+                    sync_order_to_zoho_task.delay(order.id, 'fbi', tracking_id=tid)
+                except Exception:
+                    logging.exception("Failed to queue Zoho sync for FBI order: %s", order.id)
+                # Send welcome email
+                try:
+                    send_tracking_email_task.delay(tid, 'created')
+                except Exception:
+                    logging.exception("Failed to queue tracking email for FBI order: %s", order.id)
+
                 return Response({
                     'message': 'Order created',
                     'order_id': order.id,
+                    'tracking_id': tid,
                     'file_urls': file_urls or None,
                     'calculated_total': float(total),
                 }, status=status.HTTP_201_CREATED)
@@ -137,10 +176,6 @@ class CreateEmbassyOrderView(APIView):
         serializer = EmbassyLegalizationOrderSerializer(data=request.data)
         if serializer.is_valid():
             order = serializer.save()
-            try:
-                sync_order_to_zoho_task.delay(order.id, "embassy")
-            except Exception:
-                logging.exception("Failed to enqueue Zoho sync task for embassy order %s", order.id)
 
             file_urls = []
             if request.FILES:
@@ -189,9 +224,41 @@ class CreateEmbassyOrderView(APIView):
             except Exception:
                 logging.exception("Failed to send embassy order email for %s", order.id)
 
+            # Auto create tracking record (TID first)
+            from .models import Track
+            from .utils import generate_tid
+            from .constants import STAGE_DEFS
+            codes = [d['code'] for d in STAGE_DEFS.get('embassy_legalization', [])]
+            # Start with first stage (document_received)
+            start_stage = codes[0] if codes else None
+            tid = generate_tid()
+            Track.objects.create(
+                tid=tid,
+                data={
+                    'name': order.name,
+                    'email': order.email,
+                    'service': 'embassy_legalization',
+                    'current_stage': start_stage,
+                    'order_id': order.id,
+                    'order_type': 'embassy'
+                },
+                service='embassy_legalization'
+            )
+            # Push to Zoho with Tracking_ID included (ASYNC)
+            try:
+                sync_order_to_zoho_task.delay(order.id, 'embassy', tracking_id=tid)
+            except Exception:
+                logging.exception("Failed to queue Zoho sync for Embassy order: %s", order.id)
+            # Send welcome email
+            try:
+                send_tracking_email_task.delay(tid, 'created')
+            except Exception:
+                logging.exception("Failed to queue tracking email for Embassy order: %s", order.id)
+
             return Response({
                 'message': 'Embassy legalization order created',
                 'order_id': order.id,
+                'tracking_id': tid,
                 'file_urls': file_urls or None
             }, status=status.HTTP_201_CREATED)
 
@@ -203,10 +270,6 @@ class CreateApostilleOrderView(APIView):
         serializer = ApostilleOrderSerializer(data=request.data)
         if serializer.is_valid():
             order = serializer.save()
-            try:
-                sync_order_to_zoho_task.delay(order.id, "apostille")
-            except Exception:
-                logging.exception("Failed to enqueue Zoho sync task for apostille order %s", order.id)
 
             # Send email to staff
             today_str = datetime.utcnow().strftime("%Y-%m-%d")
@@ -244,9 +307,41 @@ class CreateApostilleOrderView(APIView):
             except Exception:
                 logging.exception("Failed to send apostille order email for %s", order.id)
 
+            # Auto create tracking record (generic apostille) — TID first
+            from .models import Track
+            from .utils import generate_tid
+            from .constants import STAGE_DEFS
+            codes = [d['code'] for d in STAGE_DEFS.get('state_apostille', [])]
+            # Start with first stage (document_received)
+            start_stage = codes[0] if codes else None
+            tid = generate_tid()
+            Track.objects.create(
+                tid=tid,
+                data={
+                    'name': order.name,
+                    'email': order.email,
+                    'service': 'state_apostille',
+                    'current_stage': start_stage,
+                    'order_id': order.id,
+                    'order_type': 'apostille'
+                },
+                service='state_apostille'
+            )
+            # Push to Zoho with Tracking_ID included (ASYNC)
+            try:
+                sync_order_to_zoho_task.delay(order.id, 'apostille', tracking_id=tid)
+            except Exception:
+                logging.exception("Failed to queue Zoho sync for Apostille order: %s", order.id)
+            # Send welcome email
+            try:
+                send_tracking_email_task.delay(tid, 'created')
+            except Exception:
+                logging.exception("Failed to queue tracking email for Apostille order: %s", order.id)
+
             return Response({
                 'message': 'Apostille order created',
                 'order_id': order.id,
+                'tracking_id': tid,
             }, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -257,10 +352,6 @@ class CreateTranslationOrderView(APIView):
         serializer = TranslationOrderSerializer(data=request.data)
         if serializer.is_valid():
             order = serializer.save()
-            try:
-                sync_order_to_zoho_task.delay(order.id, "translation")
-            except Exception:
-                logging.exception("Failed to enqueue Zoho sync task for translation order %s", order.id)
 
             # Save uploaded files
             file_urls = []
@@ -309,9 +400,41 @@ class CreateTranslationOrderView(APIView):
             except Exception:
                 logging.exception("Failed to send translation order email for %s", order.id)
 
+            # Auto create tracking record — TID first
+            from .models import Track
+            from .utils import generate_tid
+            from .constants import STAGE_DEFS
+            codes = [d['code'] for d in STAGE_DEFS.get('translation', [])]
+            # Start with first stage (document_received)
+            start_stage = codes[0] if codes else None
+            tid = generate_tid()
+            Track.objects.create(
+                tid=tid,
+                data={
+                    'name': order.name,
+                    'email': order.email,
+                    'service': 'translation',
+                    'current_stage': start_stage,
+                    'order_id': order.id,
+                    'order_type': 'translation'
+                },
+                service='translation'
+            )
+            # Push to Zoho with Tracking_ID included (ASYNC)
+            try:
+                sync_order_to_zoho_task.delay(order.id, 'translation', tracking_id=tid)
+            except Exception:
+                logging.exception("Failed to queue Zoho sync for Translation order: %s", order.id)
+            # Send welcome email
+            try:
+                send_tracking_email_task.delay(tid, 'created')
+            except Exception:
+                logging.exception("Failed to queue tracking email for Translation order: %s", order.id)
+
             return Response({
                 'message': 'Translation order created',
                 'order_id': order.id,
+                'tracking_id': tid,
                 'file_urls': file_urls or None
             }, status=status.HTTP_201_CREATED)
 
@@ -459,7 +582,26 @@ class CreateStripeSessionView(APIView):
         else:
             return Response({"error": "Invalid order_type"}, status=400)
 
+        # Получаем TID для этого заказа (по order_id и order_type)
         try:
+            track = Track.objects.filter(
+                data__order_id=order_id,
+                data__order_type=order_type
+            ).order_by('-created_at').first()
+            tracking_id = track.tid if track else None
+        except Exception:
+            tracking_id = None
+            logging.exception(f"Failed to retrieve TID for order {order_id} ({order_type})")
+
+        try:
+            # Формируем success_url с TID
+            if tracking_id:
+                # Редирект на страницу трекинга с TID
+                success_url = f"{settings.FRONTEND_URL}/tracking?tid={tracking_id}"
+            else:
+                # Fallback на обычную success страницу
+                success_url = f"{settings.STRIPE_SUCCESS_URL}?session_id={{CHECKOUT_SESSION_ID}}"
+
             session = stripe.checkout.Session.create(
                 payment_method_types=["card"],
                 line_items=[{
@@ -473,11 +615,12 @@ class CreateStripeSessionView(APIView):
                     "quantity": 1,
                 }],
                 mode="payment",
-                success_url=f"{settings.STRIPE_SUCCESS_URL}?session_id={{CHECKOUT_SESSION_ID}}",
+                success_url=success_url,
                 cancel_url=settings.STRIPE_CANCEL_URL,
                 metadata={
                     "order_id": str(order.id),
                     "order_type": order_type,
+                    "tracking_id": tracking_id or "",
                 },
                 customer_email=customer_email,
                 payment_intent_data={
@@ -693,3 +836,211 @@ def zoho_callback(request):
     if code:
         return HttpResponse(f'Authorization code: {code}')
     return HttpResponse('No code found', status=400)
+
+
+# ====== TRACKING (CRM + Public) ======
+def _check_zoho_token(request):
+    token = request.headers.get('X-ZOHO-TOKEN') or request.META.get('HTTP_X_ZOHO_TOKEN')
+    # fallback: allow token in JSON body for setups without headers
+    if not token:
+        try:
+            token = request.data.get('token')
+        except Exception:
+            token = None
+    from django.conf import settings as dj_settings
+    expected = getattr(dj_settings, 'ZOHO_WEBHOOK_TOKEN', '')
+    return bool(token and expected and token == expected)
+
+
+class CreateTidFromCrmView(APIView):
+    def post(self, request, format=None):
+        if not _check_zoho_token(request):
+            return Response({'error': 'unauthorized'}, status=401)
+
+        body = request.data
+        node = body.get('data') if isinstance(body.get('data'), dict) else {}
+
+        name = node.get('name') or body.get('name') or ''
+        email = node.get('email') or body.get('email') or ''
+        service = node.get('service') or body.get('service')
+        # accept alias 'stage' for initial stage
+        current_stage = (
+            node.get('current_stage') or node.get('stage') or body.get('current_stage') or body.get('stage') or 'document_received'
+        )
+
+        # Alias for embassy -> embassy_legalization to support webhook JSON
+        if service == 'embassy':
+            service = 'embassy_legalization'
+
+        # Alias for apostille -> state_apostille if not specified explicitly
+        # (Usually CreateApostilleOrderView creates as 'state_apostille', but check webhook)
+        if service == 'apostille':
+            service = 'state_apostille'
+        
+        # do not include form comment on create
+        comment = None
+        zoho_module = node.get('zoho_module') or body.get('zoho_module')  # optional
+        zoho_record_id = node.get('record_id') or body.get('record_id')  # optional
+
+        if service not in STAGE_DEFS:
+            return Response({'error': 'invalid service'}, status=400)
+
+        codes = [d['code'] for d in STAGE_DEFS.get(service, [])]
+        if current_stage not in codes:
+            norm = str(current_stage or '').strip().lower()
+            mapped = CRM_STAGE_MAP.get(service, {}).get(norm)
+            current_stage = mapped if mapped in codes else 'document_received'
+
+        tid = generate_tid()
+        payload = {
+            'name': name,
+            'email': email,
+            'service': service,
+            'current_stage': current_stage,
+        }
+        # merge selected extra fields from data wrapper
+        if node.get('shipping') is not None:
+            payload['shipping'] = str(node.get('shipping'))
+        if node.get('translation_r') is not None:
+            tr_raw = str(node.get('translation_r')).strip().lower()
+            # Match both "Yes -Translate" and "Yes - Translate" variants
+            payload['translation_r'] = True if ('translate' in tr_raw and 'yes' in tr_raw) or tr_raw in ('yes', 'true', '1') else False
+
+        track = Track.objects.create(
+            tid=tid,
+            service=service,
+            data=payload
+        )
+
+        # Write TID back to Zoho SYNCHRONOUSLY (если есть zoho_module и record_id)
+        if zoho_module and zoho_record_id:
+            # Сохраняем zoho_module/record_id в data для отладки
+            try:
+                d = track.data or {}
+                d['zoho_module'] = zoho_module
+                d['record_id'] = str(zoho_record_id)
+                track.data = d
+                track.save(update_fields=['data'])
+            except Exception:
+                pass
+
+            # Синхронно отправляем TID в Zoho CRM
+            try:
+                from .zoho_sync import update_record_fields
+                import logging
+                logger = logging.getLogger(__name__)
+                
+                # Конвертируем название модуля из webhook в API имя
+                api_module_name = ZOHO_MODULE_MAP.get(zoho_module, zoho_module)
+                
+                logger.info(f"[CreateTID] Attempting to write TID={tid} to Zoho {zoho_module} (API: {api_module_name})/{zoho_record_id}")
+                success = update_record_fields(api_module_name, str(zoho_record_id), {"Tracking_ID": tid})
+                
+                if success:
+                    logger.info(f"[CreateTID] ✅ Successfully wrote TID={tid} to Zoho")
+                else:
+                    logger.warning(f"[CreateTID] ⚠️ Failed to write TID={tid} to Zoho (returned False), enqueueing Celery task")
+                    write_tracking_id_to_zoho_task.delay(api_module_name, zoho_record_id, tid)
+            except Exception as e:
+                logger = logging.getLogger(__name__)
+                logger.exception(f"[CreateTID] ❌ Exception writing TID={tid} to Zoho: {e}")
+                # Фоллбэк через Celery
+                api_module_name = ZOHO_MODULE_MAP.get(zoho_module, zoho_module)
+                write_tracking_id_to_zoho_task.delay(api_module_name, zoho_record_id, tid)
+
+        # Send welcome email
+        try:
+            send_tracking_email_task.delay(tid, 'created')
+        except Exception:
+            logger.exception(f"[CreateTID] Failed to queue tracking email for TID={tid}")
+
+        ser = TrackSerializer(track)
+        return Response({'tid': tid, 'track': ser.data}, status=201)
+
+
+class CrmUpdateStageView(APIView):
+    def post(self, request, format=None):
+        if not _check_zoho_token(request):
+            return Response({'error': 'unauthorized'}, status=401)
+
+        body = request.data
+        node = body.get('data') if isinstance(body.get('data'), dict) else {}
+        # accept aliases for tid
+        tid = body.get('tid') or body.get('tracking_id') or body.get('Tracking_ID')
+        if not tid:
+            return Response({'error': 'tid required'}, status=400)
+
+        track = Track.objects.filter(tid=tid).first()
+        if not track:
+            return Response({'error': 'not found'}, status=404)
+
+        current_stage = body.get('current_stage') or node.get('current_stage')
+        # accept alias 'stage' for crm_stage_name
+        crm_stage_name = body.get('crm_stage_name') or body.get('stage') or node.get('crm_stage_name') or node.get('stage')
+        comment = body.get('comment') or node.get('comment')
+
+        track_data = track.data or {}
+        service_key = track_data.get('service') or track.service
+
+        # Сохраняем старую стадию для проверки реального изменения
+        old_stage = track_data.get('current_stage')
+        stage_changed = False
+        codes = [d['code'] for d in STAGE_DEFS.get(service_key, [])]
+        
+        if current_stage:
+            if current_stage in codes:
+                # Проверяем, действительно ли стадия изменилась
+                if old_stage != current_stage:
+                    track_data['current_stage'] = current_stage
+                    stage_changed = True
+        elif crm_stage_name:
+            norm = (crm_stage_name or '').strip().lower()
+            mapped = CRM_STAGE_MAP.get(service_key, {}).get(norm)
+            if mapped in codes:
+                # Проверяем, действительно ли стадия изменилась
+                if old_stage != mapped:
+                    track_data['current_stage'] = mapped
+                    stage_changed = True
+
+        if comment is not None:
+            track_data['comment'] = str(comment)
+
+        # passthrough дополнительных полей из data и из корня (shipping, translation_r и т.п.)
+        for src in (node, body):
+            try:
+                for k, v in dict(src).items():
+                    if k in ('tid', 'tracking_id', 'Tracking_ID', 'crm_stage_name', 'current_stage', 'stage', 'token', 'data'):
+                        continue
+                    track_data[k] = v
+            except Exception:
+                pass
+
+        # normalize translation_r to boolean if present
+        if 'translation_r' in track_data:
+            tr_raw = str(track_data.get('translation_r')).strip().lower()
+            # Match both "Yes -Translate" and "Yes - Translate" variants
+            track_data['translation_r'] = True if ('translate' in tr_raw and 'yes' in tr_raw) or tr_raw in ('yes', 'true', '1') else False
+
+        track.data = track_data
+        track.save(update_fields=['data', 'updated_at'])
+
+        # Send email notification ONLY if stage actually changed
+        try:
+            if stage_changed and track_data.get('current_stage'):
+                send_tracking_email_task.delay(track.tid, track_data.get('current_stage'))
+                logging.info(f"📧 Stage changed for TID={track.tid}: {old_stage} → {track_data.get('current_stage')}")
+        except Exception:
+            logging.exception(f"Failed to queue tracking email for TID={track.tid}")
+        
+        return Response({'ok': True})
+
+
+class PublicTrackView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, tid: str):
+        track = get_object_or_404(Track, tid=tid)
+        ser = PublicTrackSerializer.from_track(track)
+        payload = ser.data
+        payload['name'] = public_name(payload.get('name', ''))
+        return Response(payload)

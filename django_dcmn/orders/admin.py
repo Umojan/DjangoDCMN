@@ -18,6 +18,7 @@ from .models import (
     ApostilleOrder,
     I9VerificationOrder,
     QuoteRequest,
+    Track,
 )
 
 
@@ -116,3 +117,9 @@ class QuoteRequestOrderAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'email', 'appointment_date', 'appointment_time', 'zoho_synced', 'created_at')
     list_filter = ('zoho_synced', 'created_at')
     search_fields = ('name', 'email', 'phone', 'address')
+
+
+@admin.register(Track)
+class TrackAdmin(admin.ModelAdmin):
+    list_display = ('tid', 'updated_at', 'created_at')
+    search_fields = ('tid',)

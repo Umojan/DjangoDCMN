@@ -15,6 +15,9 @@ from .views import (
     test_email,
 
     zoho_callback,
+    CreateTidFromCrmView,
+    CrmUpdateStageView,
+    PublicTrackView,
 )
 
 urlpatterns = [
@@ -34,4 +37,9 @@ urlpatterns = [
     path("test-email/", test_email, name="test_email"),
 
     path('zoho/callback/', zoho_callback, name='zoho_callback'),
+
+    # Tracking
+    path('tracking/crm/create/', CreateTidFromCrmView.as_view(), name='tracking_crm_create'),
+    path('tracking/crm/update/', CrmUpdateStageView.as_view(), name='tracking_crm_update'),
+    path('tracking/<str:tid>/', PublicTrackView.as_view(), name='tracking_public'),
 ]

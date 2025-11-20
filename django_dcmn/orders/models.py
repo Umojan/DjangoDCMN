@@ -234,7 +234,7 @@ class I9VerificationOrder(models.Model):
     appointment_date = models.CharField()
     appointment_time = models.CharField()
     comments = models.TextField(blank=True, null=True)
-
+    
     zoho_synced = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -273,3 +273,18 @@ class QuoteRequest(models.Model):
     class Meta:
         verbose_name = 'Quote — Request'
         verbose_name_plural = 'Quote — Requests'
+
+
+# --- Tracking ---
+class Track(models.Model):
+    tid = models.CharField(max_length=20, unique=True, db_index=True)
+    service = models.CharField(max_length=50, blank=True, null=True, db_index=True)
+    # Храним все данные для фронта в одном JSON-объекте
+    # Ожидаемые ключи (по желанию): name, email, service, current_stage, comment, shipping, translation_r, и др.
+    data = models.JSONField(default=dict, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.tid}"

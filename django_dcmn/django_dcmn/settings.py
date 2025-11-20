@@ -27,6 +27,7 @@ BASE_URL = "https://" + config('BASE_DOMAIN')
 STRIPE_SECRET_KEY = config("STRIPE_SECRET_KEY")
 STRIPE_WEBHOOK_SECRET = config("STRIPE_WEBHOOK_SECRET")
 
+FRONTEND_URL = "https://www.dcmobilenotary.com"
 STRIPE_SUCCESS_URL = "https://www.dcmobilenotary.com/success-page-done"
 STRIPE_CANCEL_URL = "https://www.dcmobilenotary.com/cancel-page"
 
@@ -56,6 +57,7 @@ EMAIL_CLIENT_FROM = config("EMAIL_CLIENT_FROM")
 ZOHO_REFRESH_TOKEN = os.getenv('ZOHO_REFRESH_TOKEN')
 ZOHO_CLIENT_ID = os.getenv('ZOHO_CLIENT_ID')
 ZOHO_CLIENT_SECRET = os.getenv('ZOHO_CLIENT_SECRET')
+ZOHO_WEBHOOK_TOKEN = config('ZOHO_WEBHOOK_TOKEN', default='')
 
 
 # ====== CELERY ======

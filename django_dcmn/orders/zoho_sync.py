@@ -115,7 +115,76 @@ def sync_order_to_zoho(order, module_name, data_payload, attach_files=True):
     return True
 
 
-def sync_fbi_order_to_zoho(order: FbiApostilleOrder):
+# -------- Generic helpers to read/update Zoho records --------
+def get_record_by_id(module_name: str, record_id: str, fields: list | None = None):
+    """Fetch Zoho CRM record by id. Optionally restrict fields with ?fields=A,B.
+    Returns parsed JSON dict or None on error.
+    """
+    for attempt in range(2):
+        access_token = get_access_token(force_refresh=(attempt == 1))
+        headers = {
+            "Authorization": f"Zoho-oauthtoken {access_token}",
+        }
+        params = {}
+        if fields:
+            params["fields"] = ",".join(fields)
+        url = f"{ZOHO_API_DOMAIN}/crm/v2/{module_name}/{record_id}"
+        resp = requests.get(url, headers=headers, params=params)
+        if resp.status_code == 401 and attempt == 0:
+            # token expired, retry once
+            continue
+        try:
+            data = resp.json()
+            if 'data' in data and len(data['data']) > 0:
+                return data['data'][0]
+        except Exception:
+            return None
+    return None
+
+
+def update_record_fields(module_name: str, record_id: str, fields_dict: dict) -> bool:
+    """Update Zoho CRM record fields with provided dict.
+    Returns True if update succeeded.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    payload = {"data": [{"id": record_id, **fields_dict}]}
+    for attempt in range(2):
+        access_token = get_access_token(force_refresh=(attempt == 1))
+        headers = {
+            "Authorization": f"Zoho-oauthtoken {access_token}",
+            "Content-Type": "application/json",
+        }
+        url = f"{ZOHO_API_DOMAIN}/crm/v2/{module_name}"
+        
+        logger.info(f"[Zoho] PUT {url} payload={payload}")
+        resp = requests.put(url, headers=headers, json=payload)
+        logger.info(f"[Zoho] Response status={resp.status_code}, body={resp.text}")
+        
+        if resp.status_code == 401 and attempt == 0:
+            # token expired, retry once
+            continue
+            
+        try:
+            data = resp.json()
+            if 'data' in data and len(data['data']) > 0:
+                item = data['data'][0]
+                # Check both 'code' and 'status' fields for success
+                code = item.get('code', '').upper()
+                status = item.get('status', '').lower()
+                if code == 'SUCCESS' or status == 'success':
+                    logger.info(f"[Zoho] ✅ Successfully updated {module_name}/{record_id}")
+                    return True
+                else:
+                    logger.warning(f"[Zoho] Update failed: code={code}, status={status}, message={item.get('message')}")
+        except Exception as e:
+            logger.exception(f"[Zoho] Exception parsing response: {e}")
+            
+    return False
+
+
+def sync_fbi_order_to_zoho(order: FbiApostilleOrder, tracking_id: str | None = None):
     contact_id = get_or_create_contact_id(order.name, order.email, order.phone)
     zoho_module = 'Deals'
     data = {
@@ -137,13 +206,14 @@ def sync_fbi_order_to_zoho(order: FbiApostilleOrder):
                 "Payment_Status": "Fully Paid" if order.is_paid else "Not Paid",
                 "Submission_Date": order.created_at.date().isoformat(),
                 "Client_Contact": {"id": contact_id},
+                **({"Tracking_ID": tracking_id} if tracking_id else {}),
             }
         ]
     }
     return sync_order_to_zoho(order, zoho_module, data, attach_files=True)
 
 
-def sync_embassy_order_to_zoho(order: EmbassyLegalizationOrder):
+def sync_embassy_order_to_zoho(order: EmbassyLegalizationOrder, tracking_id: str | None = None):
     zoho_module = 'Embassy_Legalization'
     data = {
         "data": [
@@ -161,13 +231,14 @@ def sync_embassy_order_to_zoho(order: EmbassyLegalizationOrder):
                 "Payment_Status": "Not Paid",
 
                 "Client_Comment": order.comments,
+                **({"Tracking_ID": tracking_id} if tracking_id else {}),
             }
         ]
     }
     return sync_order_to_zoho(order, zoho_module, data, attach_files=True)
 
 
-def sync_translation_order_to_zoho(order: TranslationOrder):
+def sync_translation_order_to_zoho(order: TranslationOrder, tracking_id: str | None = None):
     zoho_module = 'Translation_Services'
     data = {
         "data": [
@@ -180,13 +251,14 @@ def sync_translation_order_to_zoho(order: TranslationOrder):
                 "Languages": order.languages,
                 "Client_Comments": order.comments,
                 "Translation_Status": "Client Placed Request",
+                **({"Tracking_ID": tracking_id} if tracking_id else {}),
             }
         ]
     }
     return sync_order_to_zoho(order, zoho_module, data, attach_files=True)
 
 
-def sync_apostille_order_to_zoho(order: ApostilleOrder):
+def sync_apostille_order_to_zoho(order: ApostilleOrder, tracking_id: str | None = None):
     zoho_module = 'Apostille_Services'
 
     data = {
@@ -202,6 +274,7 @@ def sync_apostille_order_to_zoho(order: ApostilleOrder):
                 "Client_Comments": order.comments or "",
                 "Status": "Client placed the request",
                 "Process_Stage": "Submission Received",
+                **({"Tracking_ID": tracking_id} if tracking_id else {}),
             }
         ]
     }
