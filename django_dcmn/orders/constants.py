@@ -61,8 +61,8 @@ STAGE_DEFS = {
         },
         {
             'code': 'notarized',
-            'name': 'Notarization (if required)',
-            'desc': 'Your documents are being notarized by a certified notary public.'
+            'name': 'Order in Progress',
+            'desc': 'Your order is being processed and notarized (if required) by a certified notary public.'
         },
         {
             'code': 'state_authenticated',
