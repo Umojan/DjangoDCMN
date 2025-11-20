@@ -168,7 +168,7 @@ CRM_STAGE_MAP = {
         'federal authentication': 'federal_authenticated',
         'embassy/consulate legalization': 'embassy_legalized',
         'shipping/ drop off': 'delivered',
-        'completed ✅ (send review) ( automation email)': 'completed',
+        'completed ✅ (send review) ( automated email)': 'completed',
     },
     'translation': {
         'client placed request': 'document_received',
