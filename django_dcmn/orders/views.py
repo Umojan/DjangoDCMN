@@ -100,16 +100,17 @@ class CreateFbiOrderView(APIView):
                     },
                     service='fbi_apostille'
                 )
-                # Push to Zoho with Tracking_ID included (ASYNC)
-                try:
-                    sync_order_to_zoho_task.delay(order.id, 'fbi', tracking_id=tid)
-                except Exception:
-                    logging.exception("Failed to queue Zoho sync for FBI order: %s", order.id)
-                # Send welcome email
-                try:
-                    send_tracking_email_task.delay(tid, 'created')
-                except Exception:
-                    logging.exception("Failed to queue tracking email for FBI order: %s", order.id)
+                # Push to Zoho REMOVED (Moved to webhook after payment)
+                # try:
+                #     sync_order_to_zoho_task.delay(order.id, 'fbi', tracking_id=tid)
+                # except Exception:
+                #     logging.exception("Failed to queue Zoho sync for FBI order: %s", order.id)
+                
+                # Send welcome email REMOVED (Moved to webhook after payment)
+                # try:
+                #     send_tracking_email_task.delay(tid, 'created')
+                # except Exception:
+                #     logging.exception("Failed to queue tracking email for FBI order: %s", order.id)
 
                 return Response({
                     'message': 'Order created',
@@ -649,6 +650,7 @@ def stripe_webhook(request):
         session = event["data"]["object"]
         order_id = session.get("metadata", {}).get("order_id")
         order_type = session.get("metadata", {}).get("order_type")
+        tracking_id = session.get("metadata", {}).get("tracking_id")
 
         if not order_id or not order_type:
             return HttpResponse(status=400)
@@ -660,8 +662,16 @@ def stripe_webhook(request):
                 order = FbiApostilleOrder.objects.get(id=order_id)
                 if not order.is_paid:
                     order.is_paid = True
-                    sync_order_to_zoho_task.delay(order.id, "fbi")
+                    # Pass tracking_id to Zoho sync
+                    sync_order_to_zoho_task.delay(order.id, "fbi", tracking_id=tracking_id)
                     order.save()
+                    
+                    # Start tracking emails (Order Received)
+                    if tracking_id:
+                        try:
+                            send_tracking_email_task.delay(tracking_id, 'created')
+                        except Exception:
+                            logging.exception("Failed to queue tracking email for paid FBI order: %s", order.id)
 
                     # Files (universal)
                     file_links = ""
