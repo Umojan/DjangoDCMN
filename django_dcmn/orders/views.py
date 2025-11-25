@@ -80,39 +80,10 @@ class CreateFbiOrderView(APIView):
                         )
                         file_urls.append(request.build_absolute_uri(attachment.file.url))
 
-                # Auto create tracking record (TID first)
-                from .models import Track
-                from .utils import generate_tid
-                from .constants import STAGE_DEFS
-                
-                tid = generate_tid()
-                codes = [d['code'] for d in STAGE_DEFS.get('fbi_apostille', [])]
-                start_stage = codes[0] if codes else 'document_received'
-                
-                try:
-                    Track.objects.create(
-                        tid=tid,
-                        data={
-                            'name': order.name,
-                            'email': order.email,
-                            'service': 'fbi_apostille',
-                            'current_stage': start_stage,
-                            'order_id': order.id,
-                            'order_type': 'fbi'
-                        },
-                        service='fbi_apostille'
-                    )
-                except Exception as e:
-                    logging.exception(f"Failed to create Track for FBI order {order.id}: {e}")
-                    # Продолжаем работу даже если Track не создался
-                
-                # Push to Zoho REMOVED (Moved to webhook after payment)
-                # Send welcome email REMOVED (Moved to webhook after payment)
-
+                # TID, Zoho sync, and emails will be created AFTER payment in webhook
                 return Response({
                     'message': 'Order created',
                     'order_id': order.id,
-                    'tracking_id': tid,
                     'file_urls': file_urls or None,
                     'calculated_total': float(total),
                 }, status=status.HTTP_201_CREATED)
@@ -581,6 +552,12 @@ class CreateStripeSessionView(APIView):
     def post(self, request):
         order_id = request.data.get("order_id")
         order_type = request.data.get("order_type")
+        
+        logging.info(f"[Stripe Session] Received request: order_id={order_id}, order_type={order_type}")
+
+        if not order_id or not order_type:
+            logging.error(f"[Stripe Session] Missing parameters: order_id={order_id}, order_type={order_type}")
+            return Response({"error": "order_id and order_type are required"}, status=400)
 
         # Определяем модель и параметры для заказа
         if order_type == "fbi":
@@ -598,25 +575,35 @@ class CreateStripeSessionView(APIView):
         else:
             return Response({"error": "Invalid order_type"}, status=400)
 
-        # Получаем TID для этого заказа (по order_id и order_type)
         try:
-            track = Track.objects.filter(
-                data__order_id=order_id,
-                data__order_type=order_type
-            ).order_by('-created_at').first()
-            tracking_id = track.tid if track else None
-        except Exception:
-            tracking_id = None
-            logging.exception(f"Failed to retrieve TID for order {order_id} ({order_type})")
-
-        try:
-            # Формируем success_url с TID
-            if tracking_id:
-                # Редирект на страницу трекинга с TID
-                success_url = f"{settings.FRONTEND_URL}/tracking?tid={tracking_id}"
-            else:
-                # Fallback на обычную success страницу
-                success_url = f"{settings.STRIPE_SUCCESS_URL}?session_id={{CHECKOUT_SESSION_ID}}"
+            # Create TID now (but don't sync to Zoho or send emails yet)
+            from .models import Track
+            from .utils import generate_tid
+            from .constants import STAGE_DEFS
+            
+            tid = generate_tid()
+            codes = [d['code'] for d in STAGE_DEFS.get('fbi_apostille' if order_type == 'fbi' else 'marriage', [])]
+            start_stage = codes[0] if codes else 'document_received'
+            
+            try:
+                Track.objects.create(
+                    tid=tid,
+                    service='fbi_apostille' if order_type == 'fbi' else 'marriage',
+                    data={
+                        'name': order.name,
+                        'email': order.email,
+                        'current_stage': start_stage,
+                        'order_id': order.id,
+                        'order_type': order_type
+                    }
+                )
+                logging.info(f"[Stripe Session] Created TID={tid} for order {order_id}")
+            except Exception as e:
+                logging.exception(f"Failed to create Track for order {order_id}: {e}")
+                # Continue anyway
+            
+            # Redirect to tracking page with TID
+            success_url = f"{settings.FRONTEND_URL}/tracking?tid={tid}"
 
             session = stripe.checkout.Session.create(
                 payment_method_types=["card"],
@@ -636,7 +623,7 @@ class CreateStripeSessionView(APIView):
                 metadata={
                     "order_id": str(order.id),
                     "order_type": order_type,
-                    "tracking_id": tracking_id or "",
+                    "tracking_id": tid,
                 },
                 customer_email=customer_email,
                 payment_intent_data={
