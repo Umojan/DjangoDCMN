@@ -581,6 +581,12 @@ class CreateStripeSessionView(APIView):
     def post(self, request):
         order_id = request.data.get("order_id")
         order_type = request.data.get("order_type")
+        
+        logging.info(f"[Stripe Session] Received request: order_id={order_id}, order_type={order_type}")
+
+        if not order_id or not order_type:
+            logging.error(f"[Stripe Session] Missing parameters: order_id={order_id}, order_type={order_type}")
+            return Response({"error": "order_id and order_type are required"}, status=400)
 
         # Определяем модель и параметры для заказа
         if order_type == "fbi":
