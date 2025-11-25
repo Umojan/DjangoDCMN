@@ -969,7 +969,7 @@ class CreateTidFromCrmView(APIView):
             except Exception as e:
                 logger = logging.getLogger(__name__)
                 logger.exception(f"[CreateTID] ❌ Exception writing TID={tid} to Zoho: {e}")
-                # Фоллбэк через Celery
+                # Фоллбэк через  Celery
                 api_module_name = ZOHO_MODULE_MAP.get(zoho_module, zoho_module)
                 write_tracking_id_to_zoho_task.delay(api_module_name, zoho_record_id, tid)
 
