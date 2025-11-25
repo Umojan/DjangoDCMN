@@ -585,18 +585,25 @@ class CreateStripeSessionView(APIView):
             codes = [d['code'] for d in STAGE_DEFS.get('fbi_apostille' if order_type == 'fbi' else 'marriage', [])]
             start_stage = codes[0] if codes else 'document_received'
             
+            track = None
+            service_name = 'fbi_apostille' if order_type == 'fbi' else 'marriage'
             try:
-                Track.objects.create(
+                track = Track.objects.create(
                     tid=tid,
-                    service='fbi_apostille' if order_type == 'fbi' else 'marriage',
+                    service=service_name,
                     data={
                         'name': order.name,
                         'email': order.email,
+                        'service': service_name,  # Важно для serializer!
                         'current_stage': start_stage,
                         'order_id': order.id,
                         'order_type': order_type
                     }
                 )
+                # Link Track to Order
+                order.track = track
+                order.tid_created = True
+                order.save(update_fields=['track', 'tid_created'])
                 logging.info(f"[Stripe Session] Created TID={tid} for order {order_id}")
             except Exception as e:
                 logging.exception(f"Failed to create Track for order {order_id}: {e}")
@@ -664,9 +671,10 @@ def stripe_webhook(request):
                 order = FbiApostilleOrder.objects.get(id=order_id)
                 if not order.is_paid:
                     order.is_paid = True
+                    order.save()
+                    
                     # Pass tracking_id to Zoho sync
                     sync_order_to_zoho_task.delay(order.id, "fbi", tracking_id=tracking_id)
-                    order.save()
                     
                     # Start tracking emails (Order Received)
                     if tracking_id:
@@ -675,43 +683,52 @@ def stripe_webhook(request):
                         except Exception:
                             logging.exception("Failed to queue tracking email for paid FBI order: %s", order.id)
 
-                    # Files (universal)
-                    file_links = ""
-                    for f in order.file_attachments.all():
-                        file_links += f"📎 {request.build_absolute_uri(f.file.url)}\n"
+                    # Send email to manager (only if not sent before)
+                    if not order.manager_notified:
+                        file_links = ""
+                        for f in order.file_attachments.all():
+                            file_links += f"📎 {request.build_absolute_uri(f.file.url)}\n"
 
-                    today_str = datetime.utcnow().strftime("%Y-%m-%d")
-                    thread_id = f"<fbi-orders-thread-{today_str}@dcmobilenotary.com>"
-                    email_body = (
-                        f"New FBI Apostille order has been paid! Order ID: {order.id}\n\n"
-                        f"Name: {order.name}\n"
-                        f"Email: {order.email}\n"
-                        f"Phone: {order.phone}\n"
-                        f"Country: {order.country_name}\n"
-                        f"Address: {order.address}\n\n"
-                        f"Comments: \n{order.comments}\n\n"
-                        f"Package: {order.package.label}\n"
-                        f"Quantity: {order.count}\n"
-                        f"Shipping: {order.shipping_option.label}\n\n"
-                        f"Total: ${order.total_price}\n"
-                        f"Paid: ✅\n\n"
-                        f"Files:\n{file_links if file_links else 'None'}"
-                    )
-                    try:
-                        email = EmailMessage(
-                            subject=f"✅ New Paid FBI Apostille Order — {today_str}",
-                            body=email_body,
-                            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "support@dcmobilenotary.net"),
-                            to=settings.EMAIL_OFFICE_RECEIVER,
-                            headers={
-                                "Message-ID": f"<order-{order.id}@dcmobilenotary.com>",
-                                "In-Reply-To": thread_id,
-                                "References": thread_id,
-                            }
+                        today_str = datetime.utcnow().strftime("%Y-%m-%d")
+                        thread_id = f"<fbi-orders-thread-{today_str}@dcmobilenotary.com>"
+                        
+                        # Add TID to email body
+                        tid_info = f"Tracking ID: {tracking_id}\n" if tracking_id else ""
+                        
+                        email_body = (
+                            f"New FBI Apostille order has been paid! Order ID: {order.id}\n\n"
+                            f"{tid_info}"
+                            f"Name: {order.name}\n"
+                            f"Email: {order.email}\n"
+                            f"Phone: {order.phone}\n"
+                            f"Country: {order.country_name}\n"
+                            f"Address: {order.address}\n\n"
+                            f"Comments: \n{order.comments}\n\n"
+                            f"Package: {order.package.label}\n"
+                            f"Quantity: {order.count}\n"
+                            f"Shipping: {order.shipping_option.label}\n\n"
+                            f"Total: ${order.total_price}\n"
+                            f"Paid: ✅\n\n"
+                            f"Files:\n{file_links if file_links else 'None'}"
                         )
-                        email.send()
-                    except Exception:
-                        logging.exception("Failed to send paid FBI order email for %s", order.id)
+                        try:
+                            email = EmailMessage(
+                                subject=f"✅ New Paid FBI Apostille Order — {today_str}",
+                                body=email_body,
+                                from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "support@dcmobilenotary.net"),
+                                to=settings.EMAIL_OFFICE_RECEIVER,
+                                headers={
+                                    "Message-ID": f"<order-{order.id}@dcmobilenotary.com>",
+                                    "In-Reply-To": thread_id,
+                                    "References": thread_id,
+                                }
+                            )
+                            email.send()
+                            order.manager_notified = True
+                            order.save(update_fields=['manager_notified'])
+                            logging.info(f"✅ Manager notified for FBI order {order.id}")
+                        except Exception:
+                            logging.exception("Failed to send paid FBI order email for %s", order.id)
 
                     # Клиенту HTML-письмо (пример)
                     file_links_html = "".join([

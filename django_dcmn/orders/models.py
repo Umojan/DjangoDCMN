@@ -64,6 +64,9 @@ class FbiApostilleOrder(models.Model):
 
     is_paid = models.BooleanField(default=False)
     zoho_synced = models.BooleanField(default=False)
+    tid_created = models.BooleanField(default=False, help_text="Tracking ID created")
+    manager_notified = models.BooleanField(default=False, help_text="Manager email sent")
+    track = models.ForeignKey('Track', on_delete=models.SET_NULL, null=True, blank=True, related_name='fbi_orders')
     created_at = models.DateTimeField(auto_now_add=True)
 
     file_attachments = GenericRelation(
@@ -114,6 +117,9 @@ class MarriageOrder(models.Model):
     )
     is_paid = models.BooleanField(default=False)
     zoho_synced = models.BooleanField(default=False)
+    tid_created = models.BooleanField(default=False, help_text="Tracking ID created")
+    manager_notified = models.BooleanField(default=False, help_text="Manager email sent")
+    track = models.ForeignKey('Track', on_delete=models.SET_NULL, null=True, blank=True, related_name='marriage_orders')
 
     created_at = models.DateTimeField(auto_now_add=True)
 
