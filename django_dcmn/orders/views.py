@@ -84,33 +84,30 @@ class CreateFbiOrderView(APIView):
                 from .models import Track
                 from .utils import generate_tid
                 from .constants import STAGE_DEFS
-                codes = [d['code'] for d in STAGE_DEFS.get('fbi_apostille', [])]
-                # Start with first stage (document_received)
-                start_stage = codes[0] if codes else None
-                tid = generate_tid()
-                Track.objects.create(
-                    tid=tid,
-                    data={
-                        'name': order.name,
-                        'email': order.email,
-                        'service': 'fbi_apostille',
-                        'current_stage': start_stage,
-                        'order_id': order.id,
-                        'order_type': 'fbi'
-                    },
-                    service='fbi_apostille'
-                )
-                # Push to Zoho REMOVED (Moved to webhook after payment)
-                # try:
-                #     sync_order_to_zoho_task.delay(order.id, 'fbi', tracking_id=tid)
-                # except Exception:
-                #     logging.exception("Failed to queue Zoho sync for FBI order: %s", order.id)
                 
+                tid = generate_tid()
+                codes = [d['code'] for d in STAGE_DEFS.get('fbi_apostille', [])]
+                start_stage = codes[0] if codes else 'document_received'
+                
+                try:
+                    Track.objects.create(
+                        tid=tid,
+                        data={
+                            'name': order.name,
+                            'email': order.email,
+                            'service': 'fbi_apostille',
+                            'current_stage': start_stage,
+                            'order_id': order.id,
+                            'order_type': 'fbi'
+                        },
+                        service='fbi_apostille'
+                    )
+                except Exception as e:
+                    logging.exception(f"Failed to create Track for FBI order {order.id}: {e}")
+                    # Продолжаем работу даже если Track не создался
+                
+                # Push to Zoho REMOVED (Moved to webhook after payment)
                 # Send welcome email REMOVED (Moved to webhook after payment)
-                # try:
-                #     send_tracking_email_task.delay(tid, 'created')
-                # except Exception:
-                #     logging.exception("Failed to queue tracking email for FBI order: %s", order.id)
 
                 return Response({
                     'message': 'Order created',
@@ -229,22 +226,28 @@ class CreateEmbassyOrderView(APIView):
             from .models import Track
             from .utils import generate_tid
             from .constants import STAGE_DEFS
-            codes = [d['code'] for d in STAGE_DEFS.get('embassy_legalization', [])]
-            # Start with first stage (document_received)
-            start_stage = codes[0] if codes else None
+            
             tid = generate_tid()
-            Track.objects.create(
-                tid=tid,
-                data={
-                    'name': order.name,
-                    'email': order.email,
-                    'service': 'embassy_legalization',
-                    'current_stage': start_stage,
-                    'order_id': order.id,
-                    'order_type': 'embassy'
-                },
-                service='embassy_legalization'
-            )
+            codes = [d['code'] for d in STAGE_DEFS.get('embassy_legalization', [])]
+            start_stage = codes[0] if codes else 'document_received'
+            
+            try:
+                Track.objects.create(
+                    tid=tid,
+                    data={
+                        'name': order.name,
+                        'email': order.email,
+                        'service': 'embassy_legalization',
+                        'current_stage': start_stage,
+                        'order_id': order.id,
+                        'order_type': 'embassy'
+                    },
+                    service='embassy_legalization'
+                )
+            except Exception as e:
+                logging.exception(f"Failed to create Track for Embassy order {order.id}: {e}")
+                # Продолжаем работу даже если Track не создался
+            
             # Push to Zoho with Tracking_ID included (ASYNC)
             try:
                 sync_order_to_zoho_task.delay(order.id, 'embassy', tracking_id=tid)
@@ -312,22 +315,28 @@ class CreateApostilleOrderView(APIView):
             from .models import Track
             from .utils import generate_tid
             from .constants import STAGE_DEFS
-            codes = [d['code'] for d in STAGE_DEFS.get('state_apostille', [])]
-            # Start with first stage (document_received)
-            start_stage = codes[0] if codes else None
+            
             tid = generate_tid()
-            Track.objects.create(
-                tid=tid,
-                data={
-                    'name': order.name,
-                    'email': order.email,
-                    'service': 'state_apostille',
-                    'current_stage': start_stage,
-                    'order_id': order.id,
-                    'order_type': 'apostille'
-                },
-                service='state_apostille'
-            )
+            codes = [d['code'] for d in STAGE_DEFS.get('state_apostille', [])]
+            start_stage = codes[0] if codes else 'document_received'
+            
+            try:
+                Track.objects.create(
+                    tid=tid,
+                    data={
+                        'name': order.name,
+                        'email': order.email,
+                        'service': 'state_apostille',
+                        'current_stage': start_stage,
+                        'order_id': order.id,
+                        'order_type': 'apostille'
+                    },
+                    service='state_apostille'
+                )
+            except Exception as e:
+                logging.exception(f"Failed to create Track for Apostille order {order.id}: {e}")
+                # Продолжаем работу даже если Track не создался
+            
             # Push to Zoho with Tracking_ID included (ASYNC)
             try:
                 sync_order_to_zoho_task.delay(order.id, 'apostille', tracking_id=tid)
@@ -405,22 +414,28 @@ class CreateTranslationOrderView(APIView):
             from .models import Track
             from .utils import generate_tid
             from .constants import STAGE_DEFS
-            codes = [d['code'] for d in STAGE_DEFS.get('translation', [])]
-            # Start with first stage (document_received)
-            start_stage = codes[0] if codes else None
+            
             tid = generate_tid()
-            Track.objects.create(
-                tid=tid,
-                data={
-                    'name': order.name,
-                    'email': order.email,
-                    'service': 'translation',
-                    'current_stage': start_stage,
-                    'order_id': order.id,
-                    'order_type': 'translation'
-                },
-                service='translation'
-            )
+            codes = [d['code'] for d in STAGE_DEFS.get('translation', [])]
+            start_stage = codes[0] if codes else 'document_received'
+            
+            try:
+                Track.objects.create(
+                    tid=tid,
+                    data={
+                        'name': order.name,
+                        'email': order.email,
+                        'service': 'translation',
+                        'current_stage': start_stage,
+                        'order_id': order.id,
+                        'order_type': 'translation'
+                    },
+                    service='translation'
+                )
+            except Exception as e:
+                logging.exception(f"Failed to create Track for Translation order {order.id}: {e}")
+                # Продолжаем работу даже если Track не создался
+            
             # Push to Zoho with Tracking_ID included (ASYNC)
             try:
                 sync_order_to_zoho_task.delay(order.id, 'translation', tracking_id=tid)
