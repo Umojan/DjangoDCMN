@@ -586,13 +586,15 @@ class CreateStripeSessionView(APIView):
             start_stage = codes[0] if codes else 'document_received'
             
             track = None
+            service_name = 'fbi_apostille' if order_type == 'fbi' else 'marriage'
             try:
                 track = Track.objects.create(
                     tid=tid,
-                    service='fbi_apostille' if order_type == 'fbi' else 'marriage',
+                    service=service_name,
                     data={
                         'name': order.name,
                         'email': order.email,
+                        'service': service_name,  # Важно для serializer!
                         'current_stage': start_stage,
                         'order_id': order.id,
                         'order_type': order_type
