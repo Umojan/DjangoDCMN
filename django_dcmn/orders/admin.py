@@ -56,9 +56,10 @@ class FBIPricingSettingsAdmin(admin.ModelAdmin):
 @admin.register(FbiApostilleOrder)
 class FbiApostilleOrderAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'email', 'package', 'count', 'shipping_option', 'total_price',
-                    'is_paid', 'zoho_synced', 'created_at')
-    list_filter = ('package', 'shipping_option', 'is_paid', 'created_at')
+                    'is_paid', 'tid_created', 'manager_notified', 'zoho_synced', 'created_at')
+    list_filter = ('package', 'shipping_option', 'is_paid', 'tid_created', 'manager_notified', 'zoho_synced', 'created_at')
     search_fields = ('name', 'email', 'country_name', 'address')
+    readonly_fields = ('track', 'tid_created', 'manager_notified')
     inlines = [FileAttachmentInline]
 
 
@@ -70,9 +71,10 @@ class MarriagePricingSettingsAdmin(admin.ModelAdmin):
 
 @admin.register(MarriageOrder)
 class MarriageOrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'email', 'total_price', 'is_paid', 'zoho_synced', 'created_at')
-    list_filter = ('zoho_synced', 'is_paid', 'created_at')
+    list_display = ('id', 'name', 'email', 'total_price', 'is_paid', 'tid_created', 'manager_notified', 'zoho_synced', 'created_at')
+    list_filter = ('is_paid', 'tid_created', 'manager_notified', 'zoho_synced', 'created_at')
     search_fields = ('name', 'email', 'phone', 'address', 'husband_full_name', 'wife_full_name')
+    readonly_fields = ('track', 'tid_created', 'manager_notified')
     inlines = [FileAttachmentInline]
 
 
