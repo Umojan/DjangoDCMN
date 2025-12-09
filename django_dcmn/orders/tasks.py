@@ -119,6 +119,9 @@ def send_tracking_email_task(tid: str, stage_code: str):
             message = "We have successfully received your documents and they are now in our processing queue."
         else:
             message = "We have received your documents and will review them shortly. Our team will be in touch with you soon."
+    elif stage_code == 'quote_review':
+        title = "Request Under Review 📝"
+        message = "Your request is being reviewed by our specialists. We will contact you shortly with pricing details and next steps."
     elif stage_code == 'notarized':
         title = "Notarization in Progress"
         message = "Your documents are currently being notarized and prepared for the next step in the process."
