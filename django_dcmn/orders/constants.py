@@ -35,7 +35,12 @@ STAGE_DEFS = {
         {
             'code': 'document_received',
             'name': 'Document Received',
-            'desc': 'We have received your documents and are preparing them for the next stage of processing.'
+            'desc': 'We have received your request and our team is reviewing it.'
+        },
+        {
+            'code': 'quote_review',
+            'name': 'Request Under Review',
+            'desc': 'Your request is being reviewed by our specialists. We will contact you shortly with pricing details and next steps.'
         },
         {
             'code': 'in_progress',
@@ -57,7 +62,12 @@ STAGE_DEFS = {
         {
             'code': 'document_received',
             'name': 'Document Received',
-            'desc': 'We have received your documents and are preparing them for the embassy legalization process.'
+            'desc': 'We have received your request and our team is reviewing it.'
+        },
+        {
+            'code': 'quote_review',
+            'name': 'Request Under Review',
+            'desc': 'Your request is being reviewed by our specialists. We will contact you shortly with pricing details and next steps.'
         },
         {
             'code': 'notarized',
@@ -94,7 +104,12 @@ STAGE_DEFS = {
         {
             'code': 'document_received',
             'name': 'Document Received',
-            'desc': 'We have received your documents and will review them shortly. Our team will be in touch with you soon.'
+            'desc': 'We have received your request and our team is reviewing it.'
+        },
+        {
+            'code': 'quote_review',
+            'name': 'Request Under Review',
+            'desc': 'Your request is being reviewed by our specialists. We will contact you shortly with pricing details and next steps.'
         },
         {
             'code': 'in_translation',
