@@ -189,13 +189,18 @@ class PublicTrackSerializer(serializers.Serializer):
         
         # Специальная логика для document_received:
         # Если текущая стадия = document_received (первая), то показываем её как completed,
-        # а следующую как current, но описание берём от document_received
+        # а следующую как current
         display_mode = 'normal'
         display_idx = current_idx
         
         if current_stage_code != 'completed' and current_idx == 0 and len(filtered_defs) > 0 and filtered_defs[0]['code'] == 'document_received':
             display_mode = 'first_stage_special'
-            display_idx = 0  # Описание от первой стадии
+            # Для пайплайнов с quote_review показываем описание второй стадии
+            # Для FBI (без quote_review) показываем описание первой стадии
+            if len(filtered_defs) > 1 and filtered_defs[1]['code'] == 'quote_review':
+                display_idx = 1  # Описание от quote_review (Translation, Apostille, Embassy)
+            else:
+                display_idx = 0  # Описание от document_received (FBI)
         
         # Строим timeline (только название и статус)
         timeline = []
