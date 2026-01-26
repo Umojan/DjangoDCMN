@@ -58,6 +58,12 @@ ZOHO_REFRESH_TOKEN = os.getenv('ZOHO_REFRESH_TOKEN')
 ZOHO_CLIENT_ID = os.getenv('ZOHO_CLIENT_ID')
 ZOHO_CLIENT_SECRET = os.getenv('ZOHO_CLIENT_SECRET')
 ZOHO_WEBHOOK_TOKEN = config('ZOHO_WEBHOOK_TOKEN', default='')
+ZOHO_LEADS_WON_FIELD = 'Number_of_Leads_Won'  # API name of the field in Zoho Contacts
+
+
+# ====== REVIEWS ======
+GOOGLE_REVIEW_URL = config('GOOGLE_REVIEW_URL', default='https://search.google.com/local/writereview?placeid=ChIJi7ayhx-3t4kRpyVMzASAj9s')
+TRUSTPILOT_TRIGGER_EMAIL = config('TRUSTPILOT_TRIGGER_EMAIL', default='dcmobilenotary.com+cd7dabbed2@invite.trustpilot.com')
 
 
 # ====== CELERY ======
@@ -91,6 +97,7 @@ INSTALLED_APPS = [
     'anymail',
 
     'orders',
+    'reviews',
 ]
 
 MIDDLEWARE = [

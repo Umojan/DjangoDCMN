@@ -23,6 +23,7 @@ from .views import serve_media_file
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('orders.urls')),
+    path('api/reviews/', include('reviews.urls')),
 
     path('media/<path:path>', serve_media_file),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
