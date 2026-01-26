@@ -18,13 +18,76 @@ GOOGLE_REVIEW_URL = getattr(settings, 'GOOGLE_REVIEW_URL', 'https://g.page/r/YOU
 ZOHO_LEADS_WON_FIELD = getattr(settings, 'ZOHO_LEADS_WON_FIELD', 'Number_of_Leads_Won')
 
 
+def _get_contact_by_email(email: str, access_token: str) -> dict | None:
+    """
+    Search for Zoho Contact by email.
+    Returns dict with 'id' and leads_won field, or None if not found.
+    """
+    from orders.zoho_sync import ZOHO_API_DOMAIN
+    
+    headers = {"Authorization": f"Zoho-oauthtoken {access_token}"}
+    search_url = f"{ZOHO_API_DOMAIN}/crm/v2/Contacts/search?email={email}"
+    
+    resp = requests.get(search_url, headers=headers)
+    
+    if resp.status_code == 200:
+        data = resp.json()
+        if 'data' in data and len(data['data']) > 0:
+            return data['data'][0]
+    elif resp.status_code == 204:
+        # No content - contact not found
+        return None
+    else:
+        logger.warning(f"Failed to search contact by email {email}: {resp.status_code}")
+    
+    return None
+
+
+def _create_contact(name: str, email: str, phone: str, access_token: str) -> str | None:
+    """
+    Create new Zoho Contact. Returns contact ID or None.
+    """
+    from orders.zoho_sync import ZOHO_API_DOMAIN
+    
+    headers = {
+        "Authorization": f"Zoho-oauthtoken {access_token}",
+        "Content-Type": "application/json"
+    }
+    
+    create_url = f"{ZOHO_API_DOMAIN}/crm/v2/Contacts"
+    payload = {
+        "data": [{
+            "Last_Name": name or email.split('@')[0],
+            "Email": email,
+            "Phone": phone or ""
+        }]
+    }
+    
+    resp = requests.post(create_url, headers=headers, json=payload)
+    
+    try:
+        data = resp.json()
+        if 'data' in data and len(data['data']) > 0:
+            item = data['data'][0]
+            if 'details' in item:
+                return item['details']['id']
+            elif item.get('code') == 'DUPLICATE_DATA' and 'details' in item:
+                return item['details']['id']
+    except Exception as e:
+        logger.exception(f"Failed to create contact: {e}")
+    
+    return None
+
+
 @shared_task
 def process_review_request_task(review_request_id: int):
     """
     Main task for processing review request:
-    1. Determine review type (Google or TrustPilot) based on leads_won_before
-    2. Update Leads_Won in Zoho (+1)
-    3. Send corresponding review request
+    1. Get or create Contact in Zoho (if contact_id not provided)
+    2. Get Leads_Won from Contact
+    3. Determine review type (Google or TrustPilot)
+    4. Update Leads_Won in Zoho (+1)
+    5. Send corresponding review request
     """
     from .models import ReviewRequest
     from orders.zoho_sync import get_access_token, ZOHO_API_DOMAIN
@@ -36,10 +99,65 @@ def process_review_request_task(review_request_id: int):
         return
     
     try:
-        # leads_won_before already received from webhook
-        leads_won = review_request.leads_won_before
+        access_token = get_access_token()
         
-        # 1. Determine review type
+        # 1. Get or find Contact ID
+        contact_id = review_request.zoho_contact_id
+        leads_won = 0
+        
+        if not contact_id:
+            # Try to find contact by email
+            logger.info(f"No contact_id provided, searching by email: {review_request.email}")
+            contact = _get_contact_by_email(review_request.email, access_token)
+            
+            if contact:
+                contact_id = contact.get('id')
+                leads_won_value = contact.get(ZOHO_LEADS_WON_FIELD)
+                if leads_won_value is not None:
+                    try:
+                        leads_won = int(leads_won_value)
+                    except (ValueError, TypeError):
+                        leads_won = 0
+                logger.info(f"Found contact {contact_id} with {ZOHO_LEADS_WON_FIELD}={leads_won}")
+            else:
+                # Create new contact
+                logger.info(f"Contact not found, creating new one for {review_request.email}")
+                contact_id = _create_contact(
+                    review_request.name,
+                    review_request.email,
+                    review_request.phone,
+                    access_token
+                )
+                leads_won = 0
+                logger.info(f"Created new contact: {contact_id}")
+            
+            # Save contact_id to review request
+            if contact_id:
+                review_request.zoho_contact_id = contact_id
+                review_request.save(update_fields=['zoho_contact_id'])
+        else:
+            # Contact ID provided, fetch leads_won from Zoho
+            headers = {"Authorization": f"Zoho-oauthtoken {access_token}"}
+            contact_url = f"{ZOHO_API_DOMAIN}/crm/v2/Contacts/{contact_id}"
+            resp = requests.get(contact_url, headers=headers, params={'fields': ZOHO_LEADS_WON_FIELD})
+            
+            if resp.status_code == 200:
+                data = resp.json()
+                if 'data' in data and len(data['data']) > 0:
+                    leads_won_value = data['data'][0].get(ZOHO_LEADS_WON_FIELD)
+                    if leads_won_value is not None:
+                        try:
+                            leads_won = int(leads_won_value)
+                        except (ValueError, TypeError):
+                            leads_won = 0
+        
+        if not contact_id:
+            logger.error(f"Could not get or create contact for {review_request.email}")
+            return
+        
+        review_request.leads_won_before = leads_won
+        
+        # 2. Determine review type
         # Leads Won = 0 -> first customer -> Google Review
         # Leads Won >= 1 -> returning customer -> TrustPilot
         if leads_won == 0:
@@ -50,13 +168,12 @@ def process_review_request_task(review_request_id: int):
             new_leads_won = leads_won + 1
         
         review_request.leads_won_after = new_leads_won
-        review_request.save(update_fields=['leads_won_after', 'review_type'])
+        review_request.save(update_fields=['leads_won_before', 'leads_won_after', 'review_type'])
         
         logger.info(f"ReviewRequest {review_request_id}: type={review_request.review_type}, "
                     f"leads_won {leads_won} -> {new_leads_won}")
         
-        # 2. Update Leads_Won in Zoho Contact
-        access_token = get_access_token()
+        # 3. Update Leads_Won in Zoho Contact
         headers = {
             "Authorization": f"Zoho-oauthtoken {access_token}",
             "Content-Type": "application/json"
@@ -65,18 +182,18 @@ def process_review_request_task(review_request_id: int):
         update_url = f"{ZOHO_API_DOMAIN}/crm/v2/Contacts"
         update_payload = {
             "data": [{
-                "id": review_request.zoho_contact_id,
+                "id": contact_id,
                 ZOHO_LEADS_WON_FIELD: new_leads_won
             }]
         }
         update_resp = requests.put(update_url, headers=headers, json=update_payload)
         
         if update_resp.status_code in (200, 201):
-            logger.info(f"Updated {ZOHO_LEADS_WON_FIELD}={new_leads_won} for contact {review_request.zoho_contact_id}")
+            logger.info(f"Updated {ZOHO_LEADS_WON_FIELD}={new_leads_won} for contact {contact_id}")
         else:
             logger.warning(f"Failed to update Leads_Won in Zoho: {update_resp.status_code} {update_resp.text}")
         
-        # 3. Send review request
+        # 4. Send review request
         if review_request.review_type == 'google':
             _send_google_review(review_request)
         else:

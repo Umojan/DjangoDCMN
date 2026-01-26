@@ -29,12 +29,11 @@ class ReviewWebhookView(APIView):
     
     Required fields:
         - email: Customer email address
-        - contact_id: Zoho Contact ID
     
     Optional fields:
         - name: Customer name
         - phone: Customer phone
-        - contact_won_leads: Number of Leads Won from Zoho Contact
+        - contact_id: Zoho Contact ID (if not provided, will be fetched by email)
         - deal_id: Zoho Deal/Record ID
         - module: Zoho module name (Deals, Triple_Seal_Apostilles, etc.)
         - tracking_id: Tracking ID if exists
@@ -44,8 +43,6 @@ class ReviewWebhookView(APIView):
         "email": "customer@example.com",
         "name": "John Doe",
         "phone": "+1234567890",
-        "contact_id": "5765XXXXXXXXXXXXXXX",
-        "contact_won_leads": "0",
         "deal_id": "5765XXXXXXXXXXXXXXX",
         "module": "Deals",
         "tracking_id": "FBI-ABC123"
@@ -59,37 +56,24 @@ class ReviewWebhookView(APIView):
         
         data = request.data
         logger.info(f"Review webhook received: {data}")
-        logger.info(f"Review webhook - email: '{data.get('email')}', contact_id: '{data.get('contact_id')}'")
         
-        # Required fields
+        # Required field - only email
         email = data.get('email')
-        contact_id = data.get('contact_id')
         
-        if not email or not contact_id:
-            logger.warning(f"Review webhook missing fields - email: '{email}', contact_id: '{contact_id}'")
-            logger.warning(f"Full request data: {data}")
+        if not email:
+            logger.warning(f"Review webhook missing email")
             return Response({
-                'error': 'email and contact_id are required',
-                'received_email': email,
-                'received_contact_id': contact_id,
-                'full_payload': data  # TEMP: remove after debugging
+                'error': 'email is required',
+                'received_data': data
             }, status=status.HTTP_400_BAD_REQUEST)
         
         # Optional fields
         name = data.get('name', '')
         phone = data.get('phone', '')
+        contact_id = data.get('contact_id', '')  # Now optional
         deal_id = data.get('deal_id', '')
         module = data.get('module', '')
         tracking_id = data.get('tracking_id') or data.get('Tracking_ID', '')
-        
-        # Leads Won from Zoho Contact (passed directly from webhook)
-        contact_won_leads = data.get('contact_won_leads')
-        leads_won = 0
-        if contact_won_leads is not None and contact_won_leads != '':
-            try:
-                leads_won = int(contact_won_leads)
-            except (ValueError, TypeError):
-                leads_won = 0
         
         # Check if this deal_id was already processed (deduplication)
         if deal_id:
@@ -102,7 +86,7 @@ class ReviewWebhookView(APIView):
                     'review_request_id': existing.id
                 }, status=status.HTTP_200_OK)
         
-        # Create record
+        # Create record (contact_id and leads_won will be fetched in task if needed)
         review_request = ReviewRequest.objects.create(
             email=email,
             name=name,
@@ -111,7 +95,6 @@ class ReviewWebhookView(APIView):
             zoho_deal_id=deal_id,
             zoho_module=module,
             tracking_id=tracking_id,
-            leads_won_before=leads_won,
         )
         
         # Link Track if exists
