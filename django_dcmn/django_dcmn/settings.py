@@ -58,6 +58,12 @@ ZOHO_REFRESH_TOKEN = os.getenv('ZOHO_REFRESH_TOKEN')
 ZOHO_CLIENT_ID = os.getenv('ZOHO_CLIENT_ID')
 ZOHO_CLIENT_SECRET = os.getenv('ZOHO_CLIENT_SECRET')
 ZOHO_WEBHOOK_TOKEN = config('ZOHO_WEBHOOK_TOKEN', default='')
+ZOHO_LEADS_WON_FIELD = 'Number_of_Leads_Won'  # API name of the field in Zoho Contacts
+
+
+# ====== REVIEWS ======
+# Google Review URL - замени на свой
+GOOGLE_REVIEW_URL = config('GOOGLE_REVIEW_URL', default='https://g.page/r/YOUR_PLACE_ID/review')
 
 
 # ====== CELERY ======
@@ -91,6 +97,7 @@ INSTALLED_APPS = [
     'anymail',
 
     'orders',
+    'reviews',
 ]
 
 MIDDLEWARE = [
