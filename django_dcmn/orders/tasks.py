@@ -85,14 +85,21 @@ def write_tracking_id_to_zoho_task(module_name: str, record_id: str, tracking_id
 @shared_task
 def send_tracking_email_task(tid: str, stage_code: str):
     """
-    Отправляет HTML email с обновлением статуса заказа.
-    Все письма группируются в одну ветку по TID.
+    Sends HTML email with order status update.
+    All emails are grouped into one thread by TID.
+    
+    NOTE: 'completed' stage email is handled by reviews app (review request).
     """
     from django.template.loader import render_to_string
     from django.core.mail import EmailMessage
     import logging
     
     logger = logging.getLogger(__name__)
+    
+    # Skip 'completed' stage - handled by reviews app
+    if stage_code == 'completed':
+        logger.info(f"Skipping tracking email for TID {tid}, stage 'completed' - handled by reviews app")
+        return
     
     track = Track.objects.filter(tid=tid).first()
     if not track:
@@ -109,7 +116,7 @@ def send_tracking_email_task(tid: str, stage_code: str):
 
     svc = service_label(track.service)
     
-    # Определяем заголовок и сообщение в зависимости от стадии
+    # Determine title and message based on stage
     if stage_code == 'created':
         title = "Order Received 📋"
         message = "Thank you for choosing DC Mobile Notary! We have received your order and will begin processing it shortly."

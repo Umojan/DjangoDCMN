@@ -8,14 +8,17 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# TrustPilot AFS trigger email
+# TrustPilot AFS trigger email (used in BCC)
 TRUSTPILOT_TRIGGER_EMAIL = getattr(settings, 'TRUSTPILOT_TRIGGER_EMAIL', 'dcmobilenotary.com+cd7dabbed2@invite.trustpilot.com')
 
-# Google Review URL - can be overridden in settings.py
+# Google Review URL
 GOOGLE_REVIEW_URL = getattr(settings, 'GOOGLE_REVIEW_URL', 'https://g.page/r/YOUR_PLACE_ID/review')
 
 # API name of Leads Won field in Zoho Contacts
 ZOHO_LEADS_WON_FIELD = getattr(settings, 'ZOHO_LEADS_WON_FIELD', 'Number_of_Leads_Won')
+
+# Frontend URL for tracking
+FRONTEND_URL = getattr(settings, 'FRONTEND_URL', 'https://www.dcmobilenotary.com')
 
 
 def _get_contact_by_email(email: str, access_token: str) -> dict | None:
@@ -35,7 +38,6 @@ def _get_contact_by_email(email: str, access_token: str) -> dict | None:
         if 'data' in data and len(data['data']) > 0:
             return data['data'][0]
     elif resp.status_code == 204:
-        # No content - contact not found
         return None
     else:
         logger.warning(f"Failed to search contact by email {email}: {resp.status_code}")
@@ -79,6 +81,21 @@ def _create_contact(name: str, email: str, phone: str, access_token: str) -> str
     return None
 
 
+def _get_service_label(module: str) -> str:
+    """Get human-readable service label from module name."""
+    labels = {
+        'FBI': 'FBI Apostille',
+        'FBI_Background_Checks': 'FBI Apostille',
+        'Deals': 'FBI Apostille',
+        'Triple_Seal_Apostilles': 'Triple Seal Marriage',
+        'Embassy_Legalization': 'Embassy Legalization',
+        'Apostille_Services': 'Apostille',
+        'Translation_Services': 'Translation',
+        'I_9_Verification': 'I-9 Verification',
+    }
+    return labels.get(module, module or 'Notary Service')
+
+
 @shared_task
 def process_review_request_task(review_request_id: int):
     """
@@ -87,7 +104,7 @@ def process_review_request_task(review_request_id: int):
     2. Get Leads_Won from Contact
     3. Determine review type (Google or TrustPilot)
     4. Update Leads_Won in Zoho (+1)
-    5. Send corresponding review request
+    5. Send "Order Completed" email with review request
     """
     from .models import ReviewRequest
     from orders.zoho_sync import get_access_token, ZOHO_API_DOMAIN
@@ -106,7 +123,6 @@ def process_review_request_task(review_request_id: int):
         leads_won = 0
         
         if not contact_id:
-            # Try to find contact by email
             logger.info(f"No contact_id provided, searching by email: {review_request.email}")
             contact = _get_contact_by_email(review_request.email, access_token)
             
@@ -120,7 +136,6 @@ def process_review_request_task(review_request_id: int):
                         leads_won = 0
                 logger.info(f"Found contact {contact_id} with {ZOHO_LEADS_WON_FIELD}={leads_won}")
             else:
-                # Create new contact
                 logger.info(f"Contact not found, creating new one for {review_request.email}")
                 contact_id = _create_contact(
                     review_request.name,
@@ -131,7 +146,6 @@ def process_review_request_task(review_request_id: int):
                 leads_won = 0
                 logger.info(f"Created new contact: {contact_id}")
             
-            # Save contact_id to review request
             if contact_id:
                 review_request.zoho_contact_id = contact_id
                 review_request.save(update_fields=['zoho_contact_id'])
@@ -193,11 +207,11 @@ def process_review_request_task(review_request_id: int):
         else:
             logger.warning(f"Failed to update Leads_Won in Zoho: {update_resp.status_code} {update_resp.text}")
         
-        # 4. Send review request
+        # 4. Send review request email
         if review_request.review_type == 'google':
-            _send_google_review(review_request)
+            _send_google_review_email(review_request)
         else:
-            _send_trustpilot_invite(review_request)
+            _send_trustpilot_email(review_request)
         
         # Success
         review_request.is_sent = True
@@ -211,32 +225,48 @@ def process_review_request_task(review_request_id: int):
         logger.exception(f"❌ Failed to process ReviewRequest {review_request_id}: {e}")
 
 
-def _send_google_review(review_request):
-    """Send email asking customer to leave a Google Review."""
+def _send_google_review_email(review_request):
+    """
+    Send "Order Completed" email with Google Review button.
+    For first-time customers.
+    """
+    tracking_url = None
+    if review_request.tracking_id:
+        tracking_url = f"{FRONTEND_URL}/tracking?tid={review_request.tracking_id}"
+    
+    service_label = _get_service_label(review_request.zoho_module)
+    
     try:
-        html_content = render_to_string('emails/google_review_request.html', {
+        html_content = render_to_string('emails/review_thank_you.html', {
             'name': review_request.name or 'Valued Customer',
+            'service_label': service_label,
+            'tid': review_request.tracking_id,
+            'tracking_url': tracking_url,
             'review_url': GOOGLE_REVIEW_URL,
         })
     except Exception as e:
-        # Fallback if template not found
         logger.warning(f"Template not found, using fallback: {e}")
         html_content = f"""
         <html>
         <body style="font-family: Arial, sans-serif; padding: 20px;">
-            <h2>Thank you, {review_request.name or 'Valued Customer'}! 🎉</h2>
-            <p>We hope you had a great experience with DC Mobile Notary!</p>
-            <p>Your feedback helps us improve and helps others find reliable notary services.</p>
+            <h2>Order Completed! 🎉</h2>
+            <p>Hi {review_request.name or 'Valued Customer'},</p>
+            <p>Your order has been successfully completed. Thank you for choosing DC Mobile Notary!</p>
+            <p>We'd love your feedback:</p>
             <p><a href="{GOOGLE_REVIEW_URL}" style="display: inline-block; padding: 12px 24px; 
                background-color: #4285f4; color: white; text-decoration: none; border-radius: 5px;">
                ⭐ Leave a Google Review</a></p>
-            <p>Thank you for choosing DC Mobile Notary!</p>
+            <p>Thank you!</p>
         </body>
         </html>
         """
     
+    subject = f"Order Completed — {service_label}"
+    if review_request.tracking_id:
+        subject = f"Order Completed — {service_label} — {review_request.tracking_id}"
+    
     msg = EmailMessage(
-        subject='Thank you for choosing DC Mobile Notary! 🌟',
+        subject=subject,
         body=html_content,
         from_email=settings.DEFAULT_FROM_EMAIL,
         to=[review_request.email],
@@ -247,22 +277,53 @@ def _send_google_review(review_request):
     logger.info(f"📧 Google Review email sent to {review_request.email}")
 
 
-def _send_trustpilot_invite(review_request):
+def _send_trustpilot_email(review_request):
     """
-    Trigger TrustPilot AFS to send a verified review invitation.
-    TrustPilot will send the email to the customer.
+    Send "Order Completed" email with TrustPilot AFS in BCC.
+    TrustPilot will automatically send a verified review invitation.
+    For returning customers.
     """
-    reference_id = review_request.tracking_id or review_request.zoho_deal_id or str(review_request.id)
+    tracking_url = None
+    if review_request.tracking_id:
+        tracking_url = f"{FRONTEND_URL}/tracking?tid={review_request.tracking_id}"
     
+    service_label = _get_service_label(review_request.zoho_module)
+    
+    try:
+        html_content = render_to_string('emails/review_thank_you_trustpilot.html', {
+            'name': review_request.name or 'Valued Customer',
+            'service_label': service_label,
+            'tid': review_request.tracking_id,
+            'tracking_url': tracking_url,
+        })
+    except Exception as e:
+        logger.warning(f"Template not found, using fallback: {e}")
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; padding: 20px;">
+            <h2>Order Completed! 🎉</h2>
+            <p>Hi {review_request.name or 'Valued Customer'},</p>
+            <p>Your order has been successfully completed. Thank you for choosing DC Mobile Notary!</p>
+            <p>We truly appreciate your continued trust in our services.</p>
+            <p>Thank you!</p>
+        </body>
+        </html>
+        """
+    
+    subject = f"Order Completed — {service_label}"
+    if review_request.tracking_id:
+        subject = f"Order Completed — {service_label} — {review_request.tracking_id}"
+    
+    # Send to customer with TrustPilot AFS in BCC
+    # TrustPilot will see this email and send their own review invitation
     msg = EmailMessage(
-        subject=review_request.email,  # Customer email in subject
-        body=f"referenceId: {reference_id}\n"
-             f"name: {review_request.name}\n"
-             f"email: {review_request.email}",
+        subject=subject,
+        body=html_content,
         from_email=settings.DEFAULT_FROM_EMAIL,
-        to=[TRUSTPILOT_TRIGGER_EMAIL],
-        reply_to=[review_request.email],
+        to=[review_request.email],
+        bcc=[TRUSTPILOT_TRIGGER_EMAIL],  # TrustPilot AFS trigger
     )
+    msg.content_subtype = 'html'
     msg.send(fail_silently=False)
     
-    logger.info(f"📧 TrustPilot invite triggered for {review_request.email} (ref: {reference_id})")
+    logger.info(f"📧 TrustPilot email sent to {review_request.email} (BCC: TrustPilot AFS)")
