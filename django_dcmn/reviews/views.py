@@ -11,7 +11,13 @@ logger = logging.getLogger(__name__)
 
 def _check_zoho_token(request):
     """Validate token from Zoho webhook."""
-    token = request.headers.get('X-Zoho-Token') or request.data.get('token')
+    token = request.headers.get('X-ZOHO-TOKEN') or request.META.get('HTTP_X_ZOHO_TOKEN')
+    # fallback: allow token in JSON body
+    if not token:
+        try:
+            token = request.data.get('token')
+        except Exception:
+            pass
     expected = getattr(settings, 'ZOHO_WEBHOOK_TOKEN', None)
     return bool(token and expected and token == expected)
 
