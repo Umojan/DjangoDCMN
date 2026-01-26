@@ -62,8 +62,8 @@ ZOHO_LEADS_WON_FIELD = 'Number_of_Leads_Won'  # API name of the field in Zoho Co
 
 
 # ====== REVIEWS ======
-# Google Review URL - замени на свой
-GOOGLE_REVIEW_URL = config('GOOGLE_REVIEW_URL', default='https://g.page/r/YOUR_PLACE_ID/review')
+GOOGLE_REVIEW_URL = config('GOOGLE_REVIEW_URL', default='https://search.google.com/local/writereview?placeid=ChIJi7ayhx-3t4kRpyVMzASAj9s')
+TRUSTPILOT_TRIGGER_EMAIL = config('TRUSTPILOT_TRIGGER_EMAIL', default='dcmobilenotary.com+cd7dabbed2@invite.trustpilot.com')
 
 
 # ====== CELERY ======

@@ -9,7 +9,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 # TrustPilot AFS trigger email
-TRUSTPILOT_TRIGGER_EMAIL = 'dcmobilenotary.com+cd7dabbed2@invite.trustpilot.com'
+TRUSTPILOT_TRIGGER_EMAIL = getattr(settings, 'TRUSTPILOT_TRIGGER_EMAIL', 'dcmobilenotary.com+cd7dabbed2@invite.trustpilot.com')
 
 # Google Review URL - can be overridden in settings.py
 GOOGLE_REVIEW_URL = getattr(settings, 'GOOGLE_REVIEW_URL', 'https://g.page/r/YOUR_PLACE_ID/review')
