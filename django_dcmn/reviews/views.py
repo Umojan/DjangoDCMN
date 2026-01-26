@@ -67,10 +67,12 @@ class ReviewWebhookView(APIView):
         
         if not email or not contact_id:
             logger.warning(f"Review webhook missing fields - email: '{email}', contact_id: '{contact_id}'")
+            logger.warning(f"Full request data: {data}")
             return Response({
                 'error': 'email and contact_id are required',
                 'received_email': email,
-                'received_contact_id': contact_id
+                'received_contact_id': contact_id,
+                'full_payload': data  # TEMP: remove after debugging
             }, status=status.HTTP_400_BAD_REQUEST)
         
         # Optional fields
