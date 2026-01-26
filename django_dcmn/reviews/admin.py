@@ -37,7 +37,7 @@ class ReviewRequestAdmin(admin.ModelAdmin):
         }),
         ('Leads Won', {
             'fields': ('leads_won_before', 'leads_won_after'),
-            'description': 'Значение поля Leads Won в Zoho Contacts до и после обработки'
+            'description': 'Leads Won value in Zoho Contacts before and after processing'
         }),
         ('Zoho References', {
             'fields': ('zoho_contact_id', 'zoho_deal_id', 'zoho_module'),

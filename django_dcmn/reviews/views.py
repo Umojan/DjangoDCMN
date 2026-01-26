@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 def _check_zoho_token(request):
-    """Проверка токена от Zoho webhook."""
+    """Validate token from Zoho webhook."""
     token = request.headers.get('X-Zoho-Token') or request.data.get('token')
     expected = getattr(settings, 'ZOHO_WEBHOOK_TOKEN', None)
     return bool(token and expected and token == expected)
@@ -18,8 +18,8 @@ def _check_zoho_token(request):
 
 class ReviewWebhookView(APIView):
     """
-    Webhook endpoint для Zoho.
-    Вызывается когда лид достигает стадии "review".
+    Webhook endpoint for Zoho.
+    Triggered when a lead reaches the "review" stage.
     
     Required fields:
         - email: Customer email address
@@ -28,6 +28,7 @@ class ReviewWebhookView(APIView):
     Optional fields:
         - name: Customer name
         - phone: Customer phone
+        - contact_won_leads: Number of Leads Won from Zoho Contact
         - deal_id: Zoho Deal/Record ID
         - module: Zoho module name (Deals, Triple_Seal_Apostilles, etc.)
         - tracking_id: Tracking ID if exists
@@ -38,6 +39,7 @@ class ReviewWebhookView(APIView):
         "name": "John Doe",
         "phone": "+1234567890",
         "contact_id": "5765XXXXXXXXXXXXXXX",
+        "contact_won_leads": "0",
         "deal_id": "5765XXXXXXXXXXXXXXX",
         "module": "Deals",
         "tracking_id": "FBI-ABC123"
@@ -68,7 +70,16 @@ class ReviewWebhookView(APIView):
         module = data.get('module', '')
         tracking_id = data.get('tracking_id') or data.get('Tracking_ID', '')
         
-        # Проверяем, не обрабатывали ли уже этот deal_id (дедупликация)
+        # Leads Won from Zoho Contact (passed directly from webhook)
+        contact_won_leads = data.get('contact_won_leads')
+        leads_won = 0
+        if contact_won_leads is not None and contact_won_leads != '':
+            try:
+                leads_won = int(contact_won_leads)
+            except (ValueError, TypeError):
+                leads_won = 0
+        
+        # Check if this deal_id was already processed (deduplication)
         if deal_id:
             existing = ReviewRequest.objects.filter(zoho_deal_id=deal_id).first()
             if existing:
@@ -79,7 +90,7 @@ class ReviewWebhookView(APIView):
                     'review_request_id': existing.id
                 }, status=status.HTTP_200_OK)
         
-        # Создаем запись
+        # Create record
         review_request = ReviewRequest.objects.create(
             email=email,
             name=name,
@@ -88,9 +99,10 @@ class ReviewWebhookView(APIView):
             zoho_deal_id=deal_id,
             zoho_module=module,
             tracking_id=tracking_id,
+            leads_won_before=leads_won,
         )
         
-        # Привязываем Track если есть
+        # Link Track if exists
         if tracking_id:
             from orders.models import Track
             track = Track.objects.filter(tid=tracking_id).first()
@@ -98,7 +110,7 @@ class ReviewWebhookView(APIView):
                 review_request.track = track
                 review_request.save(update_fields=['track'])
         
-        # Запускаем async task для обработки
+        # Run async task for processing
         process_review_request_task.delay(review_request.id)
         
         logger.info(f"Review request created: id={review_request.id}, email={email}")

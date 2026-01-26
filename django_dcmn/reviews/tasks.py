@@ -11,21 +11,20 @@ logger = logging.getLogger(__name__)
 # TrustPilot AFS trigger email
 TRUSTPILOT_TRIGGER_EMAIL = 'dcmobilenotary.com+cd7dabbed2@invite.trustpilot.com'
 
-# Google Review URL - можно переопределить в settings.py
+# Google Review URL - can be overridden in settings.py
 GOOGLE_REVIEW_URL = getattr(settings, 'GOOGLE_REVIEW_URL', 'https://g.page/r/YOUR_PLACE_ID/review')
 
-# API имя поля Leads Won в Zoho Contacts - можно переопределить в settings.py
+# API name of Leads Won field in Zoho Contacts
 ZOHO_LEADS_WON_FIELD = getattr(settings, 'ZOHO_LEADS_WON_FIELD', 'Number_of_Leads_Won')
 
 
 @shared_task
 def process_review_request_task(review_request_id: int):
     """
-    Основной task для обработки review request:
-    1. Получить Leads_Won из Zoho Contact
-    2. Определить тип review (Google или TrustPilot)
-    3. Обновить Leads_Won в Zoho (+1)
-    4. Отправить соответствующий review request
+    Main task for processing review request:
+    1. Determine review type (Google or TrustPilot) based on leads_won_before
+    2. Update Leads_Won in Zoho (+1)
+    3. Send corresponding review request
     """
     from .models import ReviewRequest
     from orders.zoho_sync import get_access_token, ZOHO_API_DOMAIN
@@ -37,46 +36,12 @@ def process_review_request_task(review_request_id: int):
         return
     
     try:
-        # 1. Получаем текущее значение Leads_Won из Zoho Contact
-        access_token = get_access_token()
-        headers = {"Authorization": f"Zoho-oauthtoken {access_token}"}
+        # leads_won_before already received from webhook
+        leads_won = review_request.leads_won_before
         
-        contact_url = f"{ZOHO_API_DOMAIN}/crm/v2/Contacts/{review_request.zoho_contact_id}"
-        resp = requests.get(contact_url, headers=headers, params={'fields': ZOHO_LEADS_WON_FIELD})
-        
-        leads_won = 0
-        if resp.status_code == 200:
-            data = resp.json()
-            if 'data' in data and len(data['data']) > 0:
-                raw_value = data['data'][0].get(ZOHO_LEADS_WON_FIELD)
-                if raw_value is not None:
-                    try:
-                        leads_won = int(raw_value)
-                    except (ValueError, TypeError):
-                        leads_won = 0
-                logger.info(f"Contact {review_request.zoho_contact_id}: {ZOHO_LEADS_WON_FIELD}={leads_won}")
-        elif resp.status_code == 401:
-            # Token expired, refresh and retry
-            access_token = get_access_token(force_refresh=True)
-            headers = {"Authorization": f"Zoho-oauthtoken {access_token}"}
-            resp = requests.get(contact_url, headers=headers, params={'fields': ZOHO_LEADS_WON_FIELD})
-            if resp.status_code == 200:
-                data = resp.json()
-                if 'data' in data and len(data['data']) > 0:
-                    raw_value = data['data'][0].get(ZOHO_LEADS_WON_FIELD)
-                    if raw_value is not None:
-                        try:
-                            leads_won = int(raw_value)
-                        except (ValueError, TypeError):
-                            leads_won = 0
-        else:
-            logger.warning(f"Failed to get contact {review_request.zoho_contact_id}: {resp.status_code} {resp.text}")
-        
-        review_request.leads_won_before = leads_won
-        
-        # 2. Определяем тип review
-        # Leads Won = 0 или пусто → первый клиент → Google Review
-        # Leads Won >= 1 → повторный клиент → TrustPilot
+        # 1. Determine review type
+        # Leads Won = 0 -> first customer -> Google Review
+        # Leads Won >= 1 -> returning customer -> TrustPilot
         if leads_won == 0:
             review_request.review_type = 'google'
             new_leads_won = 1
@@ -85,12 +50,18 @@ def process_review_request_task(review_request_id: int):
             new_leads_won = leads_won + 1
         
         review_request.leads_won_after = new_leads_won
-        review_request.save(update_fields=['leads_won_before', 'leads_won_after', 'review_type'])
+        review_request.save(update_fields=['leads_won_after', 'review_type'])
         
         logger.info(f"ReviewRequest {review_request_id}: type={review_request.review_type}, "
-                    f"leads_won {leads_won} → {new_leads_won}")
+                    f"leads_won {leads_won} -> {new_leads_won}")
         
-        # 3. Обновляем Leads_Won в Zoho Contact
+        # 2. Update Leads_Won in Zoho Contact
+        access_token = get_access_token()
+        headers = {
+            "Authorization": f"Zoho-oauthtoken {access_token}",
+            "Content-Type": "application/json"
+        }
+        
         update_url = f"{ZOHO_API_DOMAIN}/crm/v2/Contacts"
         update_payload = {
             "data": [{
@@ -98,7 +69,6 @@ def process_review_request_task(review_request_id: int):
                 ZOHO_LEADS_WON_FIELD: new_leads_won
             }]
         }
-        headers["Content-Type"] = "application/json"
         update_resp = requests.put(update_url, headers=headers, json=update_payload)
         
         if update_resp.status_code in (200, 201):
@@ -106,13 +76,13 @@ def process_review_request_task(review_request_id: int):
         else:
             logger.warning(f"Failed to update Leads_Won in Zoho: {update_resp.status_code} {update_resp.text}")
         
-        # 4. Отправляем review request
+        # 3. Send review request
         if review_request.review_type == 'google':
             _send_google_review(review_request)
         else:
             _send_trustpilot_invite(review_request)
         
-        # Успех
+        # Success
         review_request.is_sent = True
         review_request.sent_at = timezone.now()
         review_request.save(update_fields=['is_sent', 'sent_at'])
@@ -125,14 +95,14 @@ def process_review_request_task(review_request_id: int):
 
 
 def _send_google_review(review_request):
-    """Отправляет email с просьбой оставить Google Review."""
+    """Send email asking customer to leave a Google Review."""
     try:
         html_content = render_to_string('emails/google_review_request.html', {
             'name': review_request.name or 'Valued Customer',
             'review_url': GOOGLE_REVIEW_URL,
         })
     except Exception as e:
-        # Fallback если шаблон не найден
+        # Fallback if template not found
         logger.warning(f"Template not found, using fallback: {e}")
         html_content = f"""
         <html>
@@ -162,18 +132,13 @@ def _send_google_review(review_request):
 
 def _send_trustpilot_invite(review_request):
     """
-    Триггерит TrustPilot AFS для отправки верифицированного приглашения.
-    TrustPilot сам отправит email клиенту.
-    
-    Формат зависит от настроек TrustPilot AFS:
-    - Email клиента обычно в subject или body
-    - Reference ID для идентификации заказа
+    Trigger TrustPilot AFS to send a verified review invitation.
+    TrustPilot will send the email to the customer.
     """
-    # Формат для TrustPilot AFS
     reference_id = review_request.tracking_id or review_request.zoho_deal_id or str(review_request.id)
     
     msg = EmailMessage(
-        subject=review_request.email,  # Email клиента в subject
+        subject=review_request.email,  # Customer email in subject
         body=f"referenceId: {reference_id}\n"
              f"name: {review_request.name}\n"
              f"email: {review_request.email}",

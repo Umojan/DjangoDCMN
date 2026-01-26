@@ -3,14 +3,14 @@ from django.conf import settings
 
 
 class ReviewRequest(models.Model):
-    """Запись о запросе отзыва от клиента."""
+    """Record of a review request sent to a customer."""
     
     REVIEW_TYPE_CHOICES = [
         ('google', 'Google Review'),
         ('trustpilot', 'TrustPilot'),
     ]
     
-    # Данные клиента
+    # Customer data
     email = models.EmailField(db_index=True)
     name = models.CharField(max_length=255, blank=True, default='')
     phone = models.CharField(max_length=50, blank=True, default='')
@@ -25,7 +25,7 @@ class ReviewRequest(models.Model):
         help_text="Zoho module name (Deals, Triple_Seal_Apostilles, etc.)"
     )
     
-    # Связь с Track
+    # Track reference
     track = models.ForeignKey(
         'orders.Track', 
         on_delete=models.SET_NULL, 
@@ -35,19 +35,19 @@ class ReviewRequest(models.Model):
     )
     tracking_id = models.CharField(max_length=20, blank=True, default='', db_index=True)
     
-    # Данные review
+    # Review data
     review_type = models.CharField(
         max_length=20, 
         choices=REVIEW_TYPE_CHOICES,
         blank=True,
         default='',
-        help_text="Определяется автоматически на основе Leads Won"
+        help_text="Determined automatically based on Leads Won"
     )
-    leads_won_before = models.IntegerField(default=0, help_text="Leads Won до обновления")
-    leads_won_after = models.IntegerField(default=0, help_text="Leads Won после обновления")
+    leads_won_before = models.IntegerField(default=0, help_text="Leads Won before update")
+    leads_won_after = models.IntegerField(default=0, help_text="Leads Won after update")
     
-    # Статус
-    is_sent = models.BooleanField(default=False, help_text="Был ли отправлен review request")
+    # Status
+    is_sent = models.BooleanField(default=False, help_text="Whether review request was sent")
     
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
@@ -65,7 +65,7 @@ class ReviewRequest(models.Model):
     
     @property
     def tracking_url(self):
-        """URL для просмотра трекинга на фронте."""
+        """URL for viewing tracking on frontend."""
         if self.tracking_id:
             frontend_url = getattr(settings, 'FRONTEND_URL', '')
             return f"{frontend_url}/tracking?tid={self.tracking_id}"
