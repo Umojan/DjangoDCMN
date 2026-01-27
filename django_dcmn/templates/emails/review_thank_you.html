@@ -20,45 +20,23 @@
                     <!-- Content -->
                     <tr>
                         <td style="padding: 40px 30px;">
-                            <h2 style="color: #003e9c; margin-top: 0; margin-bottom: 10px; font-size: 24px;">Order Completed! 🎉</h2>
+                            <h2 style="color: #003e9c; margin-top: 0; margin-bottom: 10px; font-size: 24px; text-align: center;">⭐ We'd Love Your Feedback! ⭐</h2>
                             <p style="font-size: 16px; color: #333; line-height: 1.6;">Hi <strong>{{ name }}</strong>,</p>
                             <p style="font-size: 16px; color: #333; line-height: 1.6;">
                                 Your order has been successfully completed. Thank you for choosing DC Mobile Notary!
                             </p>
+
+                            <p style="font-size: 16px; color: #333; line-height: 1.6;">
+                                Your review helps us improve and helps others find reliable notary services.
+                            </p>
                             
-                            {% if service_label or tid %}
-                            <div style="background: #f8f9fa; border-left: 4px solid #003e9c; padding: 20px; margin: 25px 0; border-radius: 4px;">
-                                <h3 style="color: #003e9c; margin: 0 0 10px 0; font-size: 18px;">Order Details</h3>
-                                <p style="font-size: 15px; color: #444; margin: 0; line-height: 1.8;">
-                                    {% if service_label %}<strong>Service:</strong> {{ service_label }}<br>{% endif %}
-                                    {% if tid %}<strong>Tracking ID:</strong> {{ tid }}{% endif %}
-                                </p>
-                            </div>
-                            {% endif %}
-                            
-                            {% if tracking_url %}
-                            <!-- Track Order Button -->
-                            <div style="text-align: center; margin: 30px 0 20px 0;">
-                                <a href="{{ tracking_url }}" 
-                                   style="display: inline-block; background: #003e9c; color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-size: 16px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,62,156,0.3);">
-                                    View Order Details
-                                </a>
-                            </div>
-                            {% endif %}
-                            
-                            <hr style="margin: 30px 0; border: none; border-top: 1px solid #e0e0e0;">
-                            
+
                             <!-- Review Request Section -->
                             <div style="text-align: center; padding: 20px 0;">
-                                <h3 style="color: #003e9c; margin: 0 0 15px 0; font-size: 20px;">We'd Love Your Feedback! ⭐</h3>
-                                <p style="font-size: 15px; color: #444; line-height: 1.6; margin: 0 0 25px 0;">
-                                    Your review helps us improve and helps others find reliable notary services.
-                                </p>
-                                
                                 {% if review_url %}
                                 <a href="{{ review_url }}" 
                                    style="display: inline-block; background: #4285f4; color: #ffffff; text-decoration: none; padding: 14px 35px; border-radius: 6px; font-size: 16px; font-weight: bold; box-shadow: 0 2px 4px rgba(66,133,244,0.3);">
-                                    ⭐ Leave a Google Review
+                                    Leave a Google Review
                                 </a>
                                 {% endif %}
                             </div>
