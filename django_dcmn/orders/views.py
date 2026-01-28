@@ -764,7 +764,8 @@ def stripe_webhook(request):
                     sync_order_to_zoho_task.delay(order.id, "marriage")
                     order.save()
 
-                    # Файлы (через универсальные FileAttachment)
+                # Send email to manager (only if not sent before)
+                if not order.manager_notified:
                     ct = ContentType.objects.get_for_model(MarriageOrder)
                     file_attachments = FileAttachment.objects.filter(
                         content_type=ct,
@@ -808,10 +809,13 @@ def stripe_webhook(request):
                             }
                         )
                         email.send()
+                        order.manager_notified = True
+                        order.save(update_fields=['manager_notified'])
+                        logging.info(f"✅ Manager notified for Marriage order {order.id}")
                     except Exception:
                         logging.exception("Failed to send paid marriage order email for %s", order.id)
 
-                    # Клиенту HTML-письмо (аналогично, если есть темплейт)
+                    # Client HTML email (inside manager_notified block)
                     file_links_html = "".join([
                         f'<li><a href="{request.build_absolute_uri(att.file.url)}">{att.file.name}</a></li>'
                         for att in file_attachments
@@ -834,7 +838,7 @@ def stripe_webhook(request):
                             fail_silently=False,
                         )
                     except Exception as e:
-                        print("[ERROR] Sending client marriage email failed:", e)
+                        logging.exception(f"Failed to send client marriage email for order {order.id}: {e}")
 
             else:
                 return HttpResponse(status=400)
