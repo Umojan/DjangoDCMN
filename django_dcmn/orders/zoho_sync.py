@@ -281,7 +281,8 @@ def sync_apostille_order_to_zoho(order: ApostilleOrder, tracking_id: str | None 
     return sync_order_to_zoho(order, zoho_module, data, attach_files=False)
 
 
-def sync_marriage_order_to_zoho(order):
+def sync_marriage_order_to_zoho(order, tracking_id: str | None = None):
+    """Sync Marriage/Triple Seal order to Zoho. tracking_id accepted but not used."""
     contact_id = get_or_create_contact_id(order.name, order.email, order.phone)
     zoho_module = 'Triple_Seal_Apostilles'
 
@@ -319,7 +320,8 @@ def sync_marriage_order_to_zoho(order):
     return sync_order_to_zoho(order, zoho_module, data, attach_files=True)
 
 
-def sync_i9_order_to_zoho(order):
+def sync_i9_order_to_zoho(order, tracking_id: str | None = None):
+    """Sync I-9 Verification order to Zoho. tracking_id accepted but not used."""
     contact_id = get_or_create_contact_id(order.name, order.email, order.phone)
     zoho_module = 'I_9_Verification'
 
