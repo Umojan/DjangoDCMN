@@ -1077,3 +1077,61 @@ class PublicTrackView(APIView):
         payload = ser.data
         payload['name'] = public_name(payload.get('name', ''))
         return Response(payload)
+
+
+# =============================================================================
+# WhatConverts Test Webhook
+# =============================================================================
+
+@csrf_exempt
+def whatconverts_test_webhook(request):
+    """
+    Test endpoint to receive and log WhatConverts webhook data.
+    This is for testing purposes only - logs all incoming data.
+    
+    URL: /api/orders/webhook/whatconverts-test/
+    """
+    import json
+    
+    # Collect all data
+    webhook_data = {
+        'method': request.method,
+        'content_type': request.content_type,
+        'headers': dict(request.headers),
+        'GET_params': dict(request.GET),
+        'POST_params': dict(request.POST),
+        'body_raw': None,
+        'body_json': None,
+    }
+    
+    # Try to get raw body
+    try:
+        webhook_data['body_raw'] = request.body.decode('utf-8')
+    except Exception as e:
+        webhook_data['body_raw'] = f"Error decoding body: {e}"
+    
+    # Try to parse as JSON
+    try:
+        webhook_data['body_json'] = json.loads(request.body)
+    except Exception:
+        webhook_data['body_json'] = None
+    
+    # Log everything
+    logging.info("=" * 60)
+    logging.info("📞 WhatConverts Test Webhook Received")
+    logging.info("=" * 60)
+    logging.info(f"Method: {webhook_data['method']}")
+    logging.info(f"Content-Type: {webhook_data['content_type']}")
+    logging.info(f"Headers: {json.dumps(webhook_data['headers'], indent=2, default=str)}")
+    logging.info(f"GET params: {webhook_data['GET_params']}")
+    logging.info(f"POST params: {webhook_data['POST_params']}")
+    logging.info(f"Body (raw): {webhook_data['body_raw']}")
+    logging.info(f"Body (JSON): {json.dumps(webhook_data['body_json'], indent=2, default=str) if webhook_data['body_json'] else 'N/A'}")
+    logging.info("=" * 60)
+    
+    # Return all data for easy viewing
+    return JsonResponse({
+        'status': 'received',
+        'message': 'WhatConverts test webhook data logged successfully',
+        'received_data': webhook_data
+    })

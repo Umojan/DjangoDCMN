@@ -18,6 +18,7 @@ from .views import (
     CreateTidFromCrmView,
     CrmUpdateStageView,
     PublicTrackView,
+    whatconverts_test_webhook,
 )
 
 urlpatterns = [
@@ -33,6 +34,7 @@ urlpatterns = [
     path("create-stripe-session/", CreateStripeSessionView.as_view(), name="create_stripe_session"),
 
     path("webhook/stripe/", stripe_webhook),
+    path("webhook/whatconverts-test/", whatconverts_test_webhook, name="whatconverts_test"),
 
     path("test-email/", test_email, name="test_email"),
 
