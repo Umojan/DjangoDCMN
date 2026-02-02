@@ -67,6 +67,7 @@ class FbiApostilleOrder(models.Model):
     tid_created = models.BooleanField(default=False, help_text="Tracking ID created")
     manager_notified = models.BooleanField(default=False, help_text="Manager email sent")
     track = models.ForeignKey('Track', on_delete=models.SET_NULL, null=True, blank=True, related_name='fbi_orders')
+    attribution_data = models.JSONField(blank=True, null=True, help_text="Marketing attribution data")
     created_at = models.DateTimeField(auto_now_add=True)
 
     file_attachments = GenericRelation(
@@ -120,6 +121,7 @@ class MarriageOrder(models.Model):
     tid_created = models.BooleanField(default=False, help_text="Tracking ID created")
     manager_notified = models.BooleanField(default=False, help_text="Manager email sent")
     track = models.ForeignKey('Track', on_delete=models.SET_NULL, null=True, blank=True, related_name='marriage_orders')
+    attribution_data = models.JSONField(blank=True, null=True, help_text="Marketing attribution data")
 
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -164,6 +166,7 @@ class EmbassyLegalizationOrder(models.Model):
     comments = models.TextField(blank=True, null=True)
 
     zoho_synced = models.BooleanField(default=False)
+    attribution_data = models.JSONField(blank=True, null=True, help_text="Marketing attribution data")
     created_at = models.DateTimeField(auto_now_add=True)
 
     file_attachments = GenericRelation(
@@ -190,6 +193,7 @@ class TranslationOrder(models.Model):
     comments = models.TextField(blank=True, null=True)
 
     zoho_synced = models.BooleanField(default=False)
+    attribution_data = models.JSONField(blank=True, null=True, help_text="Marketing attribution data")
     created_at = models.DateTimeField(auto_now_add=True)
 
     file_attachments = GenericRelation(
@@ -221,8 +225,8 @@ class ApostilleOrder(models.Model):
     comments = models.TextField(blank=True, null=True)
 
     zoho_synced = models.BooleanField(default=False)
+    attribution_data = models.JSONField(blank=True, null=True, help_text="Marketing attribution data")
     created_at = models.DateTimeField(auto_now_add=True)
-
 
     def __str__(self):
         return f"Apostille Order #{self.id} by {self.name}"
@@ -240,8 +244,9 @@ class I9VerificationOrder(models.Model):
     appointment_date = models.CharField()
     appointment_time = models.CharField()
     comments = models.TextField(blank=True, null=True)
-    
+
     zoho_synced = models.BooleanField(default=False)
+    attribution_data = models.JSONField(blank=True, null=True, help_text="Marketing attribution data")
     created_at = models.DateTimeField(auto_now_add=True)
 
     file_attachments = GenericRelation(
@@ -271,6 +276,7 @@ class QuoteRequest(models.Model):
     comments = models.TextField(blank=True, null=True)
 
     zoho_synced = models.BooleanField(default=False)
+    attribution_data = models.JSONField(blank=True, null=True, help_text="Marketing attribution data")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

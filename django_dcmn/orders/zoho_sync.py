@@ -1,11 +1,17 @@
 # orders/zoho_sync.py
 import requests
 import datetime
+import logging
 from django.conf import settings
 from django.core.cache import cache
 from .models import FbiApostilleOrder, EmbassyLegalizationOrder, TranslationOrder, ApostilleOrder
 
+logger = logging.getLogger(__name__)
+
 ZOHO_API_DOMAIN = 'https://www.zohoapis.com'
+
+# Module name for Lead Attribution Records
+ZOHO_ATTRIBUTION_MODULE = 'Lead_Attribution_Records'
 
 
 def get_or_create_contact_id(name, email, phone):
@@ -184,6 +190,109 @@ def update_record_fields(module_name: str, record_id: str, fields_dict: dict) ->
     return False
 
 
+# =============================================================================
+# LEAD ATTRIBUTION RECORDS
+# =============================================================================
+
+def create_attribution_record(attribution_data: dict, lead_name: str = '') -> str | None:
+    """
+    Create a Lead Attribution Record in Zoho CRM.
+
+    Args:
+        attribution_data: Cleaned attribution dict from order.attribution_data
+        lead_name: Client name for record naming
+
+    Returns:
+        Zoho Record ID (string) or None on failure
+    """
+    from .services.attribution import build_zoho_attribution_payload
+
+    payload = build_zoho_attribution_payload(attribution_data, lead_name)
+    if not payload:
+        logger.debug("No attribution payload to send to Zoho")
+        return None
+
+    zoho_payload = {"data": [payload]}
+
+    for attempt in range(2):
+        access_token = get_access_token(force_refresh=(attempt == 1))
+        headers = {
+            "Authorization": f"Zoho-oauthtoken {access_token}",
+            "Content-Type": "application/json"
+        }
+
+        url = f"{ZOHO_API_DOMAIN}/crm/v2/{ZOHO_ATTRIBUTION_MODULE}"
+        logger.info(f"[Zoho] Creating Attribution Record: {payload.get('Name')}")
+
+        try:
+            resp = requests.post(url, headers=headers, json=zoho_payload)
+            resp_data = resp.json()
+
+            if resp.status_code == 401 and attempt == 0:
+                logger.warning("[Zoho] Token expired, refreshing...")
+                continue
+
+            # Extract record ID from response
+            if 'data' in resp_data and len(resp_data['data']) > 0:
+                item = resp_data['data'][0]
+                if item.get('code') == 'SUCCESS' or item.get('status') == 'success':
+                    record_id = item.get('details', {}).get('id')
+                    if record_id:
+                        logger.info(f"[Zoho] ✅ Created Attribution Record: {record_id}")
+                        return str(record_id)
+                else:
+                    logger.warning(f"[Zoho] Attribution creation failed: {item}")
+            else:
+                logger.warning(f"[Zoho] Unexpected response: {resp_data}")
+
+        except Exception as e:
+            logger.exception(f"[Zoho] Exception creating Attribution Record: {e}")
+            if attempt == 1:
+                return None
+
+    return None
+
+
+def sync_order_with_attribution(order, module_name: str, data_payload: dict, attach_files: bool = True) -> bool:
+    """
+    Sync order to Zoho with Attribution Record lookup.
+
+    1. Creates Lead_Attribution_Record if order has attribution_data
+    2. Adds Attribution_Record lookup to order payload
+    3. Creates order in the specified module
+
+    Args:
+        order: Order model instance with attribution_data
+        module_name: Zoho module name (e.g., 'Apostille_Services')
+        data_payload: Prepared Zoho payload dict with "data" key
+        attach_files: Whether to attach files
+
+    Returns:
+        True on success, False on failure
+    """
+    attribution_data = getattr(order, 'attribution_data', None)
+    attribution_record_id = None
+
+    # Step 1: Create Attribution Record if we have data
+    if attribution_data:
+        attribution_record_id = create_attribution_record(
+            attribution_data,
+            lead_name=getattr(order, 'name', '')
+        )
+
+    # Step 2: Add Attribution lookup to order payload
+    if attribution_record_id and 'data' in data_payload and len(data_payload['data']) > 0:
+        data_payload['data'][0]['Attribution_Record'] = attribution_record_id
+        logger.info(f"[Zoho] Linking order to Attribution Record: {attribution_record_id}")
+
+    # Step 3: Create order (using existing function)
+    return sync_order_to_zoho(order, module_name, data_payload, attach_files)
+
+
+# =============================================================================
+# ORDER SYNC FUNCTIONS (with attribution support)
+# =============================================================================
+
 def sync_fbi_order_to_zoho(order: FbiApostilleOrder, tracking_id: str | None = None):
     contact_id = get_or_create_contact_id(order.name, order.email, order.phone)
     zoho_module = 'Deals'
@@ -210,7 +319,8 @@ def sync_fbi_order_to_zoho(order: FbiApostilleOrder, tracking_id: str | None = N
             }
         ]
     }
-    return sync_order_to_zoho(order, zoho_module, data, attach_files=True)
+    # Use attribution-aware sync
+    return sync_order_with_attribution(order, zoho_module, data, attach_files=True)
 
 
 def sync_embassy_order_to_zoho(order: EmbassyLegalizationOrder, tracking_id: str | None = None):
@@ -235,7 +345,7 @@ def sync_embassy_order_to_zoho(order: EmbassyLegalizationOrder, tracking_id: str
             }
         ]
     }
-    return sync_order_to_zoho(order, zoho_module, data, attach_files=True)
+    return sync_order_with_attribution(order, zoho_module, data, attach_files=True)
 
 
 def sync_translation_order_to_zoho(order: TranslationOrder, tracking_id: str | None = None):
@@ -255,7 +365,7 @@ def sync_translation_order_to_zoho(order: TranslationOrder, tracking_id: str | N
             }
         ]
     }
-    return sync_order_to_zoho(order, zoho_module, data, attach_files=True)
+    return sync_order_with_attribution(order, zoho_module, data, attach_files=True)
 
 
 def sync_apostille_order_to_zoho(order: ApostilleOrder, tracking_id: str | None = None):
@@ -278,7 +388,7 @@ def sync_apostille_order_to_zoho(order: ApostilleOrder, tracking_id: str | None 
             }
         ]
     }
-    return sync_order_to_zoho(order, zoho_module, data, attach_files=False)
+    return sync_order_with_attribution(order, zoho_module, data, attach_files=False)
 
 
 def sync_marriage_order_to_zoho(order, tracking_id: str | None = None):
@@ -317,7 +427,7 @@ def sync_marriage_order_to_zoho(order, tracking_id: str | None = None):
         ]
     }
 
-    return sync_order_to_zoho(order, zoho_module, data, attach_files=True)
+    return sync_order_with_attribution(order, zoho_module, data, attach_files=True)
 
 
 def sync_i9_order_to_zoho(order, tracking_id: str | None = None):
@@ -341,7 +451,7 @@ def sync_i9_order_to_zoho(order, tracking_id: str | None = None):
         ]
     }
 
-    return sync_order_to_zoho(order, zoho_module, data, attach_files=True)
+    return sync_order_with_attribution(order, zoho_module, data, attach_files=True)
 
 
 def sync_quote_request_to_zoho(order):
@@ -368,4 +478,4 @@ def sync_quote_request_to_zoho(order):
         ]
     }
 
-    return sync_order_to_zoho(order, zoho_module, data, attach_files=False)
+    return sync_order_with_attribution(order, zoho_module, data, attach_files=False)
