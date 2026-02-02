@@ -29,6 +29,7 @@ from ..models import (
     FileAttachment,
 )
 from ..services import process_new_order, save_file_attachments
+from ..services.attribution import process_attribution
 from ..tasks import sync_order_to_zoho_task
 
 import logging
@@ -60,6 +61,9 @@ class CreateFbiOrderView(APIView):
                     package=package,
                     shipping_option=shipping
                 )
+
+                # Process attribution data
+                process_attribution(request, order)
 
                 file_urls = save_file_attachments(request, FbiApostilleOrder, order)
 
@@ -109,6 +113,9 @@ class CreateMarriageOrderView(APIView):
 
         marriage_order.total_price = base_price
         marriage_order.save()
+
+        # Process attribution data
+        process_attribution(request, marriage_order)
 
         file_urls = save_file_attachments(request, MarriageOrder, marriage_order)
 
@@ -227,10 +234,13 @@ class CreateQuoteRequestView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
         order = serializer.save()
-        
+
+        # Process attribution data
+        process_attribution(request, order)
+
         # Quote requests don't have file attachments or tracking
         from ..services.notifications import send_staff_notification, build_order_extra_body
-        
+
         # Sync to Zoho
         try:
             sync_order_to_zoho_task.delay(order.id, "quote")
@@ -260,7 +270,10 @@ class CreateI9OrderView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
         order = serializer.save()
-        
+
+        # Process attribution data
+        process_attribution(request, order)
+
         # Sync to Zoho
         try:
             sync_order_to_zoho_task.delay(order.id, "I-9")

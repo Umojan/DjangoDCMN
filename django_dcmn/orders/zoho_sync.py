@@ -207,13 +207,19 @@ def create_attribution_record(attribution_data: dict, lead_name: str = '') -> st
     """
     from .services.attribution import build_zoho_attribution_payload
 
+    print(f"\n🔍 [DEBUG] create_attribution_record called")
+    print(f"🔍 [DEBUG] Input attribution_data: {attribution_data}")
+    print(f"🔍 [DEBUG] Lead name: {lead_name}")
+
     logger.info(f"[Zoho Attribution] Building payload from: {attribution_data}")
     payload = build_zoho_attribution_payload(attribution_data, lead_name)
 
     if not payload:
+        print(f"❌ [DEBUG] build_zoho_attribution_payload returned None!")
         logger.warning("[Zoho Attribution] build_zoho_attribution_payload returned None!")
         return None
 
+    print(f"✅ [DEBUG] Payload built: {payload}")
     logger.info(f"[Zoho Attribution] Payload built: {payload}")
     zoho_payload = {"data": [payload]}
 
@@ -228,9 +234,13 @@ def create_attribution_record(attribution_data: dict, lead_name: str = '') -> st
         logger.info(f"[Zoho] Creating Attribution Record: {payload.get('Name')}")
 
         try:
+            print(f"\n🔍 [DEBUG] POST {url}")
+            print(f"🔍 [DEBUG] Request body: {zoho_payload}")
             logger.info(f"[Zoho Attribution] POST {url}")
             logger.info(f"[Zoho Attribution] Request body: {zoho_payload}")
             resp = requests.post(url, headers=headers, json=zoho_payload)
+            print(f"🔍 [DEBUG] Response status: {resp.status_code}")
+            print(f"🔍 [DEBUG] Response body: {resp.text}")
             logger.info(f"[Zoho Attribution] Response status: {resp.status_code}")
             logger.info(f"[Zoho Attribution] Response body: {resp.text}")
             resp_data = resp.json()
@@ -245,11 +255,14 @@ def create_attribution_record(attribution_data: dict, lead_name: str = '') -> st
                 if item.get('code') == 'SUCCESS' or item.get('status') == 'success':
                     record_id = item.get('details', {}).get('id')
                     if record_id:
+                        print(f"✅ [DEBUG] Attribution Record created: {record_id}")
                         logger.info(f"[Zoho] ✅ Created Attribution Record: {record_id}")
                         return str(record_id)
                 else:
+                    print(f"❌ [DEBUG] Attribution creation failed: {item}")
                     logger.warning(f"[Zoho] Attribution creation failed: {item}")
             else:
+                print(f"❌ [DEBUG] Unexpected response: {resp_data}")
                 logger.warning(f"[Zoho] Unexpected response: {resp_data}")
 
         except Exception as e:
@@ -280,20 +293,29 @@ def sync_order_with_attribution(order, module_name: str, data_payload: dict, att
     attribution_data = getattr(order, 'attribution_data', None)
     attribution_record_id = None
 
+    # DEBUG: Print to console (always visible)
+    print(f"\n🔍 [DEBUG] sync_order_with_attribution called for order {order.id}")
+    print(f"🔍 [DEBUG] Has attribution_data: {bool(attribution_data)}")
+    if attribution_data:
+        print(f"🔍 [DEBUG] Attribution data: {attribution_data}")
+
     logger.info(f"[Zoho Attribution] Order {order.id} has attribution_data: {bool(attribution_data)}")
     if attribution_data:
         logger.info(f"[Zoho Attribution] Data: {attribution_data}")
 
     # Step 1: Create Attribution Record if we have data
     if attribution_data:
+        print(f"🔍 [DEBUG] Creating attribution record...")
         logger.info(f"[Zoho Attribution] Creating attribution record for order {order.id}...")
         attribution_record_id = create_attribution_record(
             attribution_data,
             lead_name=getattr(order, 'name', '')
         )
         if attribution_record_id:
+            print(f"✅ [DEBUG] Attribution record created: {attribution_record_id}")
             logger.info(f"[Zoho Attribution] ✅ Created record: {attribution_record_id}")
         else:
+            print(f"❌ [DEBUG] Failed to create attribution record!")
             logger.warning(f"[Zoho Attribution] ❌ Failed to create attribution record")
 
     # Step 2: Add Attribution lookup to order payload
