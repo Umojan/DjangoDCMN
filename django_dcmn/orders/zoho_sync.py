@@ -207,11 +207,14 @@ def create_attribution_record(attribution_data: dict, lead_name: str = '') -> st
     """
     from .services.attribution import build_zoho_attribution_payload
 
+    logger.info(f"[Zoho Attribution] Building payload from: {attribution_data}")
     payload = build_zoho_attribution_payload(attribution_data, lead_name)
+
     if not payload:
-        logger.debug("No attribution payload to send to Zoho")
+        logger.warning("[Zoho Attribution] build_zoho_attribution_payload returned None!")
         return None
 
+    logger.info(f"[Zoho Attribution] Payload built: {payload}")
     zoho_payload = {"data": [payload]}
 
     for attempt in range(2):
@@ -225,7 +228,11 @@ def create_attribution_record(attribution_data: dict, lead_name: str = '') -> st
         logger.info(f"[Zoho] Creating Attribution Record: {payload.get('Name')}")
 
         try:
+            logger.info(f"[Zoho Attribution] POST {url}")
+            logger.info(f"[Zoho Attribution] Request body: {zoho_payload}")
             resp = requests.post(url, headers=headers, json=zoho_payload)
+            logger.info(f"[Zoho Attribution] Response status: {resp.status_code}")
+            logger.info(f"[Zoho Attribution] Response body: {resp.text}")
             resp_data = resp.json()
 
             if resp.status_code == 401 and attempt == 0:
@@ -273,12 +280,21 @@ def sync_order_with_attribution(order, module_name: str, data_payload: dict, att
     attribution_data = getattr(order, 'attribution_data', None)
     attribution_record_id = None
 
+    logger.info(f"[Zoho Attribution] Order {order.id} has attribution_data: {bool(attribution_data)}")
+    if attribution_data:
+        logger.info(f"[Zoho Attribution] Data: {attribution_data}")
+
     # Step 1: Create Attribution Record if we have data
     if attribution_data:
+        logger.info(f"[Zoho Attribution] Creating attribution record for order {order.id}...")
         attribution_record_id = create_attribution_record(
             attribution_data,
             lead_name=getattr(order, 'name', '')
         )
+        if attribution_record_id:
+            logger.info(f"[Zoho Attribution] ✅ Created record: {attribution_record_id}")
+        else:
+            logger.warning(f"[Zoho Attribution] ❌ Failed to create attribution record")
 
     # Step 2: Add Attribution lookup to order payload
     if attribution_record_id and 'data' in data_payload and len(data_payload['data']) > 0:

@@ -82,18 +82,27 @@ def write_tracking_id_to_zoho_task(module_name: str, record_id: str, tracking_id
         return False
 
 
-@shared_task
-def send_tracking_email_task(tid: str, stage_code: str):
+@shared_task(
+    bind=True,
+    autoretry_for=(Exception,),
+    retry_backoff=3,  # Start with 3 sec, then 6, 12, 24...
+    retry_backoff_max=60,  # Max 60 sec between retries
+    retry_kwargs={'max_retries': 5},
+)
+def send_tracking_email_task(self, tid: str, stage_code: str):
     """
     Sends HTML email with order status update.
     All emails are grouped into one thread by TID.
-    
+
     NOTE: 'completed' stage email is handled by reviews app (review request).
+
+    Retries up to 5 times with exponential backoff (3s, 6s, 12s, 24s, 48s)
+    to handle Resend API rate limits (429 Too Many Requests).
     """
     from django.template.loader import render_to_string
     from django.core.mail import EmailMessage
     import logging
-    
+
     logger = logging.getLogger(__name__)
     
     # Skip 'completed' stage - handled by reviews app
@@ -231,4 +240,7 @@ def send_tracking_email_task(tid: str, stage_code: str):
         email_message.send(fail_silently=False)
         logger.info(f"✅ Tracking email sent to {email} for TID {tid}, stage: {stage_code}")
     except Exception as e:
-        logger.exception(f"❌ Failed to send tracking email for TID {tid}: {e}")
+        retry_num = self.request.retries
+        max_retries = self.max_retries
+        logger.warning(f"⚠️ Failed to send tracking email for TID {tid} (attempt {retry_num + 1}/{max_retries + 1}): {e}")
+        raise  # Re-raise to trigger Celery retry
