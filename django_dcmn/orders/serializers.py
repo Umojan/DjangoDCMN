@@ -58,7 +58,7 @@ class FbiApostilleOrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = FbiApostilleOrder
         fields = '__all__'
-        read_only_fields = ('is_paid', 'zoho_synced', 'created_at', 'total_price')
+        read_only_fields = ('is_paid', 'zoho_synced', 'created_at', 'total_price', 'attribution_data')
 
 
 # ====== MARRIAGE ======
@@ -79,7 +79,7 @@ class MarriageOrderSerializer(serializers.ModelSerializer):
             'marriage_number',
             'total_price', 'is_paid', 'created_at',
         ]
-        read_only_fields = ('total_price', 'is_paid', 'created_at')
+        read_only_fields = ('total_price', 'is_paid', 'created_at', 'attribution_data')
 
 
 # ====== EMBASSY ======
@@ -87,35 +87,35 @@ class EmbassyLegalizationOrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = EmbassyLegalizationOrder
         fields = '__all__'
-        read_only_fields = ('zoho_synced', 'created_at')
+        read_only_fields = ('zoho_synced', 'created_at', 'attribution_data')
 
 
 class TranslationOrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = TranslationOrder
         fields = '__all__'
-        read_only_fields = ('zoho_synced', 'created_at')
+        read_only_fields = ('zoho_synced', 'created_at', 'attribution_data')
 
 # ====== APOSTILLE ======
 class ApostilleOrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = ApostilleOrder
         fields = '__all__'
-        read_only_fields = ('zoho_synced', 'created_at')
+        read_only_fields = ('zoho_synced', 'created_at', 'attribution_data')
 
 # ====== I-9 ======
 class I9OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = I9VerificationOrder
         fields = '__all__'
-        read_only_fields = ('zoho_synced', 'created_at',)
+        read_only_fields = ('zoho_synced', 'created_at', 'attribution_data')
 
-# ====== Order ======
+# ====== Quote ======
 class QuoteRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = QuoteRequest
         fields = '__all__'
-        read_only_fields = ('zoho_synced', 'created_at',)
+        read_only_fields = ('zoho_synced', 'created_at', 'attribution_data')
 
 
 # ====== TRACKING ======
