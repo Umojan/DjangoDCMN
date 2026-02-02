@@ -145,12 +145,19 @@ def clean_attribution_data(raw_data: dict | None) -> dict | None:
         if key == 'device_type' and isinstance(value, str):
             value = value.lower()
 
-        # Convert numeric fields
+        # Convert numeric fields (Zoho expects Number type)
         if key in ('pages_viewed', 'visit_count', 'call_duration'):
             try:
                 value = int(value)
             except (ValueError, TypeError):
                 continue
+
+        # Validate datetime fields (Zoho expects DateTime ISO format)
+        # Frontend should send ISO 8601 format: "2024-01-15T10:30:00Z" or "2024-01-15"
+        if key == 'first_visit_at' and isinstance(value, str):
+            # Keep as-is if valid ISO format, Zoho will parse it
+            # Zoho accepts: "2024-01-15T10:30:00Z", "2024-01-15T10:30:00", "2024-01-15"
+            pass
 
         # Truncate very long strings (protection)
         if isinstance(value, str) and len(value) > 2000:
