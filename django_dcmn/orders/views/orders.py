@@ -151,30 +151,42 @@ class CreateEmbassyOrderView(APIView):
 
 class CreateApostilleOrderView(APIView):
     """Create Apostille order with full processing pipeline."""
-    
-    def post(self, request, format=None):
-        serializer = ApostilleOrderSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
-        order = serializer.save()
-        
-        result = process_new_order(
-            request=request,
-            order=order,
-            model_class=ApostilleOrder,
-            order_type='apostille',
-            sync_to_zoho=True,
-            create_tracking=True,
-            send_notification=True,
-            send_welcome_email=True,
-        )
 
-        return Response({
-            'message': 'Apostille order created',
-            'order_id': result['order_id'],
-            'tracking_id': result['tracking_id'],
-        }, status=status.HTTP_201_CREATED)
+    def post(self, request, format=None):
+        try:
+            logger.info(f"[Apostille] Received request data: {request.data}")
+
+            serializer = ApostilleOrderSerializer(data=request.data)
+            if not serializer.is_valid():
+                logger.warning(f"[Apostille] Validation errors: {serializer.errors}")
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            logger.info(f"[Apostille] Serializer valid, saving order...")
+            order = serializer.save()
+            logger.info(f"[Apostille] Order saved: {order.id}")
+
+            logger.info(f"[Apostille] Starting process_new_order...")
+            result = process_new_order(
+                request=request,
+                order=order,
+                model_class=ApostilleOrder,
+                order_type='apostille',
+                sync_to_zoho=True,
+                create_tracking=True,
+                send_notification=True,
+                send_welcome_email=True,
+            )
+            logger.info(f"[Apostille] process_new_order completed: {result}")
+
+            return Response({
+                'message': 'Apostille order created',
+                'order_id': result['order_id'],
+                'tracking_id': result['tracking_id'],
+            }, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            logger.exception(f"[Apostille] ❌ UNEXPECTED ERROR: {e}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class CreateTranslationOrderView(APIView):
