@@ -94,21 +94,17 @@ def extract_attribution_from_request(request) -> dict | None:
     """
     attribution_raw = None
 
-    # Try DRF request.data first
+    # Try DRF request.data first (works for both JSON and FormData)
     if hasattr(request, 'data'):
         attribution_raw = request.data.get('attribution')
 
-    # Try Django POST (FormData)
+    # Try Django POST (FormData) - only if DRF data didn't have it
     if not attribution_raw and hasattr(request, 'POST'):
         attribution_raw = request.POST.get('attribution')
 
-    # Try Django body (raw JSON)
-    if not attribution_raw and hasattr(request, 'body'):
-        try:
-            body = json.loads(request.body)
-            attribution_raw = body.get('attribution')
-        except (json.JSONDecodeError, TypeError, AttributeError):
-            pass
+    # NOTE: We intentionally don't try request.body here because:
+    # 1. DRF's request.data already handles JSON bodies
+    # 2. Reading body after POST causes RawPostDataException
 
     if not attribution_raw:
         return None
