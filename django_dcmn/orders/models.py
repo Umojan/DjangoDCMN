@@ -228,6 +228,13 @@ class ApostilleOrder(models.Model):
     attribution_data = models.JSONField(blank=True, null=True, help_text="Marketing attribution data")
     created_at = models.DateTimeField(auto_now_add=True)
 
+    file_attachments = GenericRelation(
+        FileAttachment,
+        content_type_field='content_type',
+        object_id_field='object_id',
+        related_query_name='apostille_order'
+    )
+
     def __str__(self):
         return f"Apostille Order #{self.id} by {self.name}"
 
