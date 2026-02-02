@@ -1,25 +1,12 @@
-from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from .models import ReviewRequest
 from .tasks import process_review_request_task
+from orders.utils import check_zoho_webhook_token
 import logging
 
 logger = logging.getLogger(__name__)
-
-
-def _check_zoho_token(request):
-    """Validate token from Zoho webhook."""
-    token = request.headers.get('X-ZOHO-TOKEN') or request.META.get('HTTP_X_ZOHO_TOKEN')
-    # fallback: allow token in JSON body
-    if not token:
-        try:
-            token = request.data.get('token')
-        except Exception:
-            pass
-    expected = getattr(settings, 'ZOHO_WEBHOOK_TOKEN', None)
-    return bool(token and expected and token == expected)
 
 
 class ReviewWebhookView(APIView):
@@ -50,7 +37,7 @@ class ReviewWebhookView(APIView):
     """
     
     def post(self, request, format=None):
-        if not _check_zoho_token(request):
+        if not check_zoho_webhook_token(request):
             logger.warning("Review webhook: unauthorized request")
             return Response({'error': 'unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
         

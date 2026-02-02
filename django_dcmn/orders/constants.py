@@ -132,6 +132,28 @@ STAGE_DEFS = {
             'desc': 'Your order has been successfully completed. Thank you!'
         },
     ],
+    'marriage': [
+        {
+            'code': 'document_received',
+            'name': 'Order Received',
+            'desc': 'We have received your Triple Seal Marriage Certificate order and are beginning the process.'
+        },
+        {
+            'code': 'in_progress',
+            'name': 'Order in Progress',
+            'desc': 'Your marriage certificate is being processed through our Triple Seal authentication workflow.'
+        },
+        {
+            'code': 'delivered',
+            'name': 'Delivery',
+            'desc': 'Your authenticated marriage certificate is on its way to you.'
+        },
+        {
+            'code': 'completed',
+            'name': 'Order Completed',
+            'desc': 'Your Triple Seal Marriage Certificate order has been successfully completed. Thank you!'
+        },
+    ],
 }
 
 SERVICE_LABELS = {
@@ -139,6 +161,7 @@ SERVICE_LABELS = {
     'state_apostille': 'State Apostille',
     'embassy_legalization': 'Embassy Legalization',
     'translation': 'Translation',
+    'marriage': 'Triple Seal Marriage Certificate',
 }
 
 # Маппинг названий модулей из Zoho webhook → API имена модулей для Zoho API
