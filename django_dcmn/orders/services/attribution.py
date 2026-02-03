@@ -223,6 +223,10 @@ def build_zoho_attribution_payload(attribution_data: dict, lead_name: str = '') 
     name_part = lead_name[:20] if lead_name else 'Lead'
     payload['Name'] = f"{name_part} | {source}/{medium} | {date_str}"
 
+    # Ensure Lead_Type is always set (default to 'Form' for web submissions)
+    if 'Lead_Type' not in payload:
+        payload['Lead_Type'] = 'Form'
+
     # Also set Lead_URL if landing_page exists but lead_url doesn't
     if 'Landing_Page' in payload and 'Lead_URL' not in payload:
         payload['Lead_URL'] = payload['Landing_Page']
@@ -301,6 +305,11 @@ def process_attribution(request, order) -> dict | None:
 
     # Enrich with geo (if configured)
     attribution = enrich_with_geo(attribution, request)
+
+    # Set default lead_type to 'Form' if not provided
+    # (All web forms are 'Form' type, unless explicitly overridden)
+    if 'lead_type' not in attribution or not attribution['lead_type']:
+        attribution['lead_type'] = 'form'
 
     # Save to order
     try:
