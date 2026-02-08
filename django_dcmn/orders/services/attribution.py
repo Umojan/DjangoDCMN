@@ -285,10 +285,10 @@ def process_attribution(request, order) -> dict | None:
     """
     Main function to process attribution for an order.
 
-    1. Extracts attribution from request
-    2. Cleans and validates
-    3. Optionally enriches with geo
-    4. Saves to order.attribution_data
+    1. Check for matching phone lead (from WhatConverts)
+    2. If found, use phone lead attribution + update lead
+    3. Otherwise extract attribution from web form request
+    4. Enrich with geo and save to order
 
     Args:
         request: Django/DRF request
@@ -297,26 +297,93 @@ def process_attribution(request, order) -> dict | None:
     Returns:
         Processed attribution dict or None
     """
-    attribution = extract_attribution_from_request(request)
+    # Check for matching phone lead FIRST (before processing web attribution)
+    # If found, use WhatConverts attribution instead of web form attribution
+    phone_lead = check_and_update_phone_lead(order, request)
 
-    if not attribution:
-        logger.debug(f"No attribution data for order {order.id}")
-        return None
+    if phone_lead:
+        # Use attribution from WhatConverts phone lead
+        logger.info(f"✅ Using WhatConverts attribution from phone lead {phone_lead.id}")
+        from .whatconverts import build_attribution_from_phone_lead
+        attribution = build_attribution_from_phone_lead(phone_lead)
 
-    # Enrich with geo (if configured)
-    attribution = enrich_with_geo(attribution, request)
+        # Override lead_type to indicate it was originally a phone lead
+        attribution['lead_type'] = 'phone'  # Keep as 'phone' to preserve origin
 
-    # Set default lead_type to 'Form' if not provided
-    # (All web forms are 'Form' type, unless explicitly overridden)
-    if 'lead_type' not in attribution or not attribution['lead_type']:
-        attribution['lead_type'] = 'form'
+    else:
+        # No phone lead found, use regular web form attribution
+        attribution = extract_attribution_from_request(request)
+
+        if not attribution:
+            logger.debug(f"No attribution data for order {order.id}")
+            return None
+
+        # Enrich with geo (if configured)
+        attribution = enrich_with_geo(attribution, request)
+
+        # Set default lead_type to 'Form' if not provided
+        # (All web forms are 'Form' type, unless explicitly overridden)
+        if 'lead_type' not in attribution or not attribution['lead_type']:
+            attribution['lead_type'] = 'form'
 
     # Save to order
     try:
         order.attribution_data = attribution
         order.save(update_fields=['attribution_data'])
-        logger.info(f"Saved attribution for order {order.id}: source={attribution.get('source')}, medium={attribution.get('medium')}")
+        logger.info(f"Saved attribution for order {order.id}: source={attribution.get('source')}, medium={attribution.get('medium')}, lead_type={attribution.get('lead_type')}")
     except Exception as e:
         logger.exception(f"Failed to save attribution for order {order.id}: {e}")
 
     return attribution
+
+
+def check_and_update_phone_lead(order, request) -> Optional['PhoneCallLead']:
+    """
+    Check if this order matches an existing phone lead.
+    If found, update phone lead with form data and return it.
+
+    Args:
+        order: Order model instance
+        request: Django request object
+
+    Returns:
+        PhoneCallLead if matched, None otherwise
+    """
+    try:
+        from .phone_lead_matcher import process_order_with_phone_lead_check
+
+        # Determine order type
+        order_type_map = {
+            'FbiApostilleOrder': 'fbi',
+            'MarriageOrder': 'marriage',
+            'EmbassyLegalizationOrder': 'embassy',
+            'TranslationOrder': 'translation',
+            'ApostilleOrder': 'apostille',
+            'I9VerificationOrder': 'i9',
+            'QuoteRequest': 'quote',
+        }
+
+        order_type = order_type_map.get(order.__class__.__name__)
+
+        if not order_type:
+            logger.debug(f"Unknown order type: {order.__class__.__name__}")
+            return None
+
+        # Build order data dict
+        order_data = {
+            'name': getattr(order, 'name', ''),
+            'email': getattr(order, 'email', ''),
+            'phone': getattr(order, 'phone', ''),
+            'city': getattr(order, 'city', ''),
+            'state': getattr(order, 'state', ''),
+            'country': getattr(order, 'country_name', ''),
+        }
+
+        # Check for matching phone lead
+        phone_lead = process_order_with_phone_lead_check(order, order_type, order_data)
+
+        return phone_lead
+
+    except Exception as e:
+        logger.error(f"Error checking for phone lead: {e}", exc_info=True)
+        return None
