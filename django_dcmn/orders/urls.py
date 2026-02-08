@@ -19,6 +19,7 @@ from .views import (
     CrmUpdateStageView,
     PublicTrackView,
     whatconverts_test_webhook,
+    whatconverts_webhook,
 )
 
 urlpatterns = [
@@ -35,6 +36,7 @@ urlpatterns = [
 
     path("webhook/stripe/", stripe_webhook),
     path("webhook/whatconverts-test/", whatconverts_test_webhook, name="whatconverts_test"),
+    path("webhook/whatconverts/", whatconverts_webhook, name="whatconverts"),
 
     path("test-email/", test_email, name="test_email"),
 
