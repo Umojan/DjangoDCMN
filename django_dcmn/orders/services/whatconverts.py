@@ -99,13 +99,18 @@ def detect_service_from_url(landing_url: str) -> Tuple[Optional[str], Optional[s
 # DUPLICATE DETECTION
 # =============================================================================
 
-def find_duplicate_phone_lead(phone: str = None, email: str = None) -> Optional['PhoneCallLead']:
+def find_duplicate_phone_lead(phone: str = None, email: str = None, service_type: str = None) -> Optional['PhoneCallLead']:
     """
-    Check if a phone call lead already exists with the same contact info.
+    Check if a phone call lead already exists with the same contact info AND service type.
+
+    CRITICAL: Only searches within the same service pipeline.
+    FBI call → Only matches FBI phone leads
+    I-9 call → Only matches I-9 phone leads
 
     Args:
         phone: Phone number
         email: Email address
+        service_type: Service type (fbi, marriage, embassy, etc.)
 
     Returns:
         Existing PhoneCallLead or None
@@ -126,10 +131,16 @@ def find_duplicate_phone_lead(phone: str = None, email: str = None) -> Optional[
     if email:
         query |= Q(contact_email__iexact=email)
 
+    # CRITICAL: Filter by service type to avoid cross-service duplicates
+    # FBI phone lead should NOT match I-9 phone lead even with same phone
+    if service_type:
+        query &= Q(detected_service=service_type)
+        logger.info(f"🔍 Checking for duplicate phone lead in '{service_type}' pipeline only")
+
     if query:
         existing = PhoneCallLead.objects.filter(query).order_by('-created_at').first()
         if existing:
-            logger.info(f"🔄 Found existing phone lead: {existing.id} (phone={phone}, email={email})")
+            logger.info(f"🔄 Found existing phone lead: {existing.id} (phone={phone}, service={service_type})")
             return existing
 
     return None
@@ -360,10 +371,11 @@ def process_whatconverts_phone_lead(webhook_data: Dict) -> Optional['PhoneCallLe
         existing_lead.save()
         phone_lead = existing_lead
     else:
-        # Check for duplicate by phone/email
+        # Check for duplicate by phone/email within same service
         duplicate = find_duplicate_phone_lead(
             phone=parsed['contact_phone'],
-            email=parsed['contact_email']
+            email=parsed['contact_email'],
+            service_type=parsed['detected_service']  # CRITICAL: Only same service
         )
 
         if duplicate:
