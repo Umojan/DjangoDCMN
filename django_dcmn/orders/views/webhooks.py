@@ -123,12 +123,14 @@ def whatconverts_webhook(request):
 
         phone_lead = process_whatconverts_phone_lead(data)
 
-        if not phone_lead:
-            logger.error("❌ Failed to process phone lead")
+        # None = matching order exists, phone lead intentionally skipped
+        if phone_lead is None:
+            logger.info("✅ Phone lead skipped (matching order exists)")
             return JsonResponse({
-                'status': 'error',
-                'message': 'Failed to process phone lead'
-            }, status=500)
+                'status': 'skipped',
+                'reason': 'Matching order already exists',
+                'message': '90% probability: clarification call about existing order'
+            })
 
         # Sync to Zoho
         success = sync_phone_lead_to_zoho(phone_lead)
