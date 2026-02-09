@@ -182,6 +182,85 @@ def update_zoho_lead_stage(phone_lead: 'PhoneCallLead', new_stage: str = 'Order 
         return False
 
 
+def update_zoho_lead_with_order_data(
+    phone_lead: 'PhoneCallLead',
+    order_data: Dict[str, Any],
+    new_stage: str = 'Order Received'
+) -> bool:
+    """
+    Update Zoho lead with form data AND stage.
+
+    This updates:
+    - First_Name / Last_Name (from form)
+    - Email (from form)
+    - Stage (to "Order Received")
+    - Any other relevant order data
+
+    Args:
+        phone_lead: PhoneCallLead instance
+        order_data: Dictionary with form data
+        new_stage: New stage name
+
+    Returns:
+        True if successful
+    """
+    from ..zoho_client import ZohoCRMClient
+
+    if not phone_lead.zoho_lead_id:
+        logger.warning(f"Phone lead {phone_lead.id} doesn't have Zoho lead ID")
+        return False
+
+    if not phone_lead.zoho_module:
+        logger.warning(f"Phone lead {phone_lead.id} doesn't have Zoho module")
+        return False
+
+    try:
+        client = ZohoCRMClient()
+
+        # Build update payload
+        update_payload = {
+            'Stage': new_stage
+        }
+
+        # Add name if provided
+        if order_data.get('name'):
+            name_parts = order_data['name'].split(' ', 1)
+            update_payload['First_Name'] = name_parts[0] if len(name_parts) > 0 else ''
+            update_payload['Last_Name'] = name_parts[1] if len(name_parts) > 1 else name_parts[0]
+
+        # Add email if provided
+        if order_data.get('email'):
+            update_payload['Email'] = order_data['email']
+
+        # Add location if provided
+        if order_data.get('city'):
+            update_payload['City'] = order_data['city']
+        if order_data.get('state'):
+            update_payload['State'] = order_data['state']
+        if order_data.get('country'):
+            update_payload['Country'] = order_data['country']
+
+        logger.info(f"📤 Updating Zoho lead {phone_lead.zoho_lead_id} in {phone_lead.zoho_module}")
+        logger.info(f"   Update payload: {update_payload}")
+
+        response = client.update_record(
+            phone_lead.zoho_module,
+            phone_lead.zoho_lead_id,
+            update_payload
+        )
+
+        if response and response.get('data'):
+            logger.info(f"✅ Updated Zoho lead with form data and stage '{new_stage}'")
+            return True
+
+        logger.error(f"❌ Failed to update Zoho lead: {response}")
+        return False
+
+    except Exception as e:
+        logger.error(f"❌ Error updating Zoho lead: {e}", exc_info=True)
+        return False
+
+
 def process_order_with_phone_lead_check(
     order_instance: Any,
     order_type: str,
@@ -225,12 +304,19 @@ def process_order_with_phone_lead_check(
         logger.warning("⚠️ Failed to update phone lead with form data")
         return phone_lead
 
-    # Update Zoho lead stage
-    stage_updated = update_zoho_lead_stage(phone_lead, 'Order Received')
+    # Mark order as synced to prevent Celery task from creating duplicate lead
+    if phone_lead.zoho_lead_id:
+        order_instance.zoho_synced = True
+        order_instance.save(update_fields=['zoho_synced'])
+        logger.info(f"✅ Marked order {order_instance.id} as synced (linked to Zoho lead {phone_lead.zoho_lead_id})")
+        logger.info(f"   This prevents Celery task from creating duplicate lead")
 
-    if stage_updated:
+    # Update Zoho lead with form data and new stage
+    zoho_updated = update_zoho_lead_with_order_data(phone_lead, order_data, 'Order Received')
+
+    if zoho_updated:
         logger.info(f"✅ Complete: Phone lead matched, updated, and Zoho synced")
     else:
-        logger.warning(f"⚠️ Phone lead updated but Zoho stage update failed")
+        logger.warning(f"⚠️ Phone lead updated but Zoho update failed")
 
     return phone_lead

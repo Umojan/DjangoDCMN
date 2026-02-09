@@ -135,9 +135,18 @@ def find_duplicate_phone_lead(phone: str = None, email: str = None) -> Optional[
     return None
 
 
-def find_matching_order(phone: str = None, email: str = None) -> Optional[Tuple[str, int, object]]:
+def find_matching_order(phone: str = None, email: str = None, service_type: str = None) -> Optional[Tuple[str, int, object]]:
     """
-    Search for matching web form order by phone/email.
+    Search for matching web form order by phone/email within the same service pipeline.
+
+    CRITICAL: Only searches within the same service type.
+    FBI phone call → Only matches FBI orders
+    I-9 phone call → Only matches I-9 orders
+
+    Args:
+        phone: Phone number from WhatConverts
+        email: Email address from WhatConverts
+        service_type: Service detected from landing URL (fbi, marriage, embassy, etc.)
 
     Returns:
         Tuple of (order_type, order_id, order_object) or None
@@ -170,6 +179,11 @@ def find_matching_order(phone: str = None, email: str = None) -> Optional[Tuple[
         ('i9', I9VerificationOrder),
         ('quote', QuoteRequest),
     ]
+
+    # If service detected, only check that specific order type
+    if service_type:
+        order_models = [(order_type, model) for order_type, model in order_models if order_type == service_type]
+        logger.info(f"🔍 Searching for orders in '{service_type}' pipeline only")
 
     for order_type, model in order_models:
         query = Q()
@@ -283,15 +297,16 @@ def process_whatconverts_phone_lead(webhook_data: Dict) -> Optional['PhoneCallLe
     Main function to process WhatConverts phone call webhook.
 
     1. Parse webhook data
-    2. Check for duplicates
-    3. Create or update PhoneCallLead
-    4. Check for matching web form orders
+    2. Check for existing web form orders FIRST (90% probability: clarification call)
+    3. If order exists: Skip phone lead creation, add note to order
+    4. If no order: Check for duplicate phone leads
+    5. Create or update PhoneCallLead
 
     Args:
         webhook_data: Raw webhook payload from WhatConverts
 
     Returns:
-        PhoneCallLead instance or None
+        PhoneCallLead instance or None (None if matching order exists)
     """
     from ..models import PhoneCallLead
 
@@ -305,7 +320,35 @@ def process_whatconverts_phone_lead(webhook_data: Dict) -> Optional['PhoneCallLe
     logger.info(f"   Landing: {parsed['landing_url']}")
     logger.info("=" * 80)
 
-    # Check if this lead already exists
+    # CRITICAL: Check for existing web form order FIRST
+    # 90% probability: call is clarification about existing order
+    # If customer wants new service, they'll fill out form (not just call)
+    match = find_matching_order(
+        phone=parsed['contact_phone'],
+        email=parsed['contact_email'],
+        service_type=parsed['detected_service']  # Only match within same service pipeline
+    )
+
+    if match:
+        order_type, order_id, order_obj = match
+        logger.info("=" * 80)
+        logger.info(f"⏭️ SKIPPING PHONE LEAD CREATION")
+        logger.info(f"   Found existing {order_type} order #{order_id}")
+        logger.info(f"   Contact: {parsed['contact_name']} | {parsed['contact_phone']}")
+        logger.info(f"   90% probability: Clarification call about existing order")
+        logger.info(f"   If customer wants NEW service, they'll fill out a form")
+        logger.info("=" * 80)
+
+        # Optionally: Add note to order about the call
+        # This could be implemented in future if needed:
+        # add_call_note_to_order(order_obj, parsed)
+
+        return None  # Don't create phone lead
+
+    # No matching order found - proceed with phone lead creation
+    logger.info("✓ No existing order found, proceeding with phone lead creation")
+
+    # Check if this lead already exists in WhatConverts
     existing_lead = PhoneCallLead.objects.filter(
         whatconverts_lead_id=parsed['whatconverts_lead_id']
     ).first()
@@ -334,22 +377,6 @@ def process_whatconverts_phone_lead(webhook_data: Dict) -> Optional['PhoneCallLe
             # Create new phone lead
             phone_lead = PhoneCallLead.objects.create(**parsed)
             logger.info(f"✅ Created new phone lead: {phone_lead.id}")
-
-    # Check if there's a matching web form order
-    match = find_matching_order(
-        phone=parsed['contact_phone'],
-        email=parsed['contact_email']
-    )
-
-    if match:
-        order_type, order_id, order_obj = match
-        phone_lead.matched_with_form = True
-        phone_lead.matched_order_type = order_type
-        phone_lead.matched_order_id = order_id
-        phone_lead.save()
-
-        logger.info(f"🔗 Phone lead matched with {order_type} order #{order_id}")
-        logger.info(f"   💡 Manager should update order to 'Order Received' stage")
 
     return phone_lead
 
