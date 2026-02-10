@@ -71,9 +71,12 @@ DEVICE_TYPE_OPTIONS = {
 }
 
 LEAD_TYPE_OPTIONS = {
-    'form': 'Form',
-    'call': 'Call',
-    'chat': 'Chat',
+    'form': 'Form Submission',        # Web forms
+    'call': 'Phone Call',             # Direct calls
+    'phone': 'Phone Call',            # WhatConverts phone leads
+    'chat': 'Chat',                   # Live chat
+    'email': 'Email',                 # Email leads
+    'manual': 'Manual',               # Manually created
 }
 
 
@@ -206,7 +209,7 @@ def build_zoho_attribution_payload(attribution_data: dict, lead_name: str = '') 
         if frontend_key == 'device_type':
             value = DEVICE_TYPE_OPTIONS.get(str(value).lower(), 'Desktop')
         elif frontend_key == 'lead_type':
-            value = LEAD_TYPE_OPTIONS.get(str(value).lower(), 'Form')
+            value = LEAD_TYPE_OPTIONS.get(str(value).lower(), 'Form Submission')
 
         payload[zoho_field] = value
         mapped_zoho_fields.add(zoho_field)
