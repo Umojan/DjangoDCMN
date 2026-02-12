@@ -165,7 +165,7 @@ def find_matching_order(phone: str = None, email: str = None, service_type: str 
     from ..models import (
         FbiApostilleOrder,
         MarriageOrder,
-        EmbassyOrder,
+        EmbassyLegalizationOrder,
         TranslationOrder,
         ApostilleOrder,
         I9VerificationOrder,
@@ -184,7 +184,7 @@ def find_matching_order(phone: str = None, email: str = None, service_type: str 
     order_models = [
         ('fbi', FbiApostilleOrder),
         ('marriage', MarriageOrder),
-        ('embassy', EmbassyOrder),
+        ('embassy', EmbassyLegalizationOrder),
         ('translation', TranslationOrder),
         ('apostille', ApostilleOrder),
         ('i9', I9VerificationOrder),
