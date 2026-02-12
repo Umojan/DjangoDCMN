@@ -211,7 +211,7 @@ def update_order_stage_to_received(order_type: str, order_id: int) -> bool:
     from ..models import (
         FbiApostilleOrder,
         MarriageOrder,
-        EmbassyOrder,
+        EmbassyLegalizationOrder,
         TranslationOrder,
         ApostilleOrder,
         I9VerificationOrder,
@@ -222,7 +222,7 @@ def update_order_stage_to_received(order_type: str, order_id: int) -> bool:
     model_map = {
         'fbi': (FbiApostilleOrder, 'FBI_Apostille'),
         'marriage': (MarriageOrder, 'Marriage_Orders'),
-        'embassy': (EmbassyOrder, 'Embassy_Legalization'),
+        'embassy': (EmbassyLegalizationOrder, 'Embassy_Legalization'),
         'translation': (TranslationOrder, 'Translation_Services'),
         'apostille': (ApostilleOrder, 'Apostille_Orders'),
         'i9': (I9VerificationOrder, 'I9_Verification'),
