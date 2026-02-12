@@ -49,8 +49,16 @@ def sync_phone_lead_to_zoho(phone_lead: 'PhoneCallLead') -> bool:
             logger.error(f"❌ Failed to create lead in Zoho: {response}")
             return False
 
-        # Extract lead ID
-        lead_id = response['data'][0]['details']['id']
+        # Extract lead ID safely
+        try:
+            lead_id = response['data'][0]['details']['id']
+        except (KeyError, IndexError, TypeError) as e:
+            logger.error(f"❌ Zoho returned unexpected response structure: {response}")
+            # Mark as synced even if we can't get the ID — the record was created
+            phone_lead.zoho_synced = True
+            phone_lead.save()
+            return False
+
         phone_lead.zoho_lead_id = lead_id
         phone_lead.zoho_synced = True
         phone_lead.save()
@@ -75,6 +83,7 @@ def sync_phone_lead_to_zoho(phone_lead: 'PhoneCallLead') -> bool:
 def build_zoho_lead_payload(phone_lead: 'PhoneCallLead') -> Dict:
     """
     Build Zoho lead payload from PhoneCallLead.
+    Adapts field names based on the target Zoho module.
 
     Args:
         phone_lead: PhoneCallLead instance
@@ -82,14 +91,7 @@ def build_zoho_lead_payload(phone_lead: 'PhoneCallLead') -> Dict:
     Returns:
         Dictionary ready for Zoho API
     """
-    # Split name into first/last
-    name_parts = phone_lead.contact_name.split(' ', 1) if phone_lead.contact_name else ['', '']
-    first_name = name_parts[0] if len(name_parts) > 0 else 'Phone'
-    last_name = name_parts[1] if len(name_parts) > 1 else 'Lead'
-
-    # Normalize source for Source_Category
-    source_lower = phone_lead.source.lower() if phone_lead.source else 'direct'
-    source_category = SOURCE_CATEGORIES.get(source_lower, 'Other')
+    name = phone_lead.contact_name or 'Phone Lead'
 
     # Build description with call details
     description_parts = []
@@ -103,27 +105,62 @@ def build_zoho_lead_payload(phone_lead: 'PhoneCallLead') -> Dict:
         description_parts.append(f"Keywords: {phone_lead.spotted_keywords}")
     if phone_lead.call_recording_url:
         description_parts.append(f"Recording: {phone_lead.call_recording_url}")
-
     description = '\n\n'.join(description_parts) if description_parts else 'Phone call lead from WhatConverts'
 
-    payload = {
-        'First_Name': first_name,
-        'Last_Name': last_name,
-        'Email': phone_lead.contact_email,
-        'Phone': phone_lead.contact_phone,
-        'Company': phone_lead.contact_company or 'N/A',
-        'Lead_Status': 'Phone Call Received',  # ← Your new stage!
-        'Lead_Source': source_category,
-        'Description': description,
-        'City': phone_lead.city,
-        'State': phone_lead.state,
-        'Zip_Code': phone_lead.zip_code,
-        'Country': phone_lead.country,
-    }
+    zoho_module = phone_lead.zoho_module or ''
 
-    # Add service-specific fields
-    if phone_lead.detected_service:
-        payload['Service_Type'] = phone_lead.detected_service.title()
+    # --- Deals module (FBI) — different field structure ---
+    if zoho_module == 'Deals':
+        payload = {
+            'Deal_Name': f"FBI Phone Lead — {name}",
+            'Name1': name,
+            'Email_1': phone_lead.contact_email,
+            'Phone': phone_lead.contact_phone,
+            'Status': 'Phone Call Received',
+            'Client_Comment': description,
+        }
+
+    # --- Triple_Seal_Apostilles (Marriage) ---
+    elif zoho_module == 'Triple_Seal_Apostilles':
+        payload = {
+            'Name': f"Triple Seal Phone Lead — {name}",
+            'Client_Name': name,
+            'Client_Email': phone_lead.contact_email,
+            'Client_Phone': phone_lead.contact_phone,
+            'Stage': 'Phone Call Received',
+            'Client_Notes_Comments': description,
+        }
+
+    # --- I_9_Verification ---
+    elif zoho_module == 'I_9_Verification':
+        payload = {
+            'Name': f"I9 Phone Lead — {name}",
+            'Client_Name': name,
+            'Client_Email': phone_lead.contact_email,
+            'Client_Phone': phone_lead.contact_phone,
+            'Stage': 'Phone Call Received',
+            'Client_Comments': description,
+        }
+
+    # --- Embassy, Translation, Apostille, Get_A_Quote and others ---
+    else:
+        # Generic payload matching Embassy/Translation/Apostille/Quote structure
+        payload = {
+            'Name': f"Phone Lead — {name}",
+            'Client_Name': name,
+            'Email': phone_lead.contact_email,
+            'Phone': phone_lead.contact_phone,
+            'Status': 'Phone Call Received',
+            'Client_Comment': description,
+        }
+
+    # Common fields for all modules
+    if phone_lead.city:
+        payload['City'] = phone_lead.city
+    if phone_lead.state:
+        payload['State'] = phone_lead.state
+    if phone_lead.country:
+        payload['Country'] = phone_lead.country
 
     # Add lead score if available
     if phone_lead.lead_score is not None:

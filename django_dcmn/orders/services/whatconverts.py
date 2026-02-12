@@ -247,8 +247,8 @@ def parse_whatconverts_webhook(data: Dict) -> Dict:
 
         # Contact info
         'contact_name': data.get('contact_name', ''),
-        'contact_email': data.get('contact_email_address') or data.get('email_address'),
-        'contact_phone': data.get('contact_phone_number') or data.get('phone_number'),
+        'contact_email': data.get('contact_email_address') or data.get('email_address') or data.get('contact_email') or '',
+        'contact_phone': data.get('contact_phone_number') or data.get('phone_number') or data.get('contact_phone') or '',
         'contact_company': data.get('contact_company_name', ''),
 
         # Call details
