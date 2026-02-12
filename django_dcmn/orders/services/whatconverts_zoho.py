@@ -95,7 +95,7 @@ def build_zoho_lead_payload(phone_lead: 'PhoneCallLead') -> Dict:
     │ Apostille_Services       │ Name       │ Client_Name │ Email     │ Phone_Number │ Status             │ Client_Comments      │
     │ Triple_Seal_Apostilles   │ Name       │ Client_Name │ Client_Email│Client_Phone│ Stage              │ Client_Notes_Comments│
     │ I_9_Verification         │ Name       │ Client_Name │ Client_Email│Client_Phone│ Stage              │ Client_Comments      │
-    │ Get_A_Quote_Leads        │ Name       │ Client_Name │ Client_Email│Client_Phone│ (none)             │ Client_Comments      │
+    │ Get_A_Quote_Leads        │ Name       │ Client_Name │ Client_Email│Client_Phone│ GET_A_QUOTE_LEADS  │ Client_Comments      │
     └──────────────────────────┴────────────┴─────────────┴───────────┴──────────────┴────────────────────┴──────────────────────┘
 
     Args:
@@ -195,16 +195,18 @@ def build_zoho_lead_payload(phone_lead: 'PhoneCallLead') -> Dict:
             'Client_Name': name,
             'Client_Email': phone_lead.contact_email,
             'Client_Phone': phone_lead.contact_phone,
+            'GET_A_QUOTE_LEADS': 'Phone Call Received',
             'Client_Comments': description,
         }
 
-    # --- Fallback for unknown modules ---
+    # --- Fallback for unknown modules → goes to Get_A_Quote_Leads ---
     else:
         payload = {
             'Name': f"Phone Lead — {name}",
             'Client_Name': name,
             'Client_Email': phone_lead.contact_email,
             'Client_Phone': phone_lead.contact_phone,
+            'GET_A_QUOTE_LEADS': 'Phone Call Received',
             'Client_Comments': description,
         }
 
