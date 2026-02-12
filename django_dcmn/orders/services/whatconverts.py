@@ -17,42 +17,46 @@ logger = logging.getLogger(__name__)
 # SERVICE DETECTION FROM LANDING URL
 # =============================================================================
 
-SERVICE_URL_PATTERNS = {
-    'apostille': [
-        '/apostille',
+# IMPORTANT: Order matters! More specific patterns must come before generic ones.
+# '/apostille-fbi' must be checked BEFORE '/apostille' to avoid false matches.
+SERVICE_URL_PATTERNS = [
+    ('fbi', [
+        '/apostille-fbi',
+        '/apostille-fbi-form',
+        '/fbi-apostille',
+    ]),
+    ('embassy', [
+        '/embassy-legalization',
+        '/embassy-legalization-form',
+    ]),
+    ('translation', [
+        '/translation-services',
+        '/translation-form',
+        '/translation-languages',
+    ]),
+    ('marriage', [
+        '/triple-seal-marriage',
+        '/seal-marriage-form',
+    ]),
+    ('i9', [
+        '/i-9-verification-form',
+        '/i-9',
+    ]),
+    ('notary', [
+        '/online-notary-form',
+        '/mobile-notary-services',
+    ]),
+    # apostille LAST — generic '/apostille' would match fbi/embassy URLs otherwise
+    ('apostille', [
+        '/apostille-services-form',
         '/ssa-letter-apostille-services',
         '/nara-apostille-services',
         '/uscis-apostille-services',
         '/nationwide-apostille-services',
         '/arlington-apostille',
-        '/apostille-services-form',
-    ],
-    'notary': [
-        '/online-notary-form',
-        '/mobile-notary-services',
-    ],
-    'i9': [
-        '/i-9-verification-form',
-        '/i-9',
-    ],
-    'fbi': [
-        '/apostille-fbi',
-        '/apostille-fbi-form',
-    ],
-    'translation': [
-        '/translation-services',
-        '/translation-form',
-        '/translation-languages',
-    ],
-    'embassy': [
-        '/embassy-legalization',
-        '/embassy-legalization-form',
-    ],
-    'marriage': [
-        '/triple-seal-marriage',
-        '/seal-marriage-form',
-    ],
-}
+        '/apostille',
+    ]),
+]
 
 # Zoho module mapping
 SERVICE_TO_ZOHO_MODULE = {
@@ -84,8 +88,8 @@ def detect_service_from_url(landing_url: str) -> Tuple[Optional[str], Optional[s
         logger.info(f"Ignoring tracking page: {landing_url}")
         return None, None
 
-    # Check each service pattern
-    for service, patterns in SERVICE_URL_PATTERNS.items():
+    # Check each service pattern (order matters — specific patterns first)
+    for service, patterns in SERVICE_URL_PATTERNS:
         for pattern in patterns:
             if pattern in landing_url_lower:
                 zoho_module = SERVICE_TO_ZOHO_MODULE.get(service)
