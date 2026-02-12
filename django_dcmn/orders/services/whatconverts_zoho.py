@@ -27,6 +27,12 @@ def sync_phone_lead_to_zoho(phone_lead: 'PhoneCallLead') -> bool:
     from ..zoho_client import ZohoCRMClient
 
     try:
+        # If already synced to Zoho — don't create a duplicate record
+        # The lead may have been moved further in the pipeline by a manager
+        if phone_lead.zoho_synced and phone_lead.zoho_lead_id:
+            logger.info(f"⏭️ Phone lead {phone_lead.id} already synced to Zoho (lead_id={phone_lead.zoho_lead_id}), skipping")
+            return True
+
         client = ZohoCRMClient()
 
         # Build lead payload

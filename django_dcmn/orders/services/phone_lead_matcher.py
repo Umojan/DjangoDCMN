@@ -193,29 +193,43 @@ def _get_stage_field(zoho_module: str) -> str:
         'Translation_Services': 'Translation_Status',
         'Triple_Seal_Apostilles': 'Stage',
         'I_9_Verification': 'Stage',
-        'Get_A_Quote_Leads': 'Stage',
+        'Get_A_Quote_Leads': 'GET_A_QUOTE_LEADS',
     }
     return stage_field_map.get(zoho_module, 'Stage')
+
+
+def _get_form_stage(zoho_module: str) -> str:
+    """Return the correct 'order received' stage value per module (from zoho_sync.py)."""
+    form_stage_map = {
+        'Deals': 'Order Received',
+        'Embassy_Legalization': 'Order Received',
+        'Apostille_Services': 'Client placed the request',
+        'Translation_Services': 'Client Placed Request',
+        'Triple_Seal_Apostilles': 'Order Received',
+        'I_9_Verification': 'Order Received',
+        'Get_A_Quote_Leads': 'Order Received',
+    }
+    return form_stage_map.get(zoho_module, 'Order Received')
 
 
 def update_zoho_lead_with_order_data(
     phone_lead: 'PhoneCallLead',
     order_data: Dict[str, Any],
-    new_stage: str = 'Order Received'
+    new_stage: str = None
 ) -> bool:
     """
-    Update Zoho lead with form data AND stage.
+    Update Zoho lead with form data. Optionally update stage.
 
     This updates:
-    - First_Name / Last_Name (from form)
+    - Client Name (from form)
     - Email (from form)
-    - Stage (to "Order Received")
-    - Any other relevant order data
+    - Location (from form)
+    - Stage ONLY if new_stage is provided (None = don't touch stage)
 
     Args:
         phone_lead: PhoneCallLead instance
         order_data: Dictionary with form data
-        new_stage: New stage name
+        new_stage: New stage name, or None to leave stage untouched
 
     Returns:
         True if successful
@@ -234,11 +248,12 @@ def update_zoho_lead_with_order_data(
         client = ZohoCRMClient()
         zoho_module = phone_lead.zoho_module
 
-        # Stage field depends on module
-        stage_field = _get_stage_field(zoho_module)
-        update_payload = {
-            stage_field: new_stage
-        }
+        update_payload = {}
+
+        # Only update stage if explicitly requested
+        if new_stage is not None:
+            stage_field = _get_stage_field(zoho_module)
+            update_payload[stage_field] = new_stage
 
         # Name/Email field names depend on module
         if order_data.get('name'):
@@ -334,14 +349,28 @@ def process_order_with_phone_lead_check(
         order_instance.zoho_synced = True
         order_instance.save(update_fields=['zoho_synced'])
         logger.info(f"✅ Marked order {order_instance.id} as synced (linked to Zoho lead {phone_lead.zoho_lead_id})")
-        logger.info(f"   This prevents Celery task from creating duplicate lead")
 
-    # Update Zoho lead with form data and new stage
-    zoho_updated = update_zoho_lead_with_order_data(phone_lead, order_data, 'Order Received')
+    # Check current stage in Zoho before updating
+    # Only advance from "Phone Call Received" → "Order Received"
+    # If manager already moved it further — don't roll back
+    if phone_lead.zoho_lead_id and phone_lead.zoho_module:
+        from ..zoho_sync import get_record_by_id
 
-    if zoho_updated:
-        logger.info(f"✅ Complete: Phone lead matched, updated, and Zoho synced")
+        stage_field = _get_stage_field(phone_lead.zoho_module)
+        record = get_record_by_id(phone_lead.zoho_module, phone_lead.zoho_lead_id, [stage_field])
+        current_stage = record.get(stage_field) if record else None
+
+        if current_stage == 'Phone Call Received':
+            target_stage = _get_form_stage(phone_lead.zoho_module)
+            zoho_updated = update_zoho_lead_with_order_data(phone_lead, order_data, new_stage=target_stage)
+            if zoho_updated:
+                logger.info(f"✅ Moved phone lead from 'Phone Call Received' → '{target_stage}'")
+            else:
+                logger.warning(f"⚠️ Failed to update Zoho lead stage")
+        else:
+            zoho_updated = update_zoho_lead_with_order_data(phone_lead, order_data, new_stage=None)
+            logger.info(f"⏭️ Phone lead already at '{current_stage}', stage untouched, contact data updated")
     else:
-        logger.warning(f"⚠️ Phone lead updated but Zoho update failed")
+        logger.info(f"⏭️ Phone lead not synced to Zoho yet, skipping Zoho update")
 
     return phone_lead
