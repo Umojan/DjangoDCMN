@@ -223,6 +223,34 @@ def find_matching_order(phone: str = None, email: str = None, service_type: str 
 # WHATCONVERTS WEBHOOK DATA PARSING
 # =============================================================================
 
+def _parse_call_duration(data: Dict) -> Optional[int]:
+    """Extract call duration in seconds from WhatConverts webhook data.
+    WC sends: call_duration_seconds=52, call_duration="52 seconds"
+    """
+    # Prefer numeric seconds field
+    seconds = data.get('call_duration_seconds')
+    if seconds is not None:
+        try:
+            return int(seconds)
+        except (ValueError, TypeError):
+            pass
+
+    # Fallback: parse human-readable "X minutes and Y seconds"
+    duration_str = data.get('call_duration', '')
+    if duration_str and isinstance(duration_str, str):
+        import re
+        total = 0
+        m = re.search(r'(\d+)\s*minute', duration_str)
+        s = re.search(r'(\d+)\s*second', duration_str)
+        if m:
+            total += int(m.group(1)) * 60
+        if s:
+            total += int(s.group(1))
+        return total if total > 0 else None
+
+    return None
+
+
 def parse_whatconverts_webhook(data: Dict) -> Dict:
     """
     Parse and normalize WhatConverts webhook data.
@@ -256,8 +284,8 @@ def parse_whatconverts_webhook(data: Dict) -> Dict:
         'contact_company': data.get('contact_company_name', ''),
 
         # Call details
-        'call_duration': None,  # WhatConverts doesn't send duration for phone calls in this format
-        'call_recording_url': None,
+        'call_duration': _parse_call_duration(data),
+        'call_recording_url': data.get('play_recording') or data.get('recording') or None,
         'lead_score': int(data['lead_score']) if data.get('lead_score') is not None else None,
         'lead_status': data.get('lead_status', ''),
 
