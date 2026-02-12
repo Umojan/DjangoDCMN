@@ -157,12 +157,14 @@ def update_zoho_lead_stage(phone_lead: 'PhoneCallLead', new_stage: str = 'Order 
     try:
         client = ZohoCRMClient()
 
+        # Stage field name depends on module
+        stage_field = _get_stage_field(phone_lead.zoho_module)
         update_payload = {
-            'Stage': new_stage
+            stage_field: new_stage
         }
 
         logger.info(f"📤 Updating Zoho lead {phone_lead.zoho_lead_id} in {phone_lead.zoho_module}")
-        logger.info(f"   New stage: {new_stage}")
+        logger.info(f"   {stage_field}: {new_stage}")
 
         response = client.update_record(
             phone_lead.zoho_module,
@@ -180,6 +182,20 @@ def update_zoho_lead_stage(phone_lead: 'PhoneCallLead', new_stage: str = 'Order 
     except Exception as e:
         logger.error(f"❌ Error updating Zoho lead stage: {e}", exc_info=True)
         return False
+
+
+def _get_stage_field(zoho_module: str) -> str:
+    """Return the correct stage/status field name for a Zoho module."""
+    stage_field_map = {
+        'Deals': 'Status',
+        'Embassy_Legalization': 'Status',
+        'Apostille_Services': 'Status',
+        'Translation_Services': 'Translation_Status',
+        'Triple_Seal_Apostilles': 'Stage',
+        'I_9_Verification': 'Stage',
+        'Get_A_Quote_Leads': 'Stage',
+    }
+    return stage_field_map.get(zoho_module, 'Stage')
 
 
 def update_zoho_lead_with_order_data(
@@ -216,21 +232,30 @@ def update_zoho_lead_with_order_data(
 
     try:
         client = ZohoCRMClient()
+        zoho_module = phone_lead.zoho_module
 
-        # Build update payload
+        # Stage field depends on module
+        stage_field = _get_stage_field(zoho_module)
         update_payload = {
-            'Stage': new_stage
+            stage_field: new_stage
         }
 
-        # Add name if provided
+        # Name/Email field names depend on module
         if order_data.get('name'):
-            name_parts = order_data['name'].split(' ', 1)
-            update_payload['First_Name'] = name_parts[0] if len(name_parts) > 0 else ''
-            update_payload['Last_Name'] = name_parts[1] if len(name_parts) > 1 else name_parts[0]
+            if zoho_module == 'Deals':
+                update_payload['Name1'] = order_data['name']
+            elif zoho_module == 'Translation_Services':
+                update_payload['Client_Name1'] = order_data['name']
+            else:
+                update_payload['Client_Name'] = order_data['name']
 
-        # Add email if provided
         if order_data.get('email'):
-            update_payload['Email'] = order_data['email']
+            if zoho_module == 'Deals':
+                update_payload['Email_1'] = order_data['email']
+            elif zoho_module in ('Triple_Seal_Apostilles', 'I_9_Verification', 'Get_A_Quote_Leads'):
+                update_payload['Client_Email'] = order_data['email']
+            else:
+                update_payload['Email'] = order_data['email']
 
         # Add location if provided
         if order_data.get('city'):
@@ -240,7 +265,7 @@ def update_zoho_lead_with_order_data(
         if order_data.get('country'):
             update_payload['Country'] = order_data['country']
 
-        logger.info(f"📤 Updating Zoho lead {phone_lead.zoho_lead_id} in {phone_lead.zoho_module}")
+        logger.info(f"📤 Updating Zoho lead {phone_lead.zoho_lead_id} in {zoho_module}")
         logger.info(f"   Update payload: {update_payload}")
 
         response = client.update_record(

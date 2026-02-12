@@ -85,6 +85,19 @@ def build_zoho_lead_payload(phone_lead: 'PhoneCallLead') -> Dict:
     Build Zoho lead payload from PhoneCallLead.
     Adapts field names based on the target Zoho module.
 
+    Field mapping per module (from zoho_sync.py):
+    ┌──────────────────────────┬────────────┬─────────────┬───────────┬──────────────┬────────────────────┬──────────────────────┐
+    │ Module                   │ Name field │ Client Name │ Email     │ Phone        │ Stage/Status       │ Comments             │
+    ├──────────────────────────┼────────────┼─────────────┼───────────┼──────────────┼────────────────────┼──────────────────────┤
+    │ Deals (FBI)              │ Deal_Name  │ Name1       │ Email_1   │ Phone        │ Status             │ Client_Comment       │
+    │ Embassy_Legalization     │ Name       │ Client_Name │ Email     │ Phone        │ Status             │ Client_Comment       │
+    │ Translation_Services     │ Name       │ Client_Name1│ Email     │ Phone        │ Translation_Status │ Client_Comments      │
+    │ Apostille_Services       │ Name       │ Client_Name │ Email     │ Phone_Number │ Status             │ Client_Comments      │
+    │ Triple_Seal_Apostilles   │ Name       │ Client_Name │ Client_Email│Client_Phone│ Stage              │ Client_Notes_Comments│
+    │ I_9_Verification         │ Name       │ Client_Name │ Client_Email│Client_Phone│ Stage              │ Client_Comments      │
+    │ Get_A_Quote_Leads        │ Name       │ Client_Name │ Client_Email│Client_Phone│ (none)             │ Client_Comments      │
+    └──────────────────────────┴────────────┴─────────────┴───────────┴──────────────┴────────────────────┴──────────────────────┘
+
     Args:
         phone_lead: PhoneCallLead instance
 
@@ -109,7 +122,7 @@ def build_zoho_lead_payload(phone_lead: 'PhoneCallLead') -> Dict:
 
     zoho_module = phone_lead.zoho_module or ''
 
-    # --- Deals module (FBI) — different field structure ---
+    # --- Deals module (FBI) ---
     if zoho_module == 'Deals':
         payload = {
             'Deal_Name': f"FBI Phone Lead — {name}",
@@ -118,6 +131,39 @@ def build_zoho_lead_payload(phone_lead: 'PhoneCallLead') -> Dict:
             'Phone': phone_lead.contact_phone,
             'Status': 'Phone Call Received',
             'Client_Comment': description,
+        }
+
+    # --- Embassy_Legalization ---
+    elif zoho_module == 'Embassy_Legalization':
+        payload = {
+            'Name': f"Embassy Phone Lead — {name}",
+            'Client_Name': name,
+            'Email': phone_lead.contact_email,
+            'Phone': phone_lead.contact_phone,
+            'Status': 'Phone Call Received',
+            'Client_Comment': description,
+        }
+
+    # --- Translation_Services ---
+    elif zoho_module == 'Translation_Services':
+        payload = {
+            'Name': f"Translation Phone Lead — {name}",
+            'Client_Name1': name,
+            'Email': phone_lead.contact_email,
+            'Phone': phone_lead.contact_phone,
+            'Translation_Status': 'Phone Call Received',
+            'Client_Comments': description,
+        }
+
+    # --- Apostille_Services ---
+    elif zoho_module == 'Apostille_Services':
+        payload = {
+            'Name': f"Apostille Phone Lead — {name}",
+            'Client_Name': name,
+            'Email': phone_lead.contact_email,
+            'Phone_Number': phone_lead.contact_phone,
+            'Status': 'Phone Call Received',
+            'Client_Comments': description,
         }
 
     # --- Triple_Seal_Apostilles (Marriage) ---
@@ -142,16 +188,24 @@ def build_zoho_lead_payload(phone_lead: 'PhoneCallLead') -> Dict:
             'Client_Comments': description,
         }
 
-    # --- Embassy, Translation, Apostille, Get_A_Quote and others ---
+    # --- Get_A_Quote_Leads ---
+    elif zoho_module == 'Get_A_Quote_Leads':
+        payload = {
+            'Name': f"Quote Phone Lead — {name}",
+            'Client_Name': name,
+            'Client_Email': phone_lead.contact_email,
+            'Client_Phone': phone_lead.contact_phone,
+            'Client_Comments': description,
+        }
+
+    # --- Fallback for unknown modules ---
     else:
-        # Generic payload matching Embassy/Translation/Apostille/Quote structure
         payload = {
             'Name': f"Phone Lead — {name}",
             'Client_Name': name,
-            'Email': phone_lead.contact_email,
-            'Phone': phone_lead.contact_phone,
-            'Status': 'Phone Call Received',
-            'Client_Comment': description,
+            'Client_Email': phone_lead.contact_email,
+            'Client_Phone': phone_lead.contact_phone,
+            'Client_Comments': description,
         }
 
     # Common fields for all modules
@@ -267,10 +321,21 @@ def update_order_stage_to_received(order_type: str, order_id: int) -> bool:
             logger.warning(f"Phone lead {phone_lead.id} missing Zoho module or ID")
             return False
 
-        # Update stage in Zoho
+        # Update stage in Zoho — field name depends on module
+        # Deals/Embassy/Apostille use 'Status', Marriage/I9 use 'Stage', Translation uses 'Translation_Status'
+        stage_field_map = {
+            'Deals': 'Status',
+            'Embassy_Legalization': 'Status',
+            'Apostille_Services': 'Status',
+            'Translation_Services': 'Translation_Status',
+            'Triple_Seal_Apostilles': 'Stage',
+            'I_9_Verification': 'Stage',
+        }
+        stage_field = stage_field_map.get(zoho_module, 'Stage')
+
         client = ZohoCRMClient()
         update_payload = {
-            'Stage': 'Order Received'
+            stage_field: 'Order Received'
         }
 
         response = client.update_record(zoho_module, zoho_id, update_payload)
