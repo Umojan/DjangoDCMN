@@ -36,8 +36,8 @@ def sync_phone_lead_to_zoho(phone_lead: 'PhoneCallLead') -> bool:
         if phone_lead.zoho_module:
             zoho_module = phone_lead.zoho_module
         else:
-            zoho_module = 'Get_a_Quote'  # Default to Get a Quote if service unknown
-            logger.info(f"⚠️ Service not detected, defaulting to Get_a_Quote module")
+            zoho_module = 'Get_A_Quote_Leads'  # Default to Get a Quote if service unknown
+            logger.info(f"⚠️ Service not detected, defaulting to Get_A_Quote_Leads module")
 
         logger.info(f"📤 Syncing phone lead {phone_lead.id} to Zoho module: {zoho_module}")
         logger.info(f"   Payload: {lead_payload}")
@@ -126,11 +126,11 @@ def build_zoho_lead_payload(phone_lead: 'PhoneCallLead') -> Dict:
         payload['Service_Type'] = phone_lead.detected_service.title()
 
     # Add lead score if available
-    if phone_lead.lead_score:
+    if phone_lead.lead_score is not None:
         payload['Rating'] = calculate_rating(phone_lead.lead_score)
 
-    # Remove None/empty values
-    payload = {k: v for k, v in payload.items() if v}
+    # Remove None/empty string values (preserve 0 and False)
+    payload = {k: v for k, v in payload.items() if v is not None and v != ''}
 
     return payload
 
@@ -208,53 +208,38 @@ def update_order_stage_to_received(order_type: str, order_id: int) -> bool:
     Returns:
         True if successful
     """
-    from ..models import (
-        FbiApostilleOrder,
-        MarriageOrder,
-        EmbassyLegalizationOrder,
-        TranslationOrder,
-        ApostilleOrder,
-        I9VerificationOrder,
-        QuoteRequest,
-    )
     from ..zoho_client import ZohoCRMClient
-
-    model_map = {
-        'fbi': (FbiApostilleOrder, 'FBI_Apostille'),
-        'marriage': (MarriageOrder, 'Marriage_Orders'),
-        'embassy': (EmbassyLegalizationOrder, 'Embassy_Legalization'),
-        'translation': (TranslationOrder, 'Translation_Services'),
-        'apostille': (ApostilleOrder, 'Apostille_Orders'),
-        'i9': (I9VerificationOrder, 'I9_Verification'),
-        'quote': (QuoteRequest, 'Get_a_Quote'),
-    }
-
-    if order_type not in model_map:
-        logger.error(f"Unknown order type: {order_type}")
-        return False
+    from ..models import PhoneCallLead
 
     try:
-        model_class, zoho_module = model_map[order_type]
-        order = model_class.objects.get(id=order_id)
+        # Find the PhoneCallLead that was matched with this order
+        phone_lead = PhoneCallLead.objects.filter(
+            matched_order_type=order_type,
+            matched_order_id=order_id,
+            zoho_lead_id__gt='',
+        ).first()
 
-        # Get Zoho ID (assuming it's stored somewhere)
-        # You might need to adjust this based on your models
-        zoho_id = getattr(order, 'zoho_id', None)
+        if not phone_lead:
+            logger.warning(f"No matched phone lead with Zoho ID for {order_type}:{order_id}")
+            return False
 
-        if not zoho_id:
-            logger.warning(f"Order {order_type}:{order_id} doesn't have Zoho ID")
+        zoho_module = phone_lead.zoho_module
+        zoho_id = phone_lead.zoho_lead_id
+
+        if not zoho_module or not zoho_id:
+            logger.warning(f"Phone lead {phone_lead.id} missing Zoho module or ID")
             return False
 
         # Update stage in Zoho
         client = ZohoCRMClient()
         update_payload = {
-            'Stage': 'Order Received'  # or whatever your stage name is
+            'Stage': 'Order Received'
         }
 
         response = client.update_record(zoho_module, zoho_id, update_payload)
 
         if response and response.get('data'):
-            logger.info(f"✅ Updated {order_type} order {order_id} to 'Order Received' stage")
+            logger.info(f"✅ Updated {order_type} order {order_id} to 'Order Received' stage in Zoho")
             return True
 
         logger.error(f"❌ Failed to update order stage: {response}")

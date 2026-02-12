@@ -56,13 +56,14 @@ SERVICE_URL_PATTERNS = {
 
 # Zoho module mapping
 SERVICE_TO_ZOHO_MODULE = {
-    'apostille': 'Apostille_Orders',
-    'notary': 'Notary_Services',
-    'i9': 'I9_Verification',
-    'fbi': 'FBI_Apostille',
-    'translation': 'Translation_Services',
+    'fbi': 'Deals',
     'embassy': 'Embassy_Legalization',
-    'marriage': 'Marriage_Orders',
+    'translation': 'Translation_Services',
+    'apostille': 'Apostille_Services',
+    'marriage': 'Triple_Seal_Apostilles',
+    'i9': 'I_9_Verification',
+    'notary': 'Get_A_Quote_Leads',
+    'quote': 'Get_A_Quote_Leads',
 }
 
 
@@ -253,7 +254,7 @@ def parse_whatconverts_webhook(data: Dict) -> Dict:
         # Call details
         'call_duration': None,  # WhatConverts doesn't send duration for phone calls in this format
         'call_recording_url': None,
-        'lead_score': data.get('lead_score'),
+        'lead_score': int(data['lead_score']) if data.get('lead_score') is not None else None,
         'lead_status': data.get('lead_status', ''),
 
         # Service detection
@@ -380,8 +381,11 @@ def process_whatconverts_phone_lead(webhook_data: Dict) -> Optional['PhoneCallLe
 
         if duplicate:
             logger.info(f"⚠️ Found duplicate phone lead by contact info: {duplicate.id}")
-            # Update the duplicate with new WhatConverts data
+            # Preserve existing Zoho sync data if already synced
+            preserve_fields = {'zoho_lead_id', 'zoho_attribution_id', 'zoho_synced', 'zoho_module'}
             for key, value in parsed.items():
+                if key in preserve_fields and getattr(duplicate, key, None):
+                    continue  # Don't overwrite existing Zoho IDs
                 setattr(duplicate, key, value)
             duplicate.save()
             phone_lead = duplicate

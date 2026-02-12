@@ -54,6 +54,30 @@ class ZohoCRMClient:
             logger.error(f"Failed to create record in {module_name}: {e}")
             return None
 
+    def update_record(self, module_name, record_id, data):
+        """
+        Update a record in Zoho CRM.
+
+        Args:
+            module_name: Zoho module name (FBI_Apostille, Marriage_Orders, etc.)
+            record_id: Zoho record ID to update
+            data: Record data dictionary with fields to update
+
+        Returns:
+            API response dict or None on error
+        """
+        url = f"{self.api_domain}/crm/v2/{module_name}"
+        headers = self._get_headers()
+        payload = {"data": [{"id": record_id, **data}]}
+
+        try:
+            response = requests.put(url, json=payload, headers=headers, timeout=30)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to update record {record_id} in {module_name}: {e}")
+            return None
+
     def create_attribution_record(self, attribution_data):
         """
         Create a Lead Attribution Record in Zoho.
