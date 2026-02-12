@@ -269,19 +269,36 @@ def create_attribution_record(
             logger.warning("Could not build attribution payload")
             return None
 
-        # Link to lead
-        zoho_payload['Attribution_Record'] = zoho_lead_id
-
         logger.info(f"📤 Creating attribution record for lead {zoho_lead_id}")
 
+        # Step 1: Create attribution record in Zoho
         response = client.create_record('Lead_Attribution_Records', zoho_payload)
 
-        if response and response.get('data'):
-            attribution_id = response['data'][0]['details']['id']
-            return attribution_id
+        if not response or not response.get('data'):
+            logger.error(f"❌ Failed to create attribution record: {response}")
+            return None
 
-        logger.error(f"❌ Failed to create attribution record: {response}")
-        return None
+        record_data = response['data'][0]
+        if record_data.get('code') != 'SUCCESS' and record_data.get('status') != 'success':
+            logger.error(f"❌ Attribution creation failed: {record_data}")
+            return None
+
+        attribution_id = record_data.get('details', {}).get('id')
+        if not attribution_id:
+            logger.error(f"❌ No ID in attribution response: {record_data}")
+            return None
+
+        # Step 2: Link attribution to lead by updating the lead record
+        # Attribution_Record is a lookup field ON the lead/deal, not on the attribution record
+        link_payload = {'Attribution_Record': str(attribution_id)}
+        link_response = client.update_record(zoho_module, zoho_lead_id, link_payload)
+
+        if link_response and link_response.get('data'):
+            logger.info(f"✅ Linked attribution {attribution_id} to lead {zoho_lead_id}")
+        else:
+            logger.warning(f"⚠️ Attribution created but failed to link to lead: {link_response}")
+
+        return str(attribution_id)
 
     except Exception as e:
         logger.error(f"❌ Error creating attribution record: {e}", exc_info=True)
