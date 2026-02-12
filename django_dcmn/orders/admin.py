@@ -18,6 +18,7 @@ from .models import (
     ApostilleOrder,
     I9VerificationOrder,
     QuoteRequest,
+    PhoneCallLead,
     Track,
 )
 
@@ -119,6 +120,83 @@ class QuoteRequestOrderAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'email', 'appointment_date', 'appointment_time', 'zoho_synced', 'created_at')
     list_filter = ('zoho_synced', 'created_at')
     search_fields = ('name', 'email', 'phone', 'address')
+
+
+@admin.register(PhoneCallLead)
+class PhoneCallLeadAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'whatconverts_lead_id',
+        'contact_name',
+        'contact_phone',
+        'contact_email',
+        'detected_service',
+        'lead_score',
+        'zoho_synced',
+        'matched_with_form',
+        'created_at',
+    )
+    list_filter = (
+        'zoho_synced',
+        'detected_service',
+        'matched_with_form',
+        'sentiment',
+        'created_at',
+    )
+    search_fields = (
+        'whatconverts_lead_id',
+        'contact_name',
+        'contact_email',
+        'contact_phone',
+        'contact_company',
+        'landing_url',
+    )
+    readonly_fields = (
+        'whatconverts_lead_id',
+        'raw_webhook_data',
+        'created_at',
+        'updated_at',
+        'zoho_lead_id',
+        'zoho_attribution_id',
+        'matched_order_type',
+        'matched_order_id',
+    )
+    fieldsets = (
+        ('Contact Information', {
+            'fields': ('contact_name', 'contact_email', 'contact_phone', 'contact_company')
+        }),
+        ('Call Details', {
+            'fields': ('call_duration', 'call_recording_url', 'lead_score', 'lead_status')
+        }),
+        ('Service Detection', {
+            'fields': ('detected_service', 'landing_url', 'lead_url', 'zoho_module')
+        }),
+        ('Attribution', {
+            'fields': ('source', 'medium', 'campaign', 'keyword', 'gclid')
+        }),
+        ('Location', {
+            'fields': ('city', 'state', 'zip_code', 'country'),
+            'classes': ('collapse',)
+        }),
+        ('Device Info', {
+            'fields': ('device_type', 'device_make', 'operating_system', 'browser'),
+            'classes': ('collapse',)
+        }),
+        ('AI Analysis', {
+            'fields': ('lead_summary', 'sentiment', 'intent', 'spotted_keywords'),
+            'classes': ('collapse',)
+        }),
+        ('Sync Status', {
+            'fields': ('zoho_synced', 'zoho_lead_id', 'zoho_attribution_id')
+        }),
+        ('Duplicate Detection', {
+            'fields': ('matched_with_form', 'matched_order_type', 'matched_order_id')
+        }),
+        ('Meta', {
+            'fields': ('whatconverts_lead_id', 'whatconverts_created_at', 'created_at', 'updated_at', 'raw_webhook_data'),
+            'classes': ('collapse',)
+        }),
+    )
 
 
 @admin.register(Track)

@@ -294,6 +294,85 @@ class QuoteRequest(models.Model):
         verbose_name_plural = 'Quote — Requests'
 
 
+# --- Phone Call Leads (WhatConverts) ---
+class PhoneCallLead(models.Model):
+    """Store phone call leads from WhatConverts"""
+
+    # WhatConverts identifiers
+    whatconverts_lead_id = models.CharField(max_length=100, unique=True, db_index=True, help_text="WhatConverts lead_id")
+
+    # Contact information
+    contact_name = models.CharField(max_length=255, blank=True)
+    contact_email = models.EmailField(blank=True, null=True, db_index=True)
+    contact_phone = models.CharField(max_length=50, blank=True, db_index=True)
+    contact_company = models.CharField(max_length=255, blank=True)
+
+    # Call details
+    call_duration = models.IntegerField(null=True, blank=True, help_text="Duration in seconds")
+    call_recording_url = models.URLField(blank=True, null=True)
+    lead_score = models.IntegerField(null=True, blank=True, help_text="WhatConverts lead score")
+    lead_status = models.CharField(max_length=50, blank=True, help_text="WhatConverts lead status")
+
+    # Service detection
+    detected_service = models.CharField(max_length=100, blank=True, help_text="Auto-detected service from landing URL")
+    landing_url = models.URLField(blank=True)
+    lead_url = models.URLField(blank=True, help_text="Page where lead was generated")
+
+    # Attribution data
+    source = models.CharField(max_length=100, blank=True)
+    medium = models.CharField(max_length=100, blank=True)
+    campaign = models.CharField(max_length=255, blank=True)
+    keyword = models.CharField(max_length=255, blank=True)
+    gclid = models.CharField(max_length=255, blank=True, help_text="Google Click ID")
+
+    # Location
+    city = models.CharField(max_length=100, blank=True)
+    state = models.CharField(max_length=50, blank=True)
+    zip_code = models.CharField(max_length=20, blank=True)
+    country = models.CharField(max_length=50, blank=True)
+
+    # Device info
+    device_type = models.CharField(max_length=50, blank=True)
+    device_make = models.CharField(max_length=100, blank=True)
+    operating_system = models.CharField(max_length=100, blank=True)
+    browser = models.CharField(max_length=100, blank=True)
+
+    # AI Analysis from WhatConverts
+    lead_summary = models.TextField(blank=True, help_text="AI-generated summary")
+    sentiment = models.CharField(max_length=50, blank=True, help_text="Positive/Negative/Neutral")
+    intent = models.TextField(blank=True, help_text="Detected intent")
+    spotted_keywords = models.CharField(max_length=500, blank=True)
+
+    # Full webhook data
+    raw_webhook_data = models.JSONField(help_text="Complete WhatConverts webhook payload")
+
+    # Sync status
+    zoho_synced = models.BooleanField(default=False)
+    zoho_lead_id = models.CharField(max_length=100, blank=True, help_text="Zoho Lead/Deal ID")
+    zoho_attribution_id = models.CharField(max_length=100, blank=True, help_text="Zoho Attribution Record ID")
+    zoho_module = models.CharField(max_length=100, blank=True, help_text="Target Zoho module (FBI_Apostille, etc)")
+
+    # Duplicate detection
+    matched_with_form = models.BooleanField(default=False, help_text="Matched with web form submission")
+    matched_order_type = models.CharField(max_length=100, blank=True)
+    matched_order_id = models.IntegerField(null=True, blank=True)
+
+    # Timestamps
+    whatconverts_created_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        name = self.contact_name or self.contact_phone or f"Lead {self.whatconverts_lead_id}"
+        service = self.detected_service or "Unknown"
+        return f"{name} | {service} | Phone Call"
+
+    class Meta:
+        verbose_name = 'Phone Call Lead'
+        verbose_name_plural = 'Phone Call Leads'
+        ordering = ['-created_at']
+
+
 # --- Tracking ---
 class Track(models.Model):
     tid = models.CharField(max_length=20, unique=True, db_index=True)
