@@ -95,7 +95,7 @@ def build_zoho_lead_payload(phone_lead: 'PhoneCallLead') -> Dict:
     ┌──────────────────────────┬────────────┬─────────────┬───────────┬──────────────┬────────────────────┬──────────────────────┐
     │ Module                   │ Name field │ Client Name │ Email     │ Phone        │ Stage/Status       │ Comments             │
     ├──────────────────────────┼────────────┼─────────────┼───────────┼──────────────┼────────────────────┼──────────────────────┤
-    │ Deals (FBI)              │ Deal_Name  │ Name1       │ Email_1   │ Phone        │ Status             │ Client_Comment       │
+    │ Deals (FBI)              │ Deal_Name  │ Name1       │ Email_1   │ Phone        │ Stage              │ Client_Comment       │
     │ Embassy_Legalization     │ Name       │ Client_Name │ Email     │ Phone        │ Status             │ Client_Comment       │
     │ Translation_Services     │ Name       │ Client_Name1│ Email     │ Phone        │ Translation_Status │ Client_Comments      │
     │ Apostille_Services       │ Name       │ Client_Name │ Email     │ Phone_Number │ Status             │ Client_Comments      │
@@ -135,7 +135,7 @@ def build_zoho_lead_payload(phone_lead: 'PhoneCallLead') -> Dict:
             'Name1': name,
             'Email_1': phone_lead.contact_email,
             'Phone': phone_lead.contact_phone,
-            'Status': 'Phone Call Received',
+            'Stage': 'Phone Call Received',
             'Client_Comment': description,
         }
 
@@ -347,9 +347,9 @@ def update_order_stage_to_received(order_type: str, order_id: int) -> bool:
             return False
 
         # Update stage in Zoho — field name depends on module
-        # Deals/Embassy/Apostille use 'Status', Marriage/I9 use 'Stage', Translation uses 'Translation_Status'
+        # Deals/Marriage/I9 use 'Stage', Embassy/Apostille use 'Status', Translation uses 'Translation_Status'
         stage_field_map = {
-            'Deals': 'Status',
+            'Deals': 'Stage',
             'Embassy_Legalization': 'Status',
             'Apostille_Services': 'Status',
             'Translation_Services': 'Translation_Status',

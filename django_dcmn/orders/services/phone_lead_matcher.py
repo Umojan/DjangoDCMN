@@ -187,7 +187,7 @@ def update_zoho_lead_stage(phone_lead: 'PhoneCallLead', new_stage: str = 'Order 
 def _get_stage_field(zoho_module: str) -> str:
     """Return the correct stage/status field name for a Zoho module."""
     stage_field_map = {
-        'Deals': 'Status',
+        'Deals': 'Stage',
         'Embassy_Legalization': 'Status',
         'Apostille_Services': 'Status',
         'Translation_Services': 'Translation_Status',
