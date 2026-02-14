@@ -247,8 +247,17 @@ def _handle_marriage_payment(request, order_id, tracking_id):
     
     if not order.is_paid:
         order.is_paid = True
-        sync_order_to_zoho_task.delay(order.id, "marriage")
         order.save()
+
+        # Pass tracking_id to Zoho sync (same as FBI)
+        sync_order_to_zoho_task.delay(order.id, "marriage", tracking_id=tracking_id)
+
+        # Send tracking email (Order Received)
+        if tracking_id:
+            try:
+                send_tracking_email_task.delay(tracking_id, 'created')
+            except Exception:
+                logger.exception("Failed to queue tracking email for paid Marriage order: %s", order.id)
 
     # Send email to manager (only if not sent before)
     if not order.manager_notified:
@@ -263,8 +272,10 @@ def _handle_marriage_payment(request, order_id, tracking_id):
 
         today_str = datetime.utcnow().strftime("%Y-%m-%d")
         thread_id = f"<marriage-orders-thread-{today_str}@dcmobilenotary.com>"
+        tid_info = f"Tracking ID: {tracking_id}\n" if tracking_id else ""
         email_body = (
             f"New Triple Seal Marriage Certificate order has been paid! Order ID: {order.id}\n\n"
+            f"{tid_info}"
             f"Name: {order.name}\n"
             f"Email: {order.email}\n"
             f"Phone: {order.phone}\n"

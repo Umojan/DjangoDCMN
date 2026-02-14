@@ -344,11 +344,10 @@ def process_order_with_phone_lead_check(
         logger.warning("⚠️ Failed to update phone lead with form data")
         return phone_lead
 
-    # Mark order as synced to prevent Celery task from creating duplicate lead
-    if phone_lead.zoho_lead_id:
-        order_instance.zoho_synced = True
-        order_instance.save(update_fields=['zoho_synced'])
-        logger.info(f"✅ Marked order {order_instance.id} as synced (linked to Zoho lead {phone_lead.zoho_lead_id})")
+    # NOTE: We do NOT set order.zoho_synced = True here.
+    # That flag should only be True after data actually reaches Zoho.
+    # Instead, Celery task checks for matched phone lead to decide CREATE vs UPDATE.
+    # zoho_synced will be set to True by Celery after successful Zoho operation.
 
     # Check current stage in Zoho before updating
     # Only advance from "Phone Call Received" → "Order Received"
