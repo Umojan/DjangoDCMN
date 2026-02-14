@@ -86,29 +86,23 @@ def update_phone_lead_with_form_data(
         logger.info(f"   Order: {order_type} #{order_id}")
         logger.info("=" * 80)
 
-        # Update contact information (preserve if form data is empty)
-        if order_data.get('name'):
-            old_name = phone_lead.contact_name
-            phone_lead.contact_name = order_data['name']
-            logger.info(f"   Name: {old_name} → {order_data['name']}")
+        # Update contact information — form data is ALWAYS authoritative
+        old_name = phone_lead.contact_name
+        phone_lead.contact_name = order_data.get('name', '')
+        logger.info(f"   Name: {old_name} → {phone_lead.contact_name}")
 
-        if order_data.get('email'):
-            old_email = phone_lead.contact_email
-            phone_lead.contact_email = order_data['email']
-            logger.info(f"   Email: {old_email} → {order_data['email']}")
+        old_email = phone_lead.contact_email
+        phone_lead.contact_email = order_data.get('email', '')
+        logger.info(f"   Email: {old_email} → {phone_lead.contact_email}")
 
-        if order_data.get('phone'):
-            old_phone = phone_lead.contact_phone
-            phone_lead.contact_phone = order_data['phone']
-            logger.info(f"   Phone: {old_phone} → {order_data['phone']}")
+        old_phone = phone_lead.contact_phone
+        phone_lead.contact_phone = order_data.get('phone', '')
+        logger.info(f"   Phone: {old_phone} → {phone_lead.contact_phone}")
 
-        # Update location if provided
-        if order_data.get('city'):
-            phone_lead.city = order_data['city']
-        if order_data.get('state'):
-            phone_lead.state = order_data['state']
-        if order_data.get('country'):
-            phone_lead.country = order_data['country']
+        # Update location — form data overwrites phone lead data
+        phone_lead.city = order_data.get('city', '') or phone_lead.city
+        phone_lead.state = order_data.get('state', '') or phone_lead.state
+        phone_lead.country = order_data.get('country', '') or phone_lead.country
 
         # Mark as matched with form
         phone_lead.matched_with_form = True
@@ -255,24 +249,24 @@ def update_zoho_lead_with_order_data(
             stage_field = _get_stage_field(zoho_module)
             update_payload[stage_field] = new_stage
 
-        # Name/Email field names depend on module
-        if order_data.get('name'):
-            if zoho_module == 'Deals':
-                update_payload['Name1'] = order_data['name']
-            elif zoho_module == 'Translation_Services':
-                update_payload['Client_Name1'] = order_data['name']
-            else:
-                update_payload['Client_Name'] = order_data['name']
+        # Name/Email field names depend on module — form data always overwrites
+        name = order_data.get('name', '')
+        if zoho_module == 'Deals':
+            update_payload['Name1'] = name
+        elif zoho_module == 'Translation_Services':
+            update_payload['Client_Name1'] = name
+        else:
+            update_payload['Client_Name'] = name
 
-        if order_data.get('email'):
-            if zoho_module == 'Deals':
-                update_payload['Email_1'] = order_data['email']
-            elif zoho_module in ('Triple_Seal_Apostilles', 'I_9_Verification', 'Get_A_Quote_Leads'):
-                update_payload['Client_Email'] = order_data['email']
-            else:
-                update_payload['Email'] = order_data['email']
+        email = order_data.get('email', '')
+        if zoho_module == 'Deals':
+            update_payload['Email_1'] = email
+        elif zoho_module in ('Triple_Seal_Apostilles', 'I_9_Verification', 'Get_A_Quote_Leads'):
+            update_payload['Client_Email'] = email
+        else:
+            update_payload['Email'] = email
 
-        # Add location if provided
+        # Location — form data overwrites if provided
         if order_data.get('city'):
             update_payload['City'] = order_data['city']
         if order_data.get('state'):

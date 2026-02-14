@@ -125,7 +125,7 @@ def _build_full_update_payload(order, order_type: str, tracking_id: str = None) 
             'Client_Name1': order.name,
             'Email': order.email,
             'Phone': order.phone,
-            'Address': order.address,
+            'Client_Address': order.address,
             'Languages': order.languages,
             'Client_Comments': order.comments,
         }
@@ -158,7 +158,7 @@ def _build_full_update_payload(order, order_type: str, tracking_id: str = None) 
             'Client_Name': order.name,
             'Client_Email': order.email,
             'Client_Phone': order.phone,
-            'Address': order.address,
+            'Client_Address': order.address,
             'Type_of_Legalization': 'Triple Seal',
             'Payment_Status': 'Deposit',
             'Amount_Paid': str(order.total_price),
