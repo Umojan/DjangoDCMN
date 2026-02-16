@@ -1,0 +1,1 @@
+web: gunicorn django_dcmn.wsgi --timeout 120 --workers 2 --keep-alive 5 --log-file -
