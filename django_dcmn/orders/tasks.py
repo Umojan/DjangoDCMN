@@ -25,37 +25,58 @@ def test_celery_task():
 
 @shared_task
 def sync_order_to_zoho_task(order_id, order_type, tracking_id=None):
+    import logging
+    logger = logging.getLogger(__name__)
+
+    ORDER_TYPE_MAP = {
+        "fbi": (FbiApostilleOrder, sync_fbi_order_to_zoho),
+        "embassy": (EmbassyLegalizationOrder, sync_embassy_order_to_zoho),
+        "apostille": (ApostilleOrder, sync_apostille_order_to_zoho),
+        "translation": (TranslationOrder, sync_translation_order_to_zoho),
+        "marriage": (MarriageOrder, sync_marriage_order_to_zoho),
+        "I-9": (I9VerificationOrder, sync_i9_order_to_zoho),
+        "quote": (QuoteRequest, sync_quote_request_to_zoho),
+    }
+
     try:
-        if order_type == "fbi":
-            order = FbiApostilleOrder.objects.get(id=order_id)
-            if not order.zoho_synced:
-                sync_fbi_order_to_zoho(order, tracking_id=tracking_id)
-        elif order_type == "embassy":
-            order = EmbassyLegalizationOrder.objects.get(id=order_id)
-            if not order.zoho_synced:
-                sync_embassy_order_to_zoho(order, tracking_id=tracking_id)
-        elif order_type == "apostille":
-            order = ApostilleOrder.objects.get(id=order_id)
-            if not order.zoho_synced:
-                sync_apostille_order_to_zoho(order, tracking_id=tracking_id)
-        elif order_type == "translation":
-            order = TranslationOrder.objects.get(id=order_id)
-            if not order.zoho_synced:
-                sync_translation_order_to_zoho(order, tracking_id=tracking_id)
-        elif order_type == "marriage":
-            order = MarriageOrder.objects.get(id=order_id)
-            if not order.zoho_synced:
-                sync_marriage_order_to_zoho(order, tracking_id=tracking_id)
-        elif order_type == "I-9":
-            order = I9VerificationOrder.objects.get(id=order_id)
-            if not order.zoho_synced:
-                sync_i9_order_to_zoho(order, tracking_id=tracking_id)
-        elif order_type == "quote":
-            order = QuoteRequest.objects.get(id=order_id)
-            if not order.zoho_synced:
-                sync_quote_request_to_zoho(order)
+        entry = ORDER_TYPE_MAP.get(order_type)
+        if not entry:
+            logger.error(f"[Celery] Unknown order_type: {order_type}")
+            return
+
+        model_class, sync_func = entry
+        order = model_class.objects.get(id=order_id)
+
+        if order.zoho_synced:
+            logger.info(f"[Celery] Order {order_type} #{order_id} already zoho_synced — skipping")
+            return
+
+        # Check if this order has a matched phone lead (UPDATE existing Zoho record)
+        from .models import PhoneCallLead
+        matched_phone_lead = PhoneCallLead.objects.filter(
+            matched_order_type=order_type,
+            matched_order_id=order.id,
+            zoho_lead_id__gt='',
+        ).first()
+
+        if matched_phone_lead:
+            # Phone lead matched: UPDATE existing Zoho record with full form data
+            from .services.zoho_update import update_matched_zoho_record
+            ok = update_matched_zoho_record(order, order_type, tracking_id=tracking_id)
+            if ok:
+                order.zoho_synced = True
+                order.save(update_fields=['zoho_synced'])
+                logger.info(f"[Celery] ✅ Updated Zoho lead for {order_type} #{order_id}, zoho_synced=True")
+        else:
+            # Normal flow: CREATE new Zoho record
+            # (zoho_synced is set inside sync_order_to_zoho / sync_order_with_attribution)
+            if order_type == "quote":
+                sync_func(order)
+            else:
+                sync_func(order, tracking_id=tracking_id)
+
     except Exception as e:
-        print(f"[Celery Task Error] Failed to sync {order_type} order #{order_id} to Zoho: {e}")
+        logger.error(f"[Celery Task Error] Failed to sync {order_type} order #{order_id} to Zoho: {e}", exc_info=True)
 
 
 @shared_task

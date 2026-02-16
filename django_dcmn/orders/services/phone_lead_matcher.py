@@ -86,29 +86,23 @@ def update_phone_lead_with_form_data(
         logger.info(f"   Order: {order_type} #{order_id}")
         logger.info("=" * 80)
 
-        # Update contact information (preserve if form data is empty)
-        if order_data.get('name'):
-            old_name = phone_lead.contact_name
-            phone_lead.contact_name = order_data['name']
-            logger.info(f"   Name: {old_name} → {order_data['name']}")
+        # Update contact information — form data is ALWAYS authoritative
+        old_name = phone_lead.contact_name
+        phone_lead.contact_name = order_data.get('name', '')
+        logger.info(f"   Name: {old_name} → {phone_lead.contact_name}")
 
-        if order_data.get('email'):
-            old_email = phone_lead.contact_email
-            phone_lead.contact_email = order_data['email']
-            logger.info(f"   Email: {old_email} → {order_data['email']}")
+        old_email = phone_lead.contact_email
+        phone_lead.contact_email = order_data.get('email', '')
+        logger.info(f"   Email: {old_email} → {phone_lead.contact_email}")
 
-        if order_data.get('phone'):
-            old_phone = phone_lead.contact_phone
-            phone_lead.contact_phone = order_data['phone']
-            logger.info(f"   Phone: {old_phone} → {order_data['phone']}")
+        old_phone = phone_lead.contact_phone
+        phone_lead.contact_phone = order_data.get('phone', '')
+        logger.info(f"   Phone: {old_phone} → {phone_lead.contact_phone}")
 
-        # Update location if provided
-        if order_data.get('city'):
-            phone_lead.city = order_data['city']
-        if order_data.get('state'):
-            phone_lead.state = order_data['state']
-        if order_data.get('country'):
-            phone_lead.country = order_data['country']
+        # Update location — form data overwrites phone lead data
+        phone_lead.city = order_data.get('city', '') or phone_lead.city
+        phone_lead.state = order_data.get('state', '') or phone_lead.state
+        phone_lead.country = order_data.get('country', '') or phone_lead.country
 
         # Mark as matched with form
         phone_lead.matched_with_form = True
@@ -157,12 +151,14 @@ def update_zoho_lead_stage(phone_lead: 'PhoneCallLead', new_stage: str = 'Order 
     try:
         client = ZohoCRMClient()
 
+        # Stage field name depends on module
+        stage_field = _get_stage_field(phone_lead.zoho_module)
         update_payload = {
-            'Stage': new_stage
+            stage_field: new_stage
         }
 
         logger.info(f"📤 Updating Zoho lead {phone_lead.zoho_lead_id} in {phone_lead.zoho_module}")
-        logger.info(f"   New stage: {new_stage}")
+        logger.info(f"   {stage_field}: {new_stage}")
 
         response = client.update_record(
             phone_lead.zoho_module,
@@ -182,24 +178,52 @@ def update_zoho_lead_stage(phone_lead: 'PhoneCallLead', new_stage: str = 'Order 
         return False
 
 
+def _get_stage_field(zoho_module: str) -> str:
+    """Return the correct stage/status field name for a Zoho module."""
+    stage_field_map = {
+        'Deals': 'Stage',
+        'Embassy_Legalization': 'Status',
+        'Apostille_Services': 'Status',
+        'Translation_Services': 'Translation_Status',
+        'Triple_Seal_Apostilles': 'Stage',
+        'I_9_Verification': 'Stage',
+        'Get_A_Quote_Leads': 'GET_A_QUOTE_LEADS',
+    }
+    return stage_field_map.get(zoho_module, 'Stage')
+
+
+def _get_form_stage(zoho_module: str) -> str:
+    """Return the correct 'order received' stage value per module (from zoho_sync.py)."""
+    form_stage_map = {
+        'Deals': 'Order Received',
+        'Embassy_Legalization': 'Order Received',
+        'Apostille_Services': 'Client placed the request',
+        'Translation_Services': 'Client Placed Request',
+        'Triple_Seal_Apostilles': 'Order Received',
+        'I_9_Verification': 'Order Received',
+        'Get_A_Quote_Leads': 'Order Received',
+    }
+    return form_stage_map.get(zoho_module, 'Order Received')
+
+
 def update_zoho_lead_with_order_data(
     phone_lead: 'PhoneCallLead',
     order_data: Dict[str, Any],
-    new_stage: str = 'Order Received'
+    new_stage: str = None
 ) -> bool:
     """
-    Update Zoho lead with form data AND stage.
+    Update Zoho lead with form data. Optionally update stage.
 
     This updates:
-    - First_Name / Last_Name (from form)
+    - Client Name (from form)
     - Email (from form)
-    - Stage (to "Order Received")
-    - Any other relevant order data
+    - Location (from form)
+    - Stage ONLY if new_stage is provided (None = don't touch stage)
 
     Args:
         phone_lead: PhoneCallLead instance
         order_data: Dictionary with form data
-        new_stage: New stage name
+        new_stage: New stage name, or None to leave stage untouched
 
     Returns:
         True if successful
@@ -216,23 +240,33 @@ def update_zoho_lead_with_order_data(
 
     try:
         client = ZohoCRMClient()
+        zoho_module = phone_lead.zoho_module
 
-        # Build update payload
-        update_payload = {
-            'Stage': new_stage
-        }
+        update_payload = {}
 
-        # Add name if provided
-        if order_data.get('name'):
-            name_parts = order_data['name'].split(' ', 1)
-            update_payload['First_Name'] = name_parts[0] if len(name_parts) > 0 else ''
-            update_payload['Last_Name'] = name_parts[1] if len(name_parts) > 1 else name_parts[0]
+        # Only update stage if explicitly requested
+        if new_stage is not None:
+            stage_field = _get_stage_field(zoho_module)
+            update_payload[stage_field] = new_stage
 
-        # Add email if provided
-        if order_data.get('email'):
-            update_payload['Email'] = order_data['email']
+        # Name/Email field names depend on module — form data always overwrites
+        name = order_data.get('name', '')
+        if zoho_module == 'Deals':
+            update_payload['Name1'] = name
+        elif zoho_module == 'Translation_Services':
+            update_payload['Client_Name1'] = name
+        else:
+            update_payload['Client_Name'] = name
 
-        # Add location if provided
+        email = order_data.get('email', '')
+        if zoho_module == 'Deals':
+            update_payload['Email_1'] = email
+        elif zoho_module in ('Triple_Seal_Apostilles', 'I_9_Verification', 'Get_A_Quote_Leads'):
+            update_payload['Client_Email'] = email
+        else:
+            update_payload['Email'] = email
+
+        # Location — form data overwrites if provided
         if order_data.get('city'):
             update_payload['City'] = order_data['city']
         if order_data.get('state'):
@@ -240,7 +274,7 @@ def update_zoho_lead_with_order_data(
         if order_data.get('country'):
             update_payload['Country'] = order_data['country']
 
-        logger.info(f"📤 Updating Zoho lead {phone_lead.zoho_lead_id} in {phone_lead.zoho_module}")
+        logger.info(f"📤 Updating Zoho lead {phone_lead.zoho_lead_id} in {zoho_module}")
         logger.info(f"   Update payload: {update_payload}")
 
         response = client.update_record(
@@ -304,19 +338,32 @@ def process_order_with_phone_lead_check(
         logger.warning("⚠️ Failed to update phone lead with form data")
         return phone_lead
 
-    # Mark order as synced to prevent Celery task from creating duplicate lead
-    if phone_lead.zoho_lead_id:
-        order_instance.zoho_synced = True
-        order_instance.save(update_fields=['zoho_synced'])
-        logger.info(f"✅ Marked order {order_instance.id} as synced (linked to Zoho lead {phone_lead.zoho_lead_id})")
-        logger.info(f"   This prevents Celery task from creating duplicate lead")
+    # NOTE: We do NOT set order.zoho_synced = True here.
+    # That flag should only be True after data actually reaches Zoho.
+    # Instead, Celery task checks for matched phone lead to decide CREATE vs UPDATE.
+    # zoho_synced will be set to True by Celery after successful Zoho operation.
 
-    # Update Zoho lead with form data and new stage
-    zoho_updated = update_zoho_lead_with_order_data(phone_lead, order_data, 'Order Received')
+    # Check current stage in Zoho before updating
+    # Only advance from "Phone Call Received" → "Order Received"
+    # If manager already moved it further — don't roll back
+    if phone_lead.zoho_lead_id and phone_lead.zoho_module:
+        from ..zoho_sync import get_record_by_id
 
-    if zoho_updated:
-        logger.info(f"✅ Complete: Phone lead matched, updated, and Zoho synced")
+        stage_field = _get_stage_field(phone_lead.zoho_module)
+        record = get_record_by_id(phone_lead.zoho_module, phone_lead.zoho_lead_id, [stage_field])
+        current_stage = record.get(stage_field) if record else None
+
+        if current_stage == 'Phone Call Received':
+            target_stage = _get_form_stage(phone_lead.zoho_module)
+            zoho_updated = update_zoho_lead_with_order_data(phone_lead, order_data, new_stage=target_stage)
+            if zoho_updated:
+                logger.info(f"✅ Moved phone lead from 'Phone Call Received' → '{target_stage}'")
+            else:
+                logger.warning(f"⚠️ Failed to update Zoho lead stage")
+        else:
+            zoho_updated = update_zoho_lead_with_order_data(phone_lead, order_data, new_stage=None)
+            logger.info(f"⏭️ Phone lead already at '{current_stage}', stage untouched, contact data updated")
     else:
-        logger.warning(f"⚠️ Phone lead updated but Zoho update failed")
+        logger.info(f"⏭️ Phone lead not synced to Zoho yet, skipping Zoho update")
 
     return phone_lead

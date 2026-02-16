@@ -16,7 +16,7 @@ def whatconverts_test_webhook(request):
     Test endpoint to receive and log WhatConverts webhook data.
     This is for testing purposes only - logs all incoming data.
 
-    URL: /api/orders/webhook/whatconverts-test/
+    URL: /api/webhook/whatconverts-test/
     """
     # Collect all data
     webhook_data = {
@@ -76,7 +76,7 @@ def whatconverts_webhook(request):
     6. Syncs to Zoho with "Phone Call Received" stage
     7. Checks for matching web form orders
 
-    URL: /api/orders/webhook/whatconverts/
+    URL: /api/webhook/whatconverts/
     """
     if request.method != 'POST':
         return JsonResponse({'error': 'Only POST requests allowed'}, status=405)
@@ -165,5 +165,5 @@ def whatconverts_webhook(request):
         logger.error(f"❌ Webhook processing error: {e}", exc_info=True)
         return JsonResponse({
             'status': 'error',
-            'message': str(e)
+            'message': 'Internal processing error'
         }, status=500)

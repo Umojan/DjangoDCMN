@@ -309,14 +309,14 @@ class PhoneCallLead(models.Model):
 
     # Call details
     call_duration = models.IntegerField(null=True, blank=True, help_text="Duration in seconds")
-    call_recording_url = models.URLField(blank=True, null=True)
+    call_recording_url = models.URLField(max_length=500, blank=True, null=True)
     lead_score = models.IntegerField(null=True, blank=True, help_text="WhatConverts lead score")
     lead_status = models.CharField(max_length=50, blank=True, help_text="WhatConverts lead status")
 
     # Service detection
     detected_service = models.CharField(max_length=100, blank=True, help_text="Auto-detected service from landing URL")
-    landing_url = models.URLField(blank=True)
-    lead_url = models.URLField(blank=True, help_text="Page where lead was generated")
+    landing_url = models.URLField(max_length=500, blank=True)
+    lead_url = models.URLField(max_length=500, blank=True, help_text="Page where lead was generated")
 
     # Attribution data
     source = models.CharField(max_length=100, blank=True)

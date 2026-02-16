@@ -17,52 +17,57 @@ logger = logging.getLogger(__name__)
 # SERVICE DETECTION FROM LANDING URL
 # =============================================================================
 
-SERVICE_URL_PATTERNS = {
-    'apostille': [
-        '/apostille',
+# IMPORTANT: Order matters! More specific patterns must come before generic ones.
+# '/apostille-fbi' must be checked BEFORE '/apostille' to avoid false matches.
+SERVICE_URL_PATTERNS = [
+    ('fbi', [
+        '/apostille-fbi',
+        '/apostille-fbi-form',
+        '/fbi-apostille',
+    ]),
+    ('embassy', [
+        '/embassy-legalization',
+        '/embassy-legalization-form',
+    ]),
+    ('translation', [
+        '/translation-services',
+        '/translation-form',
+        '/translation-languages',
+    ]),
+    ('marriage', [
+        '/triple-seal-marriage',
+        '/seal-marriage-form',
+    ]),
+    ('i9', [
+        '/i-9-verification-form',
+        '/i-9',
+    ]),
+    ('notary', [
+        '/online-notary-form',
+        '/mobile-notary-services',
+    ]),
+    # apostille LAST — generic '/apostille' would match fbi/embassy URLs otherwise
+    ('apostille', [
+        '/apostille-services-form',
         '/ssa-letter-apostille-services',
         '/nara-apostille-services',
         '/uscis-apostille-services',
         '/nationwide-apostille-services',
         '/arlington-apostille',
-        '/apostille-services-form',
-    ],
-    'notary': [
-        '/online-notary-form',
-        '/mobile-notary-services',
-    ],
-    'i9': [
-        '/i-9-verification-form',
-        '/i-9',
-    ],
-    'fbi': [
-        '/apostille-fbi',
-        '/apostille-fbi-form',
-    ],
-    'translation': [
-        '/translation-services',
-        '/translation-form',
-        '/translation-languages',
-    ],
-    'embassy': [
-        '/embassy-legalization',
-        '/embassy-legalization-form',
-    ],
-    'marriage': [
-        '/triple-seal-marriage',
-        '/seal-marriage-form',
-    ],
-}
+        '/apostille',
+    ]),
+]
 
 # Zoho module mapping
 SERVICE_TO_ZOHO_MODULE = {
-    'apostille': 'Apostille_Orders',
-    'notary': 'Notary_Services',
-    'i9': 'I9_Verification',
-    'fbi': 'FBI_Apostille',
-    'translation': 'Translation_Services',
+    'fbi': 'Deals',
     'embassy': 'Embassy_Legalization',
-    'marriage': 'Marriage_Orders',
+    'translation': 'Translation_Services',
+    'apostille': 'Apostille_Services',
+    'marriage': 'Triple_Seal_Apostilles',
+    'i9': 'I_9_Verification',
+    'notary': 'Get_A_Quote_Leads',
+    'quote': 'Get_A_Quote_Leads',
 }
 
 
@@ -83,8 +88,8 @@ def detect_service_from_url(landing_url: str) -> Tuple[Optional[str], Optional[s
         logger.info(f"Ignoring tracking page: {landing_url}")
         return None, None
 
-    # Check each service pattern
-    for service, patterns in SERVICE_URL_PATTERNS.items():
+    # Check each service pattern (order matters — specific patterns first)
+    for service, patterns in SERVICE_URL_PATTERNS:
         for pattern in patterns:
             if pattern in landing_url_lower:
                 zoho_module = SERVICE_TO_ZOHO_MODULE.get(service)
@@ -165,7 +170,7 @@ def find_matching_order(phone: str = None, email: str = None, service_type: str 
     from ..models import (
         FbiApostilleOrder,
         MarriageOrder,
-        EmbassyOrder,
+        EmbassyLegalizationOrder,
         TranslationOrder,
         ApostilleOrder,
         I9VerificationOrder,
@@ -184,7 +189,7 @@ def find_matching_order(phone: str = None, email: str = None, service_type: str 
     order_models = [
         ('fbi', FbiApostilleOrder),
         ('marriage', MarriageOrder),
-        ('embassy', EmbassyOrder),
+        ('embassy', EmbassyLegalizationOrder),
         ('translation', TranslationOrder),
         ('apostille', ApostilleOrder),
         ('i9', I9VerificationOrder),
@@ -218,6 +223,34 @@ def find_matching_order(phone: str = None, email: str = None, service_type: str 
 # WHATCONVERTS WEBHOOK DATA PARSING
 # =============================================================================
 
+def _parse_call_duration(data: Dict) -> Optional[int]:
+    """Extract call duration in seconds from WhatConverts webhook data.
+    WC sends: call_duration_seconds=52, call_duration="52 seconds"
+    """
+    # Prefer numeric seconds field
+    seconds = data.get('call_duration_seconds')
+    if seconds is not None:
+        try:
+            return int(seconds)
+        except (ValueError, TypeError):
+            pass
+
+    # Fallback: parse human-readable "X minutes and Y seconds"
+    duration_str = data.get('call_duration', '')
+    if duration_str and isinstance(duration_str, str):
+        import re
+        total = 0
+        m = re.search(r'(\d+)\s*minute', duration_str)
+        s = re.search(r'(\d+)\s*second', duration_str)
+        if m:
+            total += int(m.group(1)) * 60
+        if s:
+            total += int(s.group(1))
+        return total if total > 0 else None
+
+    return None
+
+
 def parse_whatconverts_webhook(data: Dict) -> Dict:
     """
     Parse and normalize WhatConverts webhook data.
@@ -246,14 +279,14 @@ def parse_whatconverts_webhook(data: Dict) -> Dict:
 
         # Contact info
         'contact_name': data.get('contact_name', ''),
-        'contact_email': data.get('contact_email_address') or data.get('email_address'),
-        'contact_phone': data.get('contact_phone_number') or data.get('phone_number'),
+        'contact_email': data.get('contact_email_address') or data.get('email_address') or data.get('contact_email') or '',
+        'contact_phone': data.get('contact_phone_number') or data.get('phone_number') or data.get('contact_phone') or '',
         'contact_company': data.get('contact_company_name', ''),
 
         # Call details
-        'call_duration': None,  # WhatConverts doesn't send duration for phone calls in this format
-        'call_recording_url': None,
-        'lead_score': data.get('lead_score'),
+        'call_duration': _parse_call_duration(data),
+        'call_recording_url': data.get('play_recording') or data.get('recording') or None,
+        'lead_score': int(data['lead_score']) if data.get('lead_score') is not None else None,
         'lead_status': data.get('lead_status', ''),
 
         # Service detection
@@ -380,8 +413,11 @@ def process_whatconverts_phone_lead(webhook_data: Dict) -> Optional['PhoneCallLe
 
         if duplicate:
             logger.info(f"⚠️ Found duplicate phone lead by contact info: {duplicate.id}")
-            # Update the duplicate with new WhatConverts data
+            # Preserve existing Zoho sync data if already synced
+            preserve_fields = {'zoho_lead_id', 'zoho_attribution_id', 'zoho_synced', 'zoho_module'}
             for key, value in parsed.items():
+                if key in preserve_fields and getattr(duplicate, key, None):
+                    continue  # Don't overwrite existing Zoho IDs
                 setattr(duplicate, key, value)
             duplicate.save()
             phone_lead = duplicate

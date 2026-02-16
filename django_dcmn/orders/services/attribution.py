@@ -79,6 +79,35 @@ LEAD_TYPE_OPTIONS = {
     'manual': 'Manual',               # Manually created
 }
 
+SOURCE_CATEGORIES = {
+    # Paid Search
+    'google ads': 'Google Ads',
+    'google': 'Google Ads',
+    'bing ads': 'Bing Ads',
+    'bing': 'Bing Ads',
+
+    # Social Media
+    'facebook': 'Facebook',
+    'facebook ads': 'Facebook',
+    'instagram': 'Instagram',
+    'instagram ads': 'Instagram',
+    'linkedin': 'LinkedIn',
+    'twitter': 'Twitter',
+
+    # Organic
+    'organic': 'Organic Search',
+    'google organic': 'Organic Search',
+
+    # Referral
+    'referral': 'Referral',
+
+    # Direct
+    'direct': 'Direct',
+
+    # Other
+    'other': 'Other',
+}
+
 
 # =============================================================================
 # DATA EXTRACTION & CLEANING
