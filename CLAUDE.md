@@ -24,6 +24,7 @@ django_dcmn/
 │       ├── phone_lead_matcher.py    # Phone↔Form matching, conditional stage advancement
 │       ├── whatconverts.py           # WhatConverts webhook parsing, service detection, dedup
 │       ├── whatconverts_zoho.py      # Phone lead → Zoho CRM sync
+│       ├── zoho_update.py            # Update existing Zoho record with form data (matched phone lead)
 │       ├── files.py                 # File attachment handling
 │       ├── notifications.py         # Staff email notifications
 │       └── tracking.py              # Order tracking (TID creation)
@@ -596,3 +597,28 @@ When phone lead sets `order.zoho_synced = True`, this task becomes a no-op.
 15. **Triple_Seal address field is `Client_Address`** not `Address` — same for Translation_Services
 16. **Get_A_Quote_Leads address is `Client_Address_Location`** — unique among all modules
 17. **PhoneCallLead URLField max_length=500** — increased from default 200 (migration 0027)
+18. **Form data is ALWAYS authoritative** — when form matches phone lead, name/email/phone from form ALWAYS overwrite phone lead data (no conditional guards)
+19. **zoho_sync.py address fields fixed** — Translation uses `Client_Address`, Marriage uses `Client_Address` (not `Address`)
+20. **zoho_update.py mirrors zoho_sync.py** — same field names for each module, but excludes stage field (handled by phone_lead_matcher.py)
+21. **WhatConverts call_duration & recording** — `_parse_call_duration(data)` extracts seconds from `call_duration_seconds` or parses human-readable `call_duration`. Recording URL prefers `play_recording` over `recording`
+22. **Production URL**: `https://api.dcmobilenotary.net` (MUST use HTTPS, HTTP returns "Invalid JSON payload")
+
+---
+
+## Zoho Update Flow (zoho_update.py)
+
+When a form matches an existing phone lead that's already synced to Zoho:
+
+```
+sync_order_to_zoho_task (Celery)
+  → checks order.zoho_synced
+  → If True: calls update_matched_zoho_record()
+    → Finds PhoneCallLead by matched_order_type + matched_order_id
+    → Builds full update payload (_build_full_update_payload)
+    → Updates existing Zoho record (no duplicate creation)
+    → Attaches files to existing Zoho record
+    → Includes Tracking_ID in payload
+  → If False: creates new Zoho record (normal flow)
+```
+
+**Key**: `zoho_update.py` does NOT set stage — stage is handled earlier by `phone_lead_matcher.py` with conditional logic (only advance from "Phone Call Received", never roll back).
