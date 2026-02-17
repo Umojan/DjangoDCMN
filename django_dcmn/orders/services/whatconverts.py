@@ -269,9 +269,10 @@ def parse_whatconverts_webhook(data: Dict) -> Dict:
     if data.get('date_created'):
         created_at = parse_datetime(data['date_created'])
 
-    # Detect service from landing URL
+    # Detect service from Lead URL (more accurate than landing page)
     landing_url = data.get('landing_url', '')
-    detected_service, zoho_module = detect_service_from_url(landing_url)
+    lead_url = data.get('lead_url', '')
+    detected_service, zoho_module = detect_service_from_url(lead_url or landing_url)
 
     parsed = {
         # Identifiers
