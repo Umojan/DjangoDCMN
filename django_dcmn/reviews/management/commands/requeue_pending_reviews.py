@@ -1,3 +1,5 @@
+import time
+
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
@@ -71,9 +73,11 @@ class Command(BaseCommand):
                         rr.save(update_fields=['is_sent', 'sent_at'])
                         sent += 1
                         self.stdout.write(self.style.SUCCESS(f"    → Sent {rr.review_type} email"))
+                        time.sleep(1)  # Resend rate limit: 2 req/sec
                     except Exception as e:
                         failed += 1
                         self.stdout.write(self.style.ERROR(f"    → FAILED: {e}"))
+                        time.sleep(1)
 
             if execute:
                 self.stdout.write(f"\nTyped results: {sent} sent, {failed} failed")
