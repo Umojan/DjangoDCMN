@@ -31,8 +31,8 @@ def _get_contact_by_email(email: str, access_token: str) -> dict | None:
     headers = {"Authorization": f"Zoho-oauthtoken {access_token}"}
     search_url = f"{ZOHO_API_DOMAIN}/crm/v2/Contacts/search?email={email}"
     
-    resp = requests.get(search_url, headers=headers)
-    
+    resp = requests.get(search_url, headers=headers, timeout=30)
+
     if resp.status_code == 200:
         data = resp.json()
         if 'data' in data and len(data['data']) > 0:
@@ -65,7 +65,7 @@ def _create_contact(name: str, email: str, phone: str, access_token: str) -> str
         }]
     }
     
-    resp = requests.post(create_url, headers=headers, json=payload)
+    resp = requests.post(create_url, headers=headers, json=payload, timeout=30)
     
     try:
         data = resp.json()
@@ -116,7 +116,9 @@ def process_review_request_task(self, review_request_id: int):
     """
     from .models import ReviewRequest
     from orders.zoho_sync import get_access_token, ZOHO_API_DOMAIN
-    
+
+    logger.info(f"🔄 Starting review task for id={review_request_id}")
+
     try:
         review_request = ReviewRequest.objects.get(id=review_request_id)
     except ReviewRequest.DoesNotExist:
@@ -129,7 +131,9 @@ def process_review_request_task(self, review_request_id: int):
         return
 
     try:
+        logger.info(f"Getting Zoho access token...")
         access_token = get_access_token()
+        logger.info(f"Got token, processing {review_request.email}")
         
         # 1. Get or find Contact ID
         contact_id = review_request.zoho_contact_id
@@ -166,7 +170,7 @@ def process_review_request_task(self, review_request_id: int):
             # Contact ID provided, fetch leads_won from Zoho
             headers = {"Authorization": f"Zoho-oauthtoken {access_token}"}
             contact_url = f"{ZOHO_API_DOMAIN}/crm/v2/Contacts/{contact_id}"
-            resp = requests.get(contact_url, headers=headers, params={'fields': ZOHO_LEADS_WON_FIELD})
+            resp = requests.get(contact_url, headers=headers, params={'fields': ZOHO_LEADS_WON_FIELD}, timeout=30)
             
             if resp.status_code == 200:
                 data = resp.json()
@@ -213,7 +217,7 @@ def process_review_request_task(self, review_request_id: int):
                 ZOHO_LEADS_WON_FIELD: new_leads_won
             }]
         }
-        update_resp = requests.put(update_url, headers=headers, json=update_payload)
+        update_resp = requests.put(update_url, headers=headers, json=update_payload, timeout=30)
         
         if update_resp.status_code in (200, 201):
             logger.info(f"Updated {ZOHO_LEADS_WON_FIELD}={new_leads_won} for contact {contact_id}")

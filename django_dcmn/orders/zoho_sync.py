@@ -73,7 +73,7 @@ def get_access_token(force_refresh=False):
         "client_secret": settings.ZOHO_CLIENT_SECRET,
         "grant_type": "refresh_token"
     }
-    resp = requests.post(url, params=params)
+    resp = requests.post(url, params=params, timeout=30)
     resp.raise_for_status()
     token = resp.json()["access_token"]
 
