@@ -187,6 +187,7 @@ def _get_stage_field(zoho_module: str) -> str:
         'Translation_Services': 'Translation_Status',
         'Triple_Seal_Apostilles': 'Stage',
         'I_9_Verification': 'Stage',
+        'Notary_Services': 'Notary_Stages',
         'Get_A_Quote_Leads': 'GET_A_QUOTE_LEADS',
     }
     return stage_field_map.get(zoho_module, 'Stage')
@@ -201,6 +202,7 @@ def _get_form_stage(zoho_module: str) -> str:
         'Translation_Services': 'Client Placed Request',
         'Triple_Seal_Apostilles': 'Order Received',
         'I_9_Verification': 'Order Received',
+        'Notary_Services': 'Order Received',
         'Get_A_Quote_Leads': 'Order Received',
     }
     return form_stage_map.get(zoho_module, 'Order Received')
@@ -261,7 +263,7 @@ def update_zoho_lead_with_order_data(
         email = order_data.get('email', '')
         if zoho_module == 'Deals':
             update_payload['Email_1'] = email
-        elif zoho_module in ('Triple_Seal_Apostilles', 'I_9_Verification', 'Get_A_Quote_Leads'):
+        elif zoho_module in ('Triple_Seal_Apostilles', 'I_9_Verification', 'Get_A_Quote_Leads', 'Notary_Services'):
             update_payload['Client_Email'] = email
         else:
             update_payload['Email'] = email

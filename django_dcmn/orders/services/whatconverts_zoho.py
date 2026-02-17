@@ -4,6 +4,7 @@ Zoho CRM sync for WhatConverts phone leads.
 """
 
 import logging
+import requests
 from typing import Dict, Optional
 from .attribution import build_zoho_attribution_payload, SOURCE_CATEGORIES
 
@@ -71,6 +72,11 @@ def sync_phone_lead_to_zoho(phone_lead: 'PhoneCallLead') -> bool:
 
         logger.info(f"✅ Created lead in Zoho {zoho_module}: {lead_id}")
 
+        # Create/find Contact and link to lead
+        contact_id = _get_or_create_contact_for_phone_lead(phone_lead)
+        if contact_id:
+            _link_contact_to_lead(zoho_module, lead_id, contact_id, client)
+
         # Create Attribution Record
         attribution_id = create_attribution_record(phone_lead, lead_id, zoho_module, client)
 
@@ -84,6 +90,117 @@ def sync_phone_lead_to_zoho(phone_lead: 'PhoneCallLead') -> bool:
     except Exception as e:
         logger.error(f"❌ Error syncing phone lead {phone_lead.id} to Zoho: {e}", exc_info=True)
         return False
+
+
+# Module → Contact lookup field name
+CONTACT_LOOKUP_FIELD = {
+    'Deals': 'Client_Contact',
+    'Triple_Seal_Apostilles': 'Client_Contact',
+    'I_9_Verification': 'Client_Contact',
+    'Notary_Services': 'Client_Name',
+    'Get_A_Quote_Leads': 'Name_of_Client',
+    # Embassy, Apostille, Translation — no contact lookup field in Zoho
+}
+
+
+def _get_or_create_contact_for_phone_lead(phone_lead: 'PhoneCallLead') -> Optional[str]:
+    """
+    Find or create a Zoho Contact for a phone lead.
+    Search order: phone number first, then email.
+
+    Returns:
+        Contact ID or None
+    """
+    from ..zoho_sync import get_access_token, ZOHO_API_DOMAIN
+
+    phone = phone_lead.contact_phone
+    email = phone_lead.contact_email
+    name = phone_lead.contact_name or 'Phone Lead'
+
+    if not phone and not email:
+        logger.info(f"⏭️ No phone or email for phone lead {phone_lead.id}, skipping contact creation")
+        return None
+
+    try:
+        access_token = get_access_token()
+        headers = {
+            "Authorization": f"Zoho-oauthtoken {access_token}",
+            "Content-Type": "application/json"
+        }
+
+        # 1. Search by phone number
+        if phone:
+            search_url = f"{ZOHO_API_DOMAIN}/crm/v2/Contacts/search?phone={phone}"
+            resp = requests.get(search_url, headers=headers, timeout=30)
+            if resp.status_code == 200:
+                data = resp.json()
+                if 'data' in data and len(data['data']) > 0:
+                    contact_id = data['data'][0]['id']
+                    logger.info(f"📇 Found existing contact by phone {phone}: {contact_id}")
+                    return contact_id
+
+        # 2. Search by email
+        if email:
+            search_url = f"{ZOHO_API_DOMAIN}/crm/v2/Contacts/search?email={email}"
+            resp = requests.get(search_url, headers=headers, timeout=30)
+            if resp.status_code == 200:
+                data = resp.json()
+                if 'data' in data and len(data['data']) > 0:
+                    contact_id = data['data'][0]['id']
+                    logger.info(f"📇 Found existing contact by email {email}: {contact_id}")
+                    return contact_id
+
+        # 3. Create new contact
+        create_url = f"{ZOHO_API_DOMAIN}/crm/v2/Contacts"
+        payload = {
+            "data": [{
+                "Last_Name": name,
+                "Email": email or "",
+                "Phone": phone or "",
+            }]
+        }
+        resp = requests.post(create_url, headers=headers, json=payload, timeout=30)
+
+        try:
+            data = resp.json()
+            if 'data' in data and len(data['data']) > 0:
+                item = data['data'][0]
+                if 'details' in item:
+                    contact_id = item['details']['id']
+                    logger.info(f"📇 Created new contact for {name}: {contact_id}")
+                    return contact_id
+                elif item.get('code') == 'DUPLICATE_DATA' and 'details' in item:
+                    contact_id = item['details']['id']
+                    logger.info(f"📇 Contact already exists (duplicate): {contact_id}")
+                    return contact_id
+        except (KeyError, IndexError, TypeError):
+            pass
+
+        logger.warning(f"⚠️ Failed to create contact for phone lead {phone_lead.id}: {resp.text}")
+        return None
+
+    except Exception as e:
+        logger.error(f"❌ Error creating contact for phone lead {phone_lead.id}: {e}", exc_info=True)
+        return None
+
+
+def _link_contact_to_lead(zoho_module: str, lead_id: str, contact_id: str, client: 'ZohoCRMClient'):
+    """
+    Link a Zoho Contact to a lead record via the module's lookup field.
+    Silently skips modules that don't have a contact lookup field.
+    """
+    lookup_field = CONTACT_LOOKUP_FIELD.get(zoho_module)
+    if not lookup_field:
+        logger.info(f"⏭️ Module {zoho_module} has no contact lookup field, skipping link")
+        return
+
+    link_payload = {lookup_field: {"id": contact_id}}
+    response = client.update_record(zoho_module, lead_id, link_payload)
+
+    if response:
+        logger.info(f"🔗 Linked contact {contact_id} to {zoho_module} record {lead_id} via {lookup_field}")
+    else:
+        logger.warning(f"⚠️ Failed to link contact {contact_id} to {zoho_module} record {lead_id}")
 
 
 def build_zoho_lead_payload(phone_lead: 'PhoneCallLead') -> Dict:
@@ -191,6 +308,16 @@ def build_zoho_lead_payload(phone_lead: 'PhoneCallLead') -> Dict:
             'Client_Email': phone_lead.contact_email,
             'Client_Phone': phone_lead.contact_phone,
             'Stage': 'Phone Call Received',
+            'Client_Comments': description,
+        }
+
+    # --- Notary_Services ---
+    elif zoho_module == 'Notary_Services':
+        payload = {
+            'Name': f"Notary Phone Lead — {name}",
+            'Client_Email': phone_lead.contact_email,
+            'Client_Phone_Number': phone_lead.contact_phone,
+            'Notary_Stages': 'Phone Call Received',
             'Client_Comments': description,
         }
 

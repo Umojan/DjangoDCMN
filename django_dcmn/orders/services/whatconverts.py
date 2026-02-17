@@ -66,7 +66,7 @@ SERVICE_TO_ZOHO_MODULE = {
     'apostille': 'Apostille_Services',
     'marriage': 'Triple_Seal_Apostilles',
     'i9': 'I_9_Verification',
-    'notary': 'Get_A_Quote_Leads',
+    'notary': 'Notary_Services',
     'quote': 'Get_A_Quote_Leads',
 }
 
