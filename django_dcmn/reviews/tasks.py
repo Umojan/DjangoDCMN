@@ -88,16 +88,24 @@ def _get_service_label(module: str) -> str:
         'FBI_Background_Checks': 'FBI Apostille',
         'Deals': 'FBI Apostille',
         'Triple_Seal_Apostilles': 'Triple Seal Marriage',
+        'Triple Seal': 'Triple Seal Marriage',
+        'Marriage': 'Triple Seal Marriage',
         'Embassy_Legalization': 'Embassy Legalization',
+        'Embassy Legalization': 'Embassy Legalization',
+        'Embassy': 'Embassy Legalization',
         'Apostille_Services': 'Apostille',
+        'Apostille': 'Apostille',
         'Translation_Services': 'Translation',
+        'Translation': 'Translation',
         'I_9_Verification': 'I-9 Verification',
+        'I-9': 'I-9 Verification',
+        'Notary': 'Notary Service',
     }
     return labels.get(module, module or 'Notary Service')
 
 
-@shared_task
-def process_review_request_task(review_request_id: int):
+@shared_task(bind=True, max_retries=3, default_retry_delay=300)
+def process_review_request_task(self, review_request_id: int):
     """
     Main task for processing review request:
     1. Get or create Contact in Zoho (if contact_id not provided)
@@ -114,7 +122,12 @@ def process_review_request_task(review_request_id: int):
     except ReviewRequest.DoesNotExist:
         logger.error(f"ReviewRequest {review_request_id} not found")
         return
-    
+
+    # Skip already processed reviews (prevents re-processing on retry)
+    if review_request.is_sent:
+        logger.info(f"ReviewRequest {review_request_id} already sent, skipping")
+        return
+
     try:
         access_token = get_access_token()
         
@@ -223,6 +236,7 @@ def process_review_request_task(review_request_id: int):
         
     except Exception as e:
         logger.exception(f"❌ Failed to process ReviewRequest {review_request_id}: {e}")
+        raise self.retry(exc=e)
 
 
 def _send_google_review_email(review_request):
