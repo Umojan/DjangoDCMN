@@ -97,9 +97,11 @@ CONTACT_LOOKUP_FIELD = {
     'Deals': 'Client_Contact',
     'Triple_Seal_Apostilles': 'Client_Contact',
     'I_9_Verification': 'Client_Contact',
+    'Embassy_Legalization': 'Client_Contact',
+    'Apostille_Services': 'Client_Contact',
+    'Translation_Services': 'Client_Contact',
     'Notary_Services': 'Client_Name',
     'Get_A_Quote_Leads': 'Name_of_Client',
-    # Embassy, Apostille, Translation — no contact lookup field in Zoho
 }
 
 
