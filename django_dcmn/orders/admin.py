@@ -18,6 +18,7 @@ from .models import (
     ApostilleOrder,
     I9VerificationOrder,
     QuoteRequest,
+    PreCheckSubmission,
     PhoneCallLead,
     Track,
 )
@@ -120,6 +121,15 @@ class QuoteRequestOrderAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'email', 'appointment_date', 'appointment_time', 'zoho_synced', 'created_at')
     list_filter = ('zoho_synced', 'created_at')
     search_fields = ('name', 'email', 'phone', 'address')
+
+
+# ====== Pre-Check ======
+@admin.register(PreCheckSubmission)
+class PreCheckSubmissionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'email', 'document_type', 'destination_country', 'zoho_synced', 'created_at')
+    list_filter = ('zoho_synced', 'created_at')
+    search_fields = ('name', 'email', 'phone', 'document_type', 'destination_country')
+    inlines = [FileAttachmentInline]
 
 
 @admin.register(PhoneCallLead)

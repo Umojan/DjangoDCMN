@@ -517,3 +517,29 @@ def sync_quote_request_to_zoho(order):
     }
 
     return sync_order_with_attribution(order, zoho_module, data, attach_files=False)
+
+
+def sync_precheck_to_zoho(order):
+    contact_id = get_or_create_contact_id(order.name, order.email, order.phone)
+    zoho_module = 'Get_A_Quote_Leads'
+
+    data = {
+        "data": [
+            {
+                "Name": f"Pre-Check ID{order.id}",
+                "Client_Name": order.name,
+                "Client_Email": order.email,
+                "Client_Phone": order.phone,
+                "Document_Type": order.document_type,
+                "Country_of_Use": order.destination_country,
+
+                'GET_A_QUOTE_LEADS': 'Pre-Check Document Review',
+
+                "Client_Comments": order.comments or "",
+
+                "Name_of_Client": {"id": contact_id}
+            }
+        ]
+    }
+
+    return sync_order_with_attribution(order, zoho_module, data, attach_files=True)

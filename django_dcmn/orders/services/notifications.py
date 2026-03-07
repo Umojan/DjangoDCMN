@@ -46,6 +46,11 @@ ORDER_EMAIL_CONFIG = {
         'thread_prefix': 'marriage-orders-thread',
         'message_prefix': 'marriage-order',
     },
+    'pre-check': {
+        'subject_prefix': '🔍 New Pre-Check Document Review',
+        'thread_prefix': 'precheck-thread',
+        'message_prefix': 'precheck',
+    },
 }
 
 
@@ -168,5 +173,12 @@ def build_order_extra_body(order, order_type: str) -> str:
             f"Services: {order.services}\n\n"
             f"Message: \n{order.comments or ''}"
         )
-    
+
+    elif order_type == 'pre-check':
+        extra = (
+            f"Document Type: {order.document_type}\n"
+            f"Destination Country: {order.destination_country}\n"
+            f"Comments: {order.comments or ''}"
+        )
+
     return extra

@@ -14,6 +14,7 @@ from ..serializers import (
     TranslationOrderSerializer,
     QuoteRequestSerializer,
     I9OrderSerializer,
+    PreCheckSubmissionSerializer,
 )
 from ..models import (
     FbiApostilleOrder,
@@ -26,6 +27,7 @@ from ..models import (
     TranslationOrder,
     ApostilleOrder,
     I9VerificationOrder,
+    PreCheckSubmission,
     FileAttachment,
 )
 from ..services import process_new_order, save_file_attachments
@@ -299,4 +301,46 @@ class CreateI9OrderView(APIView):
         return Response({
             'message': 'I-9 Verification order created',
             'order_id': order.id
+        }, status=status.HTTP_201_CREATED)
+
+
+class CreatePreCheckView(APIView):
+    """Create Pre-Check Document Review submission with Zoho sync and staff notification."""
+
+    def post(self, request, format=None):
+        serializer = PreCheckSubmissionSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        order = serializer.save()
+
+        # Process attribution data
+        process_attribution(request, order)
+
+        # Save file attachments
+        file_urls = save_file_attachments(request, PreCheckSubmission, order)
+
+        # Sync to Zoho
+        try:
+            sync_order_to_zoho_task.delay(order.id, "pre-check")
+        except Exception:
+            logger.exception("Failed to enqueue Zoho sync task for pre-check %s", order.id)
+
+        # Send staff notification
+        from ..services.notifications import send_staff_notification, build_order_extra_body
+        from ..services.files import build_file_links
+
+        extra_body = build_order_extra_body(order, 'pre-check')
+        file_links = build_file_links(request, order, html=False)
+        send_staff_notification(
+            order=order,
+            order_type='pre-check',
+            extra_body=extra_body,
+            file_links=file_links,
+        )
+
+        return Response({
+            'message': 'Pre-check submission created',
+            'order_id': order.id,
+            'file_urls': file_urls or None,
         }, status=status.HTTP_201_CREATED)

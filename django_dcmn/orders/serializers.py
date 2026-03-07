@@ -14,6 +14,7 @@ from .models import (
     ApostilleOrder,
     I9VerificationOrder,
     QuoteRequest,
+    PreCheckSubmission,
     Track,
 )
 
@@ -114,6 +115,14 @@ class I9OrderSerializer(serializers.ModelSerializer):
 class QuoteRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = QuoteRequest
+        fields = '__all__'
+        read_only_fields = ('zoho_synced', 'created_at', 'attribution_data')
+
+
+# ====== Pre-Check ======
+class PreCheckSubmissionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PreCheckSubmission
         fields = '__all__'
         read_only_fields = ('zoho_synced', 'created_at', 'attribution_data')
 

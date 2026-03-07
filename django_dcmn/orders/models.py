@@ -294,6 +294,33 @@ class QuoteRequest(models.Model):
         verbose_name_plural = 'Quote — Requests'
 
 
+class PreCheckSubmission(models.Model):
+    name = models.CharField(max_length=255)
+    email = models.EmailField()
+    phone = models.CharField(max_length=50)
+    document_type = models.CharField(max_length=255, help_text="Type of document for pre-check review")
+    destination_country = models.CharField(max_length=100, help_text="Country where the document is intended for")
+    comments = models.TextField(blank=True, null=True)
+
+    zoho_synced = models.BooleanField(default=False)
+    attribution_data = models.JSONField(blank=True, null=True, help_text="Marketing attribution data")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    file_attachments = GenericRelation(
+        FileAttachment,
+        content_type_field='content_type',
+        object_id_field='object_id',
+        related_query_name='precheck_submission'
+    )
+
+    def __str__(self):
+        return f"Pre-Check #{self.id} by {self.name}"
+
+    class Meta:
+        verbose_name = 'Pre-Check — Submission'
+        verbose_name_plural = 'Pre-Check — Submissions'
+
+
 # --- Phone Call Leads (WhatConverts) ---
 class PhoneCallLead(models.Model):
     """Store phone call leads from WhatConverts"""

@@ -12,6 +12,7 @@ from .orders import (
     CreateTranslationOrderView,
     CreateQuoteRequestView,
     CreateI9OrderView,
+    CreatePreCheckView,
     FbiOptionsView,
 )
 
@@ -45,6 +46,7 @@ __all__ = [
     'CreateTranslationOrderView',
     'CreateQuoteRequestView',
     'CreateI9OrderView',
+    'CreatePreCheckView',
     'FbiOptionsView',
     # Stripe
     'CreateStripeSessionView',
