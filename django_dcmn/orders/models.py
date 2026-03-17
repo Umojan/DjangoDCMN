@@ -294,6 +294,32 @@ class QuoteRequest(models.Model):
         verbose_name_plural = 'Quote — Requests'
 
 
+class FingerprintingSubmission(models.Model):
+    SERVICE_LOCATION_CHOICES = [
+        ('Office', 'Office'),
+        ('Mobile', 'Mobile'),
+    ]
+
+    name = models.CharField(max_length=255)
+    email = models.EmailField()
+    phone = models.CharField(max_length=50)
+    preferred_date = models.CharField(max_length=50)
+    preferred_time = models.CharField(max_length=50)
+    service_location = models.CharField(max_length=20, choices=SERVICE_LOCATION_CHOICES)
+    address = models.TextField(blank=True, null=True, help_text="Required for mobile service")
+
+    zoho_synced = models.BooleanField(default=False)
+    attribution_data = models.JSONField(blank=True, null=True, help_text="Marketing attribution data")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Fingerprinting #{self.id} by {self.name}"
+
+    class Meta:
+        verbose_name = 'Fingerprinting — Submission'
+        verbose_name_plural = 'Fingerprinting — Submissions'
+
+
 class PreCheckSubmission(models.Model):
     name = models.CharField(max_length=255)
     email = models.EmailField()

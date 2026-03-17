@@ -51,6 +51,11 @@ ORDER_EMAIL_CONFIG = {
         'thread_prefix': 'precheck-thread',
         'message_prefix': 'precheck',
     },
+    'fingerprinting': {
+        'subject_prefix': '🖐️ New Fingerprinting Appointment',
+        'thread_prefix': 'fingerprinting-thread',
+        'message_prefix': 'fingerprinting',
+    },
 }
 
 
@@ -173,6 +178,14 @@ def build_order_extra_body(order, order_type: str) -> str:
             f"Services: {order.services}\n\n"
             f"Message: \n{order.comments or ''}"
         )
+
+    elif order_type == 'fingerprinting':
+        extra = (
+            f"Date: {order.preferred_date}, Time: {order.preferred_time}\n"
+            f"Service Location: {order.service_location}\n"
+        )
+        if order.service_location == 'Mobile' and order.address:
+            extra += f"Address: {order.address}\n"
 
     elif order_type == 'pre-check':
         extra = (

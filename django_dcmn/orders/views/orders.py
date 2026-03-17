@@ -15,6 +15,7 @@ from ..serializers import (
     QuoteRequestSerializer,
     I9OrderSerializer,
     PreCheckSubmissionSerializer,
+    FingerprintingSubmissionSerializer,
 )
 from ..models import (
     FbiApostilleOrder,
@@ -28,6 +29,7 @@ from ..models import (
     ApostilleOrder,
     I9VerificationOrder,
     PreCheckSubmission,
+    FingerprintingSubmission,
     FileAttachment,
 )
 from ..services import process_new_order, save_file_attachments
@@ -343,4 +345,57 @@ class CreatePreCheckView(APIView):
             'message': 'Pre-check submission created',
             'order_id': order.id,
             'file_urls': file_urls or None,
+        }, status=status.HTTP_201_CREATED)
+
+
+class CreateFingerprintingView(APIView):
+    """Create Fingerprinting submission with staff + client email notifications."""
+
+    def post(self, request, format=None):
+        serializer = FingerprintingSubmissionSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        order = serializer.save()
+
+        # Process attribution data
+        process_attribution(request, order)
+
+        # Send staff notification
+        from ..services.notifications import send_staff_notification, build_order_extra_body
+
+        extra_body = build_order_extra_body(order, 'fingerprinting')
+        send_staff_notification(
+            order=order,
+            order_type='fingerprinting',
+            extra_body=extra_body,
+        )
+
+        # Send client confirmation email
+        from django.template.loader import render_to_string
+        from django.core.mail import send_mail
+        from django.conf import settings as django_settings
+
+        html_content = render_to_string('emails/fingerprinting_confirmation.html', {
+            'name': order.name,
+            'preferred_date': order.preferred_date,
+            'preferred_time': order.preferred_time,
+            'service_location': order.service_location,
+            'address': order.address or '',
+        })
+        try:
+            send_mail(
+                subject='Fingerprinting Appointment — DC Mobile Notary',
+                message='Your fingerprinting appointment has been received.',
+                from_email=getattr(django_settings, 'DEFAULT_FROM_EMAIL', 'support@dcmobilenotary.net'),
+                recipient_list=[order.email],
+                html_message=html_content,
+                fail_silently=False,
+            )
+        except Exception:
+            logger.exception("Failed to send client email for fingerprinting %s", order.id)
+
+        return Response({
+            'message': 'Fingerprinting submission created',
+            'order_id': order.id,
         }, status=status.HTTP_201_CREATED)

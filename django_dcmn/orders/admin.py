@@ -19,6 +19,7 @@ from .models import (
     I9VerificationOrder,
     QuoteRequest,
     PreCheckSubmission,
+    FingerprintingSubmission,
     PhoneCallLead,
     Track,
 )
@@ -130,6 +131,14 @@ class PreCheckSubmissionAdmin(admin.ModelAdmin):
     list_filter = ('zoho_synced', 'created_at')
     search_fields = ('name', 'email', 'phone', 'document_type', 'destination_country')
     inlines = [FileAttachmentInline]
+
+
+# ====== Fingerprinting ======
+@admin.register(FingerprintingSubmission)
+class FingerprintingSubmissionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'email', 'preferred_date', 'preferred_time', 'service_location', 'created_at')
+    list_filter = ('service_location', 'created_at')
+    search_fields = ('name', 'email', 'phone', 'address')
 
 
 @admin.register(PhoneCallLead)

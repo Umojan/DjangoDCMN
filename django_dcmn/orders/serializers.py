@@ -15,6 +15,7 @@ from .models import (
     I9VerificationOrder,
     QuoteRequest,
     PreCheckSubmission,
+    FingerprintingSubmission,
     Track,
 )
 
@@ -115,6 +116,14 @@ class I9OrderSerializer(serializers.ModelSerializer):
 class QuoteRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = QuoteRequest
+        fields = '__all__'
+        read_only_fields = ('zoho_synced', 'created_at', 'attribution_data')
+
+
+# ====== Fingerprinting ======
+class FingerprintingSubmissionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FingerprintingSubmission
         fields = '__all__'
         read_only_fields = ('zoho_synced', 'created_at', 'attribution_data')
 
