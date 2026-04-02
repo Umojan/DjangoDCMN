@@ -22,6 +22,7 @@ class FbiServicePackage(models.Model):
     code = models.CharField(max_length=50, unique=True)
     label = models.CharField(max_length=255)
     price = models.DecimalField(max_digits=7, decimal_places=2)
+    sort_order = models.PositiveIntegerField(default=0, help_text='Lower number = shown first on frontend')
 
     def __str__(self):
         return self.label
@@ -29,6 +30,7 @@ class FbiServicePackage(models.Model):
     class Meta:
         verbose_name = 'FBI Apostille — Service Package'
         verbose_name_plural = 'FBI Apostille — Service Packages'
+        ordering = ['sort_order', 'id']
 
 
 # ---------- Files ------------

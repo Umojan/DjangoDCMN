@@ -48,7 +48,8 @@ class ShippingOptionAdmin(admin.ModelAdmin):
 # ====== FBI ======
 @admin.register(FbiServicePackage)
 class ServicePackageAdmin(admin.ModelAdmin):
-    list_display = ("label", "code", "price")
+    list_display = ("label", "code", "price", "sort_order")
+    list_editable = ("sort_order",)
 
 
 @admin.register(FbiPricingSettings)
