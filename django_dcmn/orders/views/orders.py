@@ -382,11 +382,16 @@ class CreateFingerprintingView(APIView):
             'preferred_time': order.preferred_time,
             'service_location': order.service_location,
             'address': order.address or '',
+            'service_type_display': order.get_service_type_display() if order.service_type else '',
         })
         try:
             send_mail(
-                subject='Fingerprinting Appointment — DC Mobile Notary',
-                message='Your fingerprinting appointment has been received.',
+                subject='Fingerprinting Inquiry Received — DC Mobile Notary',
+                message=(
+                    'Thank you for submitting your inquiry. We will get back to you '
+                    'within approximately 30 minutes with a service quote. '
+                    'For urgent requests, please call us at (202) 247-0837.'
+                ),
                 from_email=getattr(django_settings, 'DEFAULT_FROM_EMAIL', 'support@dcmobilenotary.net'),
                 recipient_list=[order.email],
                 html_message=html_content,

@@ -302,9 +302,22 @@ class FingerprintingSubmission(models.Model):
         ('Mobile', 'Mobile'),
     ]
 
+    SERVICE_TYPE_CHOICES = [
+        ('fbi', 'FBI Departmental Order Live Scan'),
+        ('fd258', 'FD-258 Print-to-Card Fingerprinting'),
+        ('fdle', 'FDLE Fingerprinting (Florida)'),
+        ('atf', 'ATF Fingerprinting'),
+    ]
+
     name = models.CharField(max_length=255)
     email = models.EmailField()
     phone = models.CharField(max_length=50)
+    service_type = models.CharField(
+        max_length=20,
+        choices=SERVICE_TYPE_CHOICES,
+        blank=True,
+        help_text="Which fingerprinting service the client needs (for quote)",
+    )
     preferred_date = models.CharField(max_length=50)
     preferred_time = models.CharField(max_length=50)
     service_location = models.CharField(max_length=20, choices=SERVICE_LOCATION_CHOICES)

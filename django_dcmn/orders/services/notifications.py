@@ -180,7 +180,9 @@ def build_order_extra_body(order, order_type: str) -> str:
         )
 
     elif order_type == 'fingerprinting':
+        service_label = order.get_service_type_display() if order.service_type else 'Not specified'
         extra = (
+            f"Service Needed: {service_label}\n"
             f"Date: {order.preferred_date}, Time: {order.preferred_time}\n"
             f"Service Location: {order.service_location}\n"
         )

@@ -137,8 +137,8 @@ class PreCheckSubmissionAdmin(admin.ModelAdmin):
 # ====== Fingerprinting ======
 @admin.register(FingerprintingSubmission)
 class FingerprintingSubmissionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'email', 'preferred_date', 'preferred_time', 'service_location', 'created_at')
-    list_filter = ('service_location', 'created_at')
+    list_display = ('id', 'name', 'email', 'service_type', 'preferred_date', 'preferred_time', 'service_location', 'created_at')
+    list_filter = ('service_type', 'service_location', 'created_at')
     search_fields = ('name', 'email', 'phone', 'address')
 
 
