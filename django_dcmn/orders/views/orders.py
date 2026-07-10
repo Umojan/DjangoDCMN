@@ -361,6 +361,12 @@ class CreateFingerprintingView(APIView):
         # Process attribution data
         process_attribution(request, order)
 
+        # Sync to Zoho FINGERPRINT_SERVICES pipeline
+        try:
+            sync_order_to_zoho_task.delay(order.id, "fingerprinting")
+        except Exception:
+            logger.exception("Failed to enqueue Zoho sync task for fingerprinting %s", order.id)
+
         # Send staff notification
         from ..services.notifications import send_staff_notification, build_order_extra_body
 

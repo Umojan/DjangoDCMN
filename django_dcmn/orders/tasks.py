@@ -3,7 +3,7 @@ from celery import shared_task
 from django.conf import settings
 from django.core.mail import send_mail
 from .models import FbiApostilleOrder, EmbassyLegalizationOrder, TranslationOrder, ApostilleOrder, MarriageOrder, \
-    I9VerificationOrder, QuoteRequest, PreCheckSubmission
+    I9VerificationOrder, QuoteRequest, PreCheckSubmission, FingerprintingSubmission
 from .zoho_sync import (
     sync_fbi_order_to_zoho,
     sync_embassy_order_to_zoho,
@@ -12,6 +12,7 @@ from .zoho_sync import (
     sync_marriage_order_to_zoho,
     sync_i9_order_to_zoho, sync_quote_request_to_zoho,
     sync_precheck_to_zoho,
+    sync_fingerprinting_to_zoho,
     update_record_fields,
 )
 from .models import Track
@@ -38,6 +39,7 @@ def sync_order_to_zoho_task(order_id, order_type, tracking_id=None):
         "I-9": (I9VerificationOrder, sync_i9_order_to_zoho),
         "quote": (QuoteRequest, sync_quote_request_to_zoho),
         "pre-check": (PreCheckSubmission, sync_precheck_to_zoho),
+        "fingerprinting": (FingerprintingSubmission, sync_fingerprinting_to_zoho),
     }
 
     try:
@@ -72,7 +74,7 @@ def sync_order_to_zoho_task(order_id, order_type, tracking_id=None):
         else:
             # Normal flow: CREATE new Zoho record
             # (zoho_synced is set inside sync_order_to_zoho / sync_order_with_attribution)
-            if order_type in ("quote", "pre-check"):
+            if order_type in ("quote", "pre-check", "fingerprinting"):
                 sync_func(order)
             else:
                 sync_func(order, tracking_id=tracking_id)

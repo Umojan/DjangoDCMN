@@ -543,3 +543,94 @@ def sync_precheck_to_zoho(order):
     }
 
     return sync_order_with_attribution(order, zoho_module, data, attach_files=True)
+
+
+# =============================================================================
+# FINGERPRINTING SYNC (module: FINGERPRINT_SERVICES)
+# =============================================================================
+
+# Form service_type choices -> Zoho Fingerprint_Service_Type picklist values
+FINGERPRINT_SERVICE_TYPE_MAP = {
+    'fbi': 'FBI Live Scan',
+    'fd258': 'FD-258 Card',
+    'fdle': 'FDLE',
+    'atf': 'ATF',
+}
+
+
+def _build_fingerprint_datetime(date_str: str, time_str: str) -> str | None:
+    """Combine preferred_date ('YYYY-MM-DD') and preferred_time ('10:30 AM')
+    into a timezone-aware ISO 8601 string Zoho accepts. Returns None on failure.
+
+    Appointment times are entered as local wall-clock (Eastern Time / DC), so we
+    localize to America/New_York — this keeps the stored instant correct regardless
+    of the Zoho org timezone."""
+    from datetime import datetime
+
+    if not date_str:
+        return None
+    try:
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo("America/New_York")
+    except Exception:
+        tz = None
+
+    raw = f"{date_str} {time_str}".strip()
+    for fmt in ("%Y-%m-%d %I:%M %p", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
+        try:
+            dt = datetime.strptime(raw, fmt)
+        except ValueError:
+            continue
+        if tz is not None:
+            dt = dt.replace(tzinfo=tz)
+        return dt.isoformat()
+    return None
+
+
+def sync_fingerprinting_to_zoho(order):
+    """Create a lead in the FINGERPRINT_SERVICES pipeline for a fingerprinting form submission.
+
+    Note: this module has no Attribution_Record / Tracking_ID fields, so we use the
+    base sync (no attribution linking). Marketing source is folded into Client_Comment.
+    """
+    zoho_module = 'FINGERPRINT_SERVICES'
+    contact_id = get_or_create_contact_id(order.name, order.email, order.phone)
+
+    service_type_value = FINGERPRINT_SERVICE_TYPE_MAP.get(order.service_type)
+    appointment_dt = _build_fingerprint_datetime(order.preferred_date, order.preferred_time)
+
+    # Build a readable Client_Comment (also carries data that has no dedicated field)
+    comment_parts = []
+    if order.service_type:
+        comment_parts.append(f"Service requested: {order.get_service_type_display()}")
+    comment_parts.append(f"Preferred: {order.preferred_date} {order.preferred_time}")
+    comment_parts.append(f"Location: {order.service_location}")
+    if order.service_location == 'Mobile' and order.address:
+        comment_parts.append(f"Address: {order.address}")
+    attr = getattr(order, 'attribution_data', None) or {}
+    src, med, camp = attr.get('source'), attr.get('medium'), attr.get('campaign')
+    if any([src, med, camp]):
+        line = f"Attribution: {src or '-'}/{med or '-'}"
+        if camp:
+            line += f" · {camp}"
+        comment_parts.append(line)
+    client_comment = "\n".join(comment_parts)
+
+    record = {
+        "Name": order.name,
+        "Email": order.email,
+        "Phone": order.phone,
+        "Appointment_Type": order.service_location,   # 'Office' | 'Mobile'
+        "Fingerprint_Stage": "Client placed the request",
+        "Client_Comment": client_comment,
+        "Client_Name": {"id": contact_id},
+    }
+    if service_type_value:
+        record["Fingerprint_Service_Type"] = service_type_value
+    if appointment_dt:
+        record["Appointment_Date_Time"] = appointment_dt
+    if order.service_location == 'Mobile' and order.address:
+        record["Service_Address_for_mobile"] = order.address
+
+    data = {"data": [record]}
+    return sync_order_to_zoho(order, zoho_module, data, attach_files=False)
