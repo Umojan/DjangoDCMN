@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse
 from django.core.mail import send_mail, EmailMessage
+from django.db import transaction
 from django.template.loader import render_to_string
 
 from rest_framework.views import APIView
@@ -20,7 +21,7 @@ from ..models import (
 )
 from ..utils import generate_tid
 from ..constants import STAGE_DEFS
-from ..tasks import sync_order_to_zoho_task, send_tracking_email_task
+from ..tasks import enqueue_zoho_sync, send_tracking_email_task
 from ..services.files import build_file_links
 
 import stripe
@@ -159,15 +160,18 @@ def stripe_webhook(request):
 
 def _handle_fbi_payment(request, order_id, tracking_id):
     """Process FBI order after successful payment."""
-    order = FbiApostilleOrder.objects.get(id=order_id)
-    
-    if not order.is_paid:
-        order.is_paid = True
-        order.save()
+    with transaction.atomic():
+        order = FbiApostilleOrder.objects.select_for_update().get(id=order_id)
+        newly_paid = not order.is_paid
+        if newly_paid:
+            order.is_paid = True
+            order.save(update_fields=['is_paid'])
 
-        # Pass tracking_id to Zoho sync
-        sync_order_to_zoho_task.delay(order.id, "fbi", tracking_id=tracking_id)
-        
+        # A repeated Stripe webhook repairs a paid-but-unsynced order.
+        if not order.zoho_synced:
+            enqueue_zoho_sync(order.id, 'fbi', tracking_id=tracking_id)
+
+    if newly_paid:
         # Start tracking emails (Order Received)
         if tracking_id:
             try:
@@ -243,15 +247,17 @@ def _handle_fbi_payment(request, order_id, tracking_id):
 
 def _handle_marriage_payment(request, order_id, tracking_id):
     """Process Marriage order after successful payment."""
-    order = MarriageOrder.objects.get(id=order_id)
-    
-    if not order.is_paid:
-        order.is_paid = True
-        order.save()
+    with transaction.atomic():
+        order = MarriageOrder.objects.select_for_update().get(id=order_id)
+        newly_paid = not order.is_paid
+        if newly_paid:
+            order.is_paid = True
+            order.save(update_fields=['is_paid'])
 
-        # Pass tracking_id to Zoho sync (same as FBI)
-        sync_order_to_zoho_task.delay(order.id, "marriage", tracking_id=tracking_id)
+        if not order.zoho_synced:
+            enqueue_zoho_sync(order.id, 'marriage', tracking_id=tracking_id)
 
+    if newly_paid:
         # Send tracking email (Order Received)
         if tracking_id:
             try:

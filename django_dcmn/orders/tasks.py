@@ -2,9 +2,14 @@
 from celery import shared_task
 from django.conf import settings
 from django.core.mail import send_mail
+from django.db import transaction
+from django.db.models import F
+from django.utils import timezone
 from .models import FbiApostilleOrder, EmbassyLegalizationOrder, TranslationOrder, ApostilleOrder, MarriageOrder, \
-    I9VerificationOrder, QuoteRequest, PreCheckSubmission, FingerprintingSubmission
+    I9VerificationOrder, QuoteRequest, PreCheckSubmission, FingerprintingSubmission, PhoneCallLead, ZohoSyncJob
 from .zoho_sync import (
+    EXTERNAL_ORDER_KEY_FIELD,
+    get_order_external_key,
     sync_fbi_order_to_zoho,
     sync_embassy_order_to_zoho,
     sync_translation_order_to_zoho,
@@ -13,10 +18,101 @@ from .zoho_sync import (
     sync_i9_order_to_zoho, sync_quote_request_to_zoho,
     sync_precheck_to_zoho,
     sync_fingerprinting_to_zoho,
+    sync_order_attachments,
     update_record_fields,
 )
+from .zoho_errors import ZohoPermanentError, ZohoTransientError
 from .models import Track
 from .utils import service_label
+import datetime
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def sync_phone_lead_to_zoho(phone_lead):
+    from .services.whatconverts_zoho import sync_phone_lead_to_zoho as sync_phone
+
+    return sync_phone(phone_lead)
+
+
+ORDER_TYPE_ALIASES = {
+    'I-9': 'i9',
+    'i-9': 'i9',
+}
+
+ORDER_TYPE_MAP = {
+    'fbi': (FbiApostilleOrder, sync_fbi_order_to_zoho),
+    'embassy': (EmbassyLegalizationOrder, sync_embassy_order_to_zoho),
+    'apostille': (ApostilleOrder, sync_apostille_order_to_zoho),
+    'translation': (TranslationOrder, sync_translation_order_to_zoho),
+    'marriage': (MarriageOrder, sync_marriage_order_to_zoho),
+    'i9': (I9VerificationOrder, sync_i9_order_to_zoho),
+    'quote': (QuoteRequest, sync_quote_request_to_zoho),
+    'pre-check': (PreCheckSubmission, sync_precheck_to_zoho),
+    'fingerprinting': (FingerprintingSubmission, sync_fingerprinting_to_zoho),
+    'phone': (PhoneCallLead, sync_phone_lead_to_zoho),
+}
+
+
+def canonical_order_type(order_type):
+    return ORDER_TYPE_ALIASES.get(order_type, order_type)
+
+
+def matched_order_type_aliases(order_type):
+    canonical = canonical_order_type(order_type)
+    if canonical == 'i9':
+        return ('i9', 'I-9', 'i-9')
+    return (canonical,)
+
+
+def enqueue_zoho_sync(order_id, order_type, tracking_id=None):
+    """Persist intent before publishing so a broker failure cannot lose the sync."""
+    canonical = canonical_order_type(order_type)
+    if canonical not in ORDER_TYPE_MAP:
+        raise ValueError(f'Unknown order_type: {order_type}')
+
+    job, _ = ZohoSyncJob.objects.get_or_create(
+        order_type=canonical,
+        order_id=order_id,
+        defaults={
+            'tracking_id': tracking_id or '',
+            'status': ZohoSyncJob.STATUS_PENDING,
+        },
+    )
+    if job.status in (ZohoSyncJob.STATUS_SYNCED, ZohoSyncJob.STATUS_SUPPRESSED):
+        return job
+
+    changed_fields = []
+    if tracking_id and job.tracking_id != tracking_id:
+        job.tracking_id = tracking_id
+        changed_fields.append('tracking_id')
+    if job.status == ZohoSyncJob.STATUS_FAILED:
+        job.status = ZohoSyncJob.STATUS_PENDING
+        changed_fields.append('status')
+    if changed_fields:
+        job.save(update_fields=changed_fields + ['updated_at'])
+
+    def publish():
+        try:
+            sync_order_to_zoho_task.delay(
+                order_id,
+                canonical,
+                tracking_id=tracking_id or job.tracking_id or None,
+            )
+        except Exception as exc:
+            logger.exception(
+                'Failed to publish Zoho sync for %s #%s',
+                canonical,
+                order_id,
+            )
+            ZohoSyncJob.objects.filter(pk=job.pk).update(
+                status=ZohoSyncJob.STATUS_PENDING,
+                last_error=f'Queue publish failed: {exc}'[:2000],
+            )
+
+    transaction.on_commit(publish)
+    return job
 
 
 @shared_task
@@ -25,62 +121,304 @@ def test_celery_task():
     return "Hello from Celery"
 
 
-@shared_task
-def sync_order_to_zoho_task(order_id, order_type, tracking_id=None):
-    import logging
-    logger = logging.getLogger(__name__)
+@shared_task(
+    bind=True,
+    acks_late=True,
+    reject_on_worker_lost=True,
+    autoretry_for=(ZohoTransientError,),
+    retry_backoff=True,
+    retry_backoff_max=300,
+    retry_jitter=True,
+    retry_kwargs={'max_retries': 8},
+)
+def sync_order_to_zoho_task(self, order_id, order_type, tracking_id=None):
+    canonical = canonical_order_type(order_type)
+    entry = ORDER_TYPE_MAP.get(canonical)
+    if not entry:
+        logger.error('[Celery] Unknown order_type: %s', order_type)
+        return
 
-    ORDER_TYPE_MAP = {
-        "fbi": (FbiApostilleOrder, sync_fbi_order_to_zoho),
-        "embassy": (EmbassyLegalizationOrder, sync_embassy_order_to_zoho),
-        "apostille": (ApostilleOrder, sync_apostille_order_to_zoho),
-        "translation": (TranslationOrder, sync_translation_order_to_zoho),
-        "marriage": (MarriageOrder, sync_marriage_order_to_zoho),
-        "I-9": (I9VerificationOrder, sync_i9_order_to_zoho),
-        "quote": (QuoteRequest, sync_quote_request_to_zoho),
-        "pre-check": (PreCheckSubmission, sync_precheck_to_zoho),
-        "fingerprinting": (FingerprintingSubmission, sync_fingerprinting_to_zoho),
-    }
-
+    model_class, sync_func = entry
     try:
-        entry = ORDER_TYPE_MAP.get(order_type)
-        if not entry:
-            logger.error(f"[Celery] Unknown order_type: {order_type}")
-            return
+        with transaction.atomic():
+            order = model_class.objects.select_for_update().get(id=order_id)
+            job, _ = ZohoSyncJob.objects.select_for_update().get_or_create(
+                order_type=canonical,
+                order_id=order_id,
+                defaults={'tracking_id': tracking_id or ''},
+            )
+            if job.status == ZohoSyncJob.STATUS_SUPPRESSED:
+                logger.info(
+                    '[Celery] Zoho sync suppressed for %s #%s',
+                    canonical,
+                    order_id,
+                )
+                return
 
-        model_class, sync_func = entry
-        order = model_class.objects.get(id=order_id)
+            sync_complete = order.zoho_synced
+            if canonical == 'phone':
+                sync_complete = (
+                    sync_complete
+                    and bool(order.zoho_module)
+                    and bool(order.zoho_lead_id)
+                    and bool(order.zoho_attribution_id)
+                )
+            if sync_complete:
+                job.status = ZohoSyncJob.STATUS_SYNCED
+                if canonical == 'phone':
+                    job.zoho_module = order.zoho_module
+                    job.zoho_record_id = order.zoho_lead_id
+                job.synced_at = job.synced_at or timezone.now()
+                job.last_error = ''
+                job.save(
+                    update_fields=[
+                        'status',
+                        'zoho_module',
+                        'zoho_record_id',
+                        'synced_at',
+                        'last_error',
+                        'updated_at',
+                    ]
+                )
+                logger.info(
+                    '[Celery] Order %s #%s already synced, skipping',
+                    canonical,
+                    order_id,
+                )
+                return
 
-        if order.zoho_synced:
-            logger.info(f"[Celery] Order {order_type} #{order_id} already zoho_synced — skipping")
-            return
+            job.status = ZohoSyncJob.STATUS_RUNNING
+            job.attempts += 1
+            job.last_attempt_at = timezone.now()
+            job.last_error = ''
+            if tracking_id:
+                job.tracking_id = tracking_id
+            job.save(
+                update_fields=[
+                    'status',
+                    'attempts',
+                    'last_attempt_at',
+                    'last_error',
+                    'tracking_id',
+                    'updated_at',
+                ]
+            )
 
-        # Check if this order has a matched phone lead (UPDATE existing Zoho record)
-        from .models import PhoneCallLead
-        matched_phone_lead = PhoneCallLead.objects.filter(
-            matched_order_type=order_type,
-            matched_order_id=order.id,
-            zoho_lead_id__gt='',
-        ).first()
+            matched_phone_lead = None
+            if canonical != 'phone':
+                matched_phone_lead = PhoneCallLead.objects.filter(
+                    matched_order_type__in=matched_order_type_aliases(canonical),
+                    matched_order_id=order.id,
+                ).first()
 
-        if matched_phone_lead:
-            # Phone lead matched: UPDATE existing Zoho record with full form data
-            from .services.zoho_update import update_matched_zoho_record
-            ok = update_matched_zoho_record(order, order_type, tracking_id=tracking_id)
-            if ok:
+            if canonical == 'phone':
+                result = sync_func(order)
+                if not result:
+                    raise ZohoTransientError(
+                        f'Zoho sync returned false for phone #{order_id}'
+                    )
+                order.refresh_from_db(
+                    fields=[
+                        'zoho_module',
+                        'zoho_lead_id',
+                        'zoho_attribution_id',
+                        'zoho_synced',
+                    ]
+                )
+                if not (
+                    order.zoho_synced
+                    and order.zoho_module
+                    and order.zoho_lead_id
+                    and order.zoho_attribution_id
+                ):
+                    raise ZohoTransientError(
+                        f'Phone sync incomplete for phone #{order_id}'
+                    )
+                job.zoho_module = order.zoho_module
+                job.zoho_record_id = order.zoho_lead_id
+            elif matched_phone_lead:
+                if not matched_phone_lead.zoho_lead_id:
+                    try:
+                        sync_order_to_zoho_task.delay(
+                            matched_phone_lead.id,
+                            'phone',
+                        )
+                    except Exception:
+                        logger.exception(
+                            '[Celery] Failed to wake phone sync #%s',
+                            matched_phone_lead.id,
+                        )
+                    raise ZohoTransientError(
+                        f'Waiting for matched phone lead '
+                        f'#{matched_phone_lead.id} to finish Zoho sync'
+                    )
+
+                from .services.zoho_update import update_matched_zoho_record
+
+                ok = update_matched_zoho_record(
+                    order,
+                    canonical,
+                    tracking_id=tracking_id or job.tracking_id or None,
+                )
+                if not ok:
+                    raise ZohoTransientError(
+                        f'Zoho update returned false for {canonical} #{order_id}'
+                    )
+
+                update_record_fields(
+                    matched_phone_lead.zoho_module,
+                    matched_phone_lead.zoho_lead_id,
+                    {EXTERNAL_ORDER_KEY_FIELD: get_order_external_key(order)},
+                )
+                if hasattr(order, 'file_attachments'):
+                    sync_order_attachments(
+                        order,
+                        matched_phone_lead.zoho_module,
+                        matched_phone_lead.zoho_lead_id,
+                    )
                 order.zoho_synced = True
                 order.save(update_fields=['zoho_synced'])
-                logger.info(f"[Celery] ✅ Updated Zoho lead for {order_type} #{order_id}, zoho_synced=True")
-        else:
-            # Normal flow: CREATE new Zoho record
-            # (zoho_synced is set inside sync_order_to_zoho / sync_order_with_attribution)
-            if order_type in ("quote", "pre-check", "fingerprinting"):
-                sync_func(order)
+                job.zoho_module = matched_phone_lead.zoho_module
+                job.zoho_record_id = matched_phone_lead.zoho_lead_id
             else:
-                sync_func(order, tracking_id=tracking_id)
+                if canonical in ('quote', 'pre-check', 'fingerprinting'):
+                    result = sync_func(order)
+                else:
+                    result = sync_func(
+                        order,
+                        tracking_id=tracking_id or job.tracking_id or None,
+                    )
+                if not result:
+                    raise ZohoTransientError(
+                        f'Zoho sync returned false for {canonical} #{order_id}'
+                    )
+                job.refresh_from_db(fields=['zoho_module', 'zoho_record_id'])
 
-    except Exception as e:
-        logger.error(f"[Celery Task Error] Failed to sync {order_type} order #{order_id} to Zoho: {e}", exc_info=True)
+            job.status = ZohoSyncJob.STATUS_SYNCED
+            job.synced_at = timezone.now()
+            job.last_error = ''
+            job.save(
+                update_fields=[
+                    'status',
+                    'zoho_module',
+                    'zoho_record_id',
+                    'synced_at',
+                    'last_error',
+                    'updated_at',
+                ]
+            )
+            logger.info('[Celery] Synced %s #%s to Zoho', canonical, order_id)
+    except model_class.DoesNotExist:
+        ZohoSyncJob.objects.filter(
+            order_type=canonical,
+            order_id=order_id,
+        ).update(
+            status=ZohoSyncJob.STATUS_FAILED,
+            last_error='Order no longer exists',
+            updated_at=timezone.now(),
+        )
+        logger.warning('[Celery] Order %s #%s no longer exists', canonical, order_id)
+    except ZohoPermanentError as exc:
+        ZohoSyncJob.objects.filter(
+            order_type=canonical,
+            order_id=order_id,
+        ).update(
+            status=ZohoSyncJob.STATUS_FAILED,
+            attempts=F('attempts') + 1,
+            last_error=str(exc)[:2000],
+            last_attempt_at=timezone.now(),
+            updated_at=timezone.now(),
+        )
+        logger.exception(
+            '[Celery] Permanent Zoho failure for %s #%s',
+            canonical,
+            order_id,
+        )
+        raise
+    except ZohoTransientError as exc:
+        ZohoSyncJob.objects.filter(
+            order_type=canonical,
+            order_id=order_id,
+        ).update(
+            status=ZohoSyncJob.STATUS_PENDING,
+            attempts=F('attempts') + 1,
+            last_error=str(exc)[:2000],
+            last_attempt_at=timezone.now(),
+            updated_at=timezone.now(),
+        )
+        logger.warning(
+            '[Celery] Temporary Zoho failure for %s #%s: %s',
+            canonical,
+            order_id,
+            exc,
+        )
+        raise
+    except Exception as exc:
+        ZohoSyncJob.objects.filter(
+            order_type=canonical,
+            order_id=order_id,
+        ).update(
+            status=ZohoSyncJob.STATUS_PENDING,
+            attempts=F('attempts') + 1,
+            last_error=str(exc)[:2000],
+            last_attempt_at=timezone.now(),
+            updated_at=timezone.now(),
+        )
+        logger.exception(
+            '[Celery] Unexpected Zoho failure for %s #%s',
+            canonical,
+            order_id,
+        )
+        raise ZohoTransientError(str(exc)) from exc
+
+
+@shared_task
+def reconcile_pending_zoho_syncs():
+    """Republish durable pending intents without scanning ambiguous legacy rows."""
+    stale_running_before = timezone.now() - datetime.timedelta(minutes=15)
+    ZohoSyncJob.objects.filter(
+        status=ZohoSyncJob.STATUS_RUNNING,
+        updated_at__lt=stale_running_before,
+    ).update(
+        status=ZohoSyncJob.STATUS_PENDING,
+        last_error='Recovered stale running job',
+        updated_at=timezone.now(),
+    )
+
+    queued = 0
+    pending_before = timezone.now() - datetime.timedelta(minutes=2)
+    jobs = ZohoSyncJob.objects.filter(
+        status=ZohoSyncJob.STATUS_PENDING,
+        created_at__lte=pending_before,
+    ).order_by('created_at')
+    for job in jobs.iterator():
+        if job.order_type not in ORDER_TYPE_MAP:
+            ZohoSyncJob.objects.filter(pk=job.pk).update(
+                status=ZohoSyncJob.STATUS_FAILED,
+                last_error=f'Unknown order type: {job.order_type}',
+                updated_at=timezone.now(),
+            )
+            continue
+        try:
+            sync_order_to_zoho_task.delay(
+                job.order_id,
+                job.order_type,
+                tracking_id=job.tracking_id or None,
+            )
+            queued += 1
+        except Exception as exc:
+            logger.exception(
+                '[Celery] Failed to republish Zoho sync for %s #%s',
+                job.order_type,
+                job.order_id,
+            )
+            ZohoSyncJob.objects.filter(pk=job.pk).update(
+                last_error=f'Queue publish failed: {exc}'[:2000],
+                updated_at=timezone.now(),
+            )
+
+    logger.info('[Celery] Reconciliation queued %s Zoho syncs', queued)
+    return queued
 
 
 @shared_task

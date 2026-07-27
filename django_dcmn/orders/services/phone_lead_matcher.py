@@ -5,8 +5,11 @@ Used when web form is submitted after phone call to update existing lead.
 """
 
 import logging
+from datetime import timedelta
 from typing import Optional, Dict, Any
+from django.db import transaction
 from django.db.models import Q
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +44,13 @@ def find_phone_lead_for_order(phone: str, service_type: str) -> Optional['PhoneC
 
     logger.info(f"🔍 Searching for phone lead: phone={phone_last_10}, service={service_type}")
 
-    # Search for phone lead with matching phone and service
-    query = Q(contact_phone__icontains=phone_last_10)
+    # A phone call can only be consumed once, and only while it is recent
+    # enough to plausibly belong to this form submission.
+    query = (
+        Q(contact_phone__icontains=phone_last_10)
+        & Q(matched_with_form=False)
+        & Q(created_at__gte=timezone.now() - timedelta(days=14))
+    )
 
     # Filter by service if provided
     if service_type:
@@ -81,43 +89,52 @@ def update_phone_lead_with_form_data(
         True if updated successfully
     """
     try:
+        with transaction.atomic():
+            locked_lead = (
+                phone_lead.__class__.objects.select_for_update().get(
+                    pk=phone_lead.pk,
+                )
+            )
+            if locked_lead.matched_with_form:
+                logger.info(
+                    'Phone lead %s was already matched while waiting for lock',
+                    phone_lead.id,
+                )
+                return False
+
+            locked_lead.contact_name = order_data.get('name', '')
+            locked_lead.contact_email = order_data.get('email', '')
+            locked_lead.contact_phone = order_data.get('phone', '')
+            locked_lead.city = order_data.get('city', '') or locked_lead.city
+            locked_lead.state = order_data.get('state', '') or locked_lead.state
+            locked_lead.country = (
+                order_data.get('country', '') or locked_lead.country
+            )
+            locked_lead.matched_with_form = True
+            locked_lead.matched_order_type = order_type
+            locked_lead.matched_order_id = order_id
+            locked_lead.save(
+                update_fields=[
+                    'contact_name',
+                    'contact_email',
+                    'contact_phone',
+                    'city',
+                    'state',
+                    'country',
+                    'matched_with_form',
+                    'matched_order_type',
+                    'matched_order_id',
+                    'updated_at',
+                ]
+            )
+
+        phone_lead.refresh_from_db()
         logger.info("=" * 80)
         logger.info(f"🔄 Updating phone lead {phone_lead.id} with form data")
         logger.info(f"   Order: {order_type} #{order_id}")
         logger.info("=" * 80)
 
-        # Update contact information — form data is ALWAYS authoritative
-        old_name = phone_lead.contact_name
-        phone_lead.contact_name = order_data.get('name', '')
-        logger.info(f"   Name: {old_name} → {phone_lead.contact_name}")
-
-        old_email = phone_lead.contact_email
-        phone_lead.contact_email = order_data.get('email', '')
-        logger.info(f"   Email: {old_email} → {phone_lead.contact_email}")
-
-        old_phone = phone_lead.contact_phone
-        phone_lead.contact_phone = order_data.get('phone', '')
-        logger.info(f"   Phone: {old_phone} → {phone_lead.contact_phone}")
-
-        # Update location — form data overwrites phone lead data
-        phone_lead.city = order_data.get('city', '') or phone_lead.city
-        phone_lead.state = order_data.get('state', '') or phone_lead.state
-        phone_lead.country = order_data.get('country', '') or phone_lead.country
-
-        # Mark as matched with form
-        phone_lead.matched_with_form = True
-        phone_lead.matched_order_type = order_type
-        phone_lead.matched_order_id = order_id
-
-        phone_lead.save()
-
         logger.info(f"✅ Phone lead {phone_lead.id} updated with form data")
-        logger.info(f"   WhatConverts attribution PRESERVED:")
-        logger.info(f"   - Source: {phone_lead.source}")
-        logger.info(f"   - Medium: {phone_lead.medium}")
-        logger.info(f"   - Campaign: {phone_lead.campaign}")
-        logger.info(f"   - GCLID: {phone_lead.gclid}")
-        logger.info(f"   - Lead Score: {phone_lead.lead_score}")
         logger.info("=" * 80)
 
         return True
@@ -338,7 +355,7 @@ def process_order_with_phone_lead_check(
 
     if not updated:
         logger.warning("⚠️ Failed to update phone lead with form data")
-        return phone_lead
+        return None
 
     # NOTE: We do NOT set order.zoho_synced = True here.
     # That flag should only be True after data actually reaches Zoho.

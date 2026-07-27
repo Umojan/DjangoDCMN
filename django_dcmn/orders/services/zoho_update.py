@@ -8,8 +8,6 @@ with all form-specific data (comments, package, shipping, address, etc.)
 """
 
 import logging
-from typing import Optional
-from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -28,11 +26,11 @@ def update_matched_zoho_record(order, order_type: str, tracking_id: str = None) 
         True if updated successfully
     """
     from ..models import PhoneCallLead
-    from ..zoho_client import ZohoCRMClient
 
     # Find the matched phone lead
+    order_type_aliases = ('i9', 'I-9', 'i-9') if order_type == 'i9' else (order_type,)
     phone_lead = PhoneCallLead.objects.filter(
-        matched_order_type=order_type,
+        matched_order_type__in=order_type_aliases,
         matched_order_id=order.id,
         zoho_lead_id__gt='',
     ).first()
@@ -58,27 +56,17 @@ def update_matched_zoho_record(order, order_type: str, tracking_id: str = None) 
         logger.warning(f"[ZohoUpdate] Empty payload for {order_type} order {order.id}")
         return False
 
-    logger.info(f"[ZohoUpdate] Updating {zoho_module}/{zoho_lead_id} with form data for {order_type} order {order.id}")
-    logger.info(f"[ZohoUpdate] Payload: {update_payload}")
+    logger.info(
+        "[ZohoUpdate] Updating %s/%s from %s order %s",
+        zoho_module,
+        zoho_lead_id,
+        order_type,
+        order.id,
+    )
 
-    try:
-        client = ZohoCRMClient()
-        response = client.update_record(zoho_module, zoho_lead_id, update_payload)
+    from ..zoho_sync import update_record_fields
 
-        if response and response.get('data'):
-            logger.info(f"[ZohoUpdate] ✅ Updated {zoho_module}/{zoho_lead_id} with full form data")
-
-            # Attach files to existing Zoho record
-            _attach_files_to_record(order, zoho_module, zoho_lead_id)
-
-            return True
-
-        logger.error(f"[ZohoUpdate] ❌ Failed to update: {response}")
-        return False
-
-    except Exception as e:
-        logger.error(f"[ZohoUpdate] ❌ Error: {e}", exc_info=True)
-        return False
+    return update_record_fields(zoho_module, zoho_lead_id, update_payload)
 
 
 def _build_full_update_payload(order, order_type: str, tracking_id: str = None) -> dict:
@@ -140,7 +128,6 @@ def _build_full_update_payload(order, order_type: str, tracking_id: str = None) 
             'Country_of_Use': order.country,
             'Document_Type': order.type,
             'Client_Comments': order.comments or '',
-            'Process_Stage': 'Submission Received',
         }
 
     elif order_type == 'marriage':
@@ -198,38 +185,3 @@ def _build_full_update_payload(order, order_type: str, tracking_id: str = None) 
     payload = {k: v for k, v in payload.items() if v is not None}
 
     return payload
-
-
-def _attach_files_to_record(order, zoho_module: str, zoho_record_id: str):
-    """Attach order files to existing Zoho record."""
-    import requests
-    from ..zoho_sync import get_access_token, ZOHO_API_DOMAIN
-
-    # QuoteRequest has no file_attachments GenericRelation
-    if not hasattr(order, 'file_attachments'):
-        return
-
-    try:
-        file_urls = [settings.BASE_URL + fa.file.url for fa in order.file_attachments.all()]
-        if not file_urls:
-            return
-
-        access_token = get_access_token()
-
-        for url in file_urls:
-            try:
-                file_response = requests.get(url)
-                file_response.raise_for_status()
-                filename = url.split('/')[-1]
-
-                attach_url = f'{ZOHO_API_DOMAIN}/crm/v2/{zoho_module}/{zoho_record_id}/Attachments'
-                attach_headers = {'Authorization': f'Zoho-oauthtoken {access_token}'}
-                files = {'file': (filename, file_response.content)}
-
-                response = requests.post(attach_url, headers=attach_headers, files=files)
-                logger.info(f'[ZohoUpdate] Attached "{filename}": {response.status_code}')
-            except Exception as e:
-                logger.error(f'[ZohoUpdate] Failed to attach file {url}: {e}')
-
-    except Exception as e:
-        logger.error(f'[ZohoUpdate] Error attaching files: {e}', exc_info=True)

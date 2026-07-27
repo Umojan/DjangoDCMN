@@ -296,6 +296,20 @@ class QuoteRequest(models.Model):
         verbose_name_plural = 'Quote — Requests'
 
 
+class QuoteRequestDeduplication(models.Model):
+    """Persistent lock row for suppressing concurrent duplicate quote posts."""
+
+    fingerprint = models.CharField(max_length=64, unique=True)
+    last_order = models.ForeignKey(
+        QuoteRequest,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='+',
+    )
+    last_accepted_at = models.DateTimeField(null=True, blank=True)
+
+
 class FingerprintingSubmission(models.Model):
     SERVICE_LOCATION_CHOICES = [
         ('Office', 'Office'),
@@ -439,6 +453,61 @@ class PhoneCallLead(models.Model):
         verbose_name = 'Phone Call Lead'
         verbose_name_plural = 'Phone Call Leads'
         ordering = ['-created_at']
+
+
+class ZohoSyncJob(models.Model):
+    """Durable outbox and audit trail for CRM synchronization."""
+
+    STATUS_PENDING = 'pending'
+    STATUS_RUNNING = 'running'
+    STATUS_SYNCED = 'synced'
+    STATUS_FAILED = 'failed'
+    STATUS_SUPPRESSED = 'suppressed'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_RUNNING, 'Running'),
+        (STATUS_SYNCED, 'Synced'),
+        (STATUS_FAILED, 'Failed'),
+        (STATUS_SUPPRESSED, 'Suppressed'),
+    ]
+
+    order_type = models.CharField(max_length=32)
+    order_id = models.PositiveBigIntegerField()
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
+        db_index=True,
+    )
+    zoho_module = models.CharField(max_length=100, blank=True)
+    zoho_record_id = models.CharField(max_length=100, blank=True)
+    tracking_id = models.CharField(max_length=64, blank=True)
+    attempts = models.PositiveIntegerField(default=0)
+    last_error = models.TextField(blank=True)
+    last_attempt_at = models.DateTimeField(null=True, blank=True)
+    synced_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'{self.order_type} #{self.order_id}: {self.status}'
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=('order_type', 'order_id'),
+                name='orders_unique_zoho_sync_job',
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=('status', 'updated_at'),
+                name='orders_zoho_status_updated_idx',
+            ),
+        ]
+        ordering = ('-updated_at',)
+        verbose_name = 'Zoho Sync Job'
+        verbose_name_plural = 'Zoho Sync Jobs'
 
 
 # --- Tracking ---

@@ -1,7 +1,13 @@
 # orders/views/orders.py
 """Order creation views."""
 
-from django.contrib.contenttypes.models import ContentType
+import hashlib
+import json
+from datetime import timedelta
+
+from django.core.serializers.json import DjangoJSONEncoder
+from django.db import transaction
+from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -28,17 +34,48 @@ from ..models import (
     TranslationOrder,
     ApostilleOrder,
     I9VerificationOrder,
+    QuoteRequestDeduplication,
     PreCheckSubmission,
     FingerprintingSubmission,
-    FileAttachment,
 )
 from ..services import process_new_order, save_file_attachments
 from ..services.attribution import process_attribution
-from ..tasks import sync_order_to_zoho_task
+from ..tasks import enqueue_zoho_sync
 
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+QUOTE_DEDUPE_WINDOW = timedelta(seconds=30)
+QUOTE_DEDUPE_FIELDS = (
+    'name',
+    'email',
+    'phone',
+    'address',
+    'number',
+    'appointment_date',
+    'appointment_time',
+    'services',
+    'comments',
+)
+
+
+def _quote_fingerprint(validated_data):
+    canonical = json.dumps(
+        {
+            'kind': 'quote',
+            'data': {
+                field: validated_data.get(field)
+                for field in QUOTE_DEDUPE_FIELDS
+            },
+        },
+        cls=DjangoJSONEncoder,
+        sort_keys=True,
+        separators=(',', ':'),
+        ensure_ascii=False,
+    )
+    return hashlib.sha256(canonical.encode('utf-8')).hexdigest()
 
 
 class CreateFbiOrderView(APIView):
@@ -139,7 +176,8 @@ class CreateEmbassyOrderView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
-        order = serializer.save()
+        with transaction.atomic():
+            order = serializer.save()
         
         result = process_new_order(
             request=request,
@@ -173,7 +211,8 @@ class CreateApostilleOrderView(APIView):
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
             logger.info(f"[Apostille] Serializer valid, saving order...")
-            order = serializer.save()
+            with transaction.atomic():
+                order = serializer.save()
             logger.info(f"[Apostille] Order saved: {order.id}")
 
             logger.info(f"[Apostille] Starting process_new_order...")
@@ -208,7 +247,8 @@ class CreateTranslationOrderView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
-        order = serializer.save()
+        with transaction.atomic():
+            order = serializer.save()
         
         result = process_new_order(
             request=request,
@@ -236,8 +276,37 @@ class CreateQuoteRequestView(APIView):
         serializer = QuoteRequestSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
-        order = serializer.save()
+
+        # Browser retries and double-clicks can arrive concurrently. A
+        # persistent per-payload lock suppresses only a short duplicate burst.
+        fingerprint = _quote_fingerprint(serializer.validated_data)
+        received_at = timezone.now()
+        with transaction.atomic():
+            guard, _ = QuoteRequestDeduplication.objects.get_or_create(
+                fingerprint=fingerprint,
+            )
+            guard = (
+                QuoteRequestDeduplication.objects.select_for_update().get(
+                    pk=guard.pk,
+                )
+            )
+            if (
+                guard.last_order_id
+                and guard.last_accepted_at
+                and received_at - guard.last_accepted_at <= QUOTE_DEDUPE_WINDOW
+            ):
+                return Response(
+                    {
+                        'message': 'Quote request already received',
+                        'order_id': guard.last_order_id,
+                        'duplicate': True,
+                    },
+                    status=status.HTTP_200_OK,
+                )
+            order = serializer.save()
+            guard.last_order = order
+            guard.last_accepted_at = received_at
+            guard.save(update_fields=('last_order', 'last_accepted_at'))
 
         # Process attribution data
         process_attribution(request, order)
@@ -247,7 +316,7 @@ class CreateQuoteRequestView(APIView):
 
         # Sync to Zoho
         try:
-            sync_order_to_zoho_task.delay(order.id, "quote")
+            enqueue_zoho_sync(order.id, "quote")
         except Exception:
             logger.exception("Failed to enqueue Zoho sync task for quote request %s", order.id)
         
@@ -273,19 +342,20 @@ class CreateI9OrderView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
-        order = serializer.save()
+        with transaction.atomic():
+            order = serializer.save()
 
         # Process attribution data
         process_attribution(request, order)
 
-        # Sync to Zoho
-        try:
-            sync_order_to_zoho_task.delay(order.id, "I-9")
-        except Exception:
-            logger.exception("Failed to enqueue Zoho sync task for I-9 order %s", order.id)
-        
         # Save files
         file_urls = save_file_attachments(request, I9VerificationOrder, order)
+
+        # Queue only after every DB/file write is complete.
+        try:
+            enqueue_zoho_sync(order.id, "i9")
+        except Exception:
+            logger.exception("Failed to enqueue Zoho sync task for I-9 order %s", order.id)
         
         # Send staff notification
         from ..services.notifications import send_staff_notification, build_order_extra_body
@@ -314,7 +384,8 @@ class CreatePreCheckView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        order = serializer.save()
+        with transaction.atomic():
+            order = serializer.save()
 
         # Process attribution data
         process_attribution(request, order)
@@ -324,7 +395,7 @@ class CreatePreCheckView(APIView):
 
         # Sync to Zoho
         try:
-            sync_order_to_zoho_task.delay(order.id, "pre-check")
+            enqueue_zoho_sync(order.id, "pre-check")
         except Exception:
             logger.exception("Failed to enqueue Zoho sync task for pre-check %s", order.id)
 
@@ -356,14 +427,15 @@ class CreateFingerprintingView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        order = serializer.save()
+        with transaction.atomic():
+            order = serializer.save()
 
         # Process attribution data
         process_attribution(request, order)
 
         # Sync to Zoho FINGERPRINT_SERVICES pipeline
         try:
-            sync_order_to_zoho_task.delay(order.id, "fingerprinting")
+            enqueue_zoho_sync(order.id, "fingerprinting")
         except Exception:
             logger.exception("Failed to enqueue Zoho sync task for fingerprinting %s", order.id)
 

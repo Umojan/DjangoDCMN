@@ -2,63 +2,69 @@
 import requests
 import datetime
 import logging
+import os
+from copy import deepcopy
+from io import BytesIO
 from django.conf import settings
 from django.core.cache import cache
 from .models import FbiApostilleOrder, EmbassyLegalizationOrder, TranslationOrder, ApostilleOrder
+from .zoho_errors import ZohoPermanentError, ZohoTransientError
 
 logger = logging.getLogger(__name__)
 
 ZOHO_API_DOMAIN = 'https://www.zohoapis.com'
+ZOHO_REQUEST_TIMEOUT = (5, 45)
+EXTERNAL_ORDER_KEY_FIELD = 'External_Order_Key'
 
 # Module name for Lead Attribution Records
 ZOHO_ATTRIBUTION_MODULE = 'Lead_Attribution_Records'
 
+ORDER_TYPE_BY_MODEL = {
+    'fbiapostilleorder': 'fbi',
+    'embassylegalizationorder': 'embassy',
+    'translationorder': 'translation',
+    'apostilleorder': 'apostille',
+    'marriageorder': 'marriage',
+    'i9verificationorder': 'i9',
+    'quoterequest': 'quote',
+    'prechecksubmission': 'pre-check',
+    'fingerprintingsubmission': 'fingerprinting',
+    'phonecalllead': 'phone',
+}
+
+
+def get_order_type(order) -> str:
+    model_name = order._meta.model_name
+    try:
+        return ORDER_TYPE_BY_MODEL[model_name]
+    except KeyError as exc:
+        raise ZohoPermanentError(f'Unsupported order model: {model_name}') from exc
+
+
+def get_order_external_key(order) -> str:
+    return f'dcmn:{get_order_type(order)}:{order.id}'
+
+
+def get_attribution_external_key(order) -> str:
+    return f'dcmn:attribution:{get_order_type(order)}:{order.id}'
+
 
 def get_or_create_contact_id(name, email, phone):
-    access_token = get_access_token()
-    headers = {
-        "Authorization": f"Zoho-oauthtoken {access_token}",
-        "Content-Type": "application/json"
+    if not email:
+        return None
+
+    record = {
+        'Last_Name': name or 'DCMN Client',
+        'Email': email,
+        'Phone': phone,
     }
-
-    search_url = f"{ZOHO_API_DOMAIN}/crm/v2/Contacts/search?email={email}"
-    resp = requests.get(search_url, headers=headers)
-    if resp.status_code == 204:
-        contact_data = {}
-    else:
-        try:
-            contact_data = resp.json()
-        except Exception as e:
-            print("❌ Failed to parse Zoho JSON response:", e)
-            return None
-
-    if 'data' in contact_data and len(contact_data['data']) > 0:
-        return contact_data['data'][0]['id']
-    else:
-        # Create a new contact
-        create_contact_url = f"{ZOHO_API_DOMAIN}/crm/v2/Contacts"
-        payload = {
-            "data": [{
-                "Last_Name": name,
-                "Email": email,
-                "Phone": phone
-            }]
-        }
-        resp = requests.post(create_contact_url, headers=headers, json=payload)
-        try:
-            created_data = resp.json()
-            if 'data' in created_data:
-                return created_data['data'][0]['details']['id']
-            elif 'data' in created_data and 'details' in created_data['data'][0]:
-                return created_data['data'][0]['details']['id']
-            elif 'code' in created_data['data'][0] and created_data['data'][0]['code'] == 'DUPLICATE_DATA':
-                return created_data['data'][0]['details']['id']
-            else:
-                print("❌ Error creating contact:", created_data)
-                return None
-        except Exception as e:
-            print("❌ Exception while creating contact:", e)
-            return None
+    # Contacts do not carry our order key. Use Zoho's Email duplicate check
+    # directly so an ambiguous network retry cannot create another Contact.
+    return upsert_record_by_unique_field(
+        module_name='Contacts',
+        record=record,
+        unique_field='Email',
+    )
 
 
 def get_access_token(force_refresh=False):
@@ -73,128 +79,328 @@ def get_access_token(force_refresh=False):
         "client_secret": settings.ZOHO_CLIENT_SECRET,
         "grant_type": "refresh_token"
     }
-    resp = requests.post(url, params=params, timeout=30)
-    resp.raise_for_status()
-    token = resp.json()["access_token"]
+    try:
+        resp = requests.post(url, params=params, timeout=ZOHO_REQUEST_TIMEOUT)
+        resp.raise_for_status()
+        token = resp.json()['access_token']
+    except (requests.Timeout, requests.ConnectionError, requests.HTTPError) as exc:
+        raise ZohoTransientError(f'Unable to refresh Zoho access token: {exc}') from exc
+    except (ValueError, KeyError) as exc:
+        raise ZohoPermanentError('Zoho token response did not contain access_token') from exc
 
     # Save token to cache
     cache.set("zoho_access_token", token, timeout=2900)  # ~50 min
     return token
 
 
-def sync_order_to_zoho(order, module_name, data_payload, attach_files=True):
+def _request(method, url, *, json=None, files=None, params=None):
+    """Send a Zoho request, refreshing auth once and classifying retryable errors."""
     for attempt in range(2):
         access_token = get_access_token(force_refresh=(attempt == 1))
-        headers = {
-            "Authorization": f"Zoho-oauthtoken {access_token}",
-            "Content-Type": "application/json"
-        }
-        resp = requests.post(f"{ZOHO_API_DOMAIN}/crm/v2/{module_name}", headers=headers, json=data_payload)
-        resp_data = resp.json()
-        print(f"Create {module_name} deal:", resp_data)
+        headers = {'Authorization': f'Zoho-oauthtoken {access_token}'}
+        if files is None:
+            headers['Content-Type'] = 'application/json'
+
         try:
-            record_id = resp_data['data'][0]['details']['id']
-            break
-        except Exception as e:
-            print(f"{module_name} order creation ERROR:", e)
-            if attempt == 1:
-                return False
+            response = requests.request(
+                method,
+                url,
+                headers=headers,
+                json=json,
+                files=files,
+                params=params,
+                timeout=ZOHO_REQUEST_TIMEOUT,
+            )
+        except (requests.Timeout, requests.ConnectionError) as exc:
+            raise ZohoTransientError(f'Zoho network error for {method} {url}: {exc}') from exc
+        except requests.RequestException as exc:
+            raise ZohoTransientError(f'Zoho request error for {method} {url}: {exc}') from exc
+
+        if response.status_code == 401 and attempt == 0:
+            continue
+        return response
+
+    raise ZohoTransientError(f'Zoho authentication failed for {method} {url}')
+
+
+def _response_json(response, context):
+    if response.status_code == 204:
+        return {}
+    try:
+        return response.json()
+    except ValueError as exc:
+        if response.status_code == 429 or response.status_code >= 500:
+            raise ZohoTransientError(
+                f'{context}: HTTP {response.status_code} with invalid JSON'
+            ) from exc
+        raise ZohoPermanentError(
+            f'{context}: HTTP {response.status_code} with invalid JSON'
+        ) from exc
+
+
+def _first_response_item(data):
+    items = data.get('data') or data.get('fields') or []
+    return items[0] if items else {}
+
+
+def _record_id_from_success(data):
+    item = _first_response_item(data)
+    code = str(item.get('code', '')).upper()
+    status = str(item.get('status', '')).lower()
+    if code == 'SUCCESS' or status == 'success':
+        record_id = item.get('details', {}).get('id')
+        if record_id:
+            return str(record_id)
+    return None
+
+
+def _raise_zoho_error(response, data, context):
+    item = _first_response_item(data)
+    code = str(item.get('code', '')).upper()
+    message = item.get('message') or response.text[:500]
+    detail = f'{context}: HTTP {response.status_code}, code={code or "unknown"}, message={message}'
+    if response.status_code == 429 or response.status_code >= 500:
+        raise ZohoTransientError(detail)
+    raise ZohoPermanentError(detail)
+
+
+def _resolve_unique_record_id(module_name, unique_field, unique_value):
+    """Resolve an already-created record without changing business fields."""
+    payload = {
+        'data': [{unique_field: unique_value}],
+        'duplicate_check_fields': [unique_field],
+        'trigger': [],
+    }
+    response = _request(
+        'POST',
+        f'{ZOHO_API_DOMAIN}/crm/v2/{module_name}/upsert',
+        json=payload,
+    )
+    data = _response_json(response, f'Resolve existing {module_name}')
+    record_id = _record_id_from_success(data)
+    if record_id:
+        return record_id
+    _raise_zoho_error(response, data, f'Resolve existing {module_name}')
+
+
+def upsert_record_by_unique_field(module_name, record, unique_field):
+    """Create or update a non-pipeline record using Zoho duplicate checking."""
+    payload = {
+        'data': [record],
+        'duplicate_check_fields': [unique_field],
+        'trigger': [],
+    }
+    response = _request(
+        'POST',
+        f'{ZOHO_API_DOMAIN}/crm/v2/{module_name}/upsert',
+        json=payload,
+    )
+    data = _response_json(response, f'Upsert {module_name}')
+    record_id = _record_id_from_success(data)
+    if record_id:
+        return record_id
+    _raise_zoho_error(response, data, f'Upsert {module_name}')
+
+
+def create_record_idempotently(module_name, record, unique_field, unique_value):
+    """
+    Insert once using a CRM unique field.
+
+    A retry after an ambiguous timeout receives DUPLICATE_DATA and resolves the
+    existing ID with a minimal, trigger-free upsert. Business fields and stages
+    are never rolled back by a retry.
+    """
+    response = _request(
+        'POST',
+        f'{ZOHO_API_DOMAIN}/crm/v2/{module_name}',
+        json={'data': [record]},
+    )
+    data = _response_json(response, f'Create {module_name}')
+    record_id = _record_id_from_success(data)
+    if record_id:
+        return record_id
+
+    item = _first_response_item(data)
+    if str(item.get('code', '')).upper() == 'DUPLICATE_DATA':
+        return _resolve_unique_record_id(module_name, unique_field, unique_value)
+
+    _raise_zoho_error(response, data, f'Create {module_name}')
+
+
+def _existing_attachment_names(module_name, record_id):
+    response = _request(
+        'GET',
+        f'{ZOHO_API_DOMAIN}/crm/v2/{module_name}/{record_id}/Attachments',
+    )
+    if response.status_code == 204:
+        return set()
+    data = _response_json(response, f'List attachments for {module_name}/{record_id}')
+    if response.status_code >= 400:
+        _raise_zoho_error(
+            response,
+            data,
+            f'List attachments for {module_name}/{record_id}',
+        )
+    return {
+        item.get('File_Name')
+        for item in data.get('data', [])
+        if item.get('File_Name')
+    }
+
+
+def sync_order_attachments(order, module_name, record_id):
+    """Upload each local file at most once, keyed by its stored filename."""
+    existing_names = _existing_attachment_names(module_name, record_id)
+    for attachment in order.file_attachments.all():
+        filename = os.path.basename(attachment.file.name)
+        if filename in existing_names:
+            logger.info(
+                '[Zoho] Attachment %s already exists on %s/%s, skipping',
+                filename,
+                module_name,
+                record_id,
+            )
+            continue
+
+        upload_file = None
+        close_upload_file = None
+        try:
+            try:
+                attachment.file.open('rb')
+                upload_file = attachment.file.file
+                close_upload_file = attachment.file.close
+            except (FileNotFoundError, OSError):
+                # Railway mounts media only on the web service. Celery fetches
+                # the same file through the web service when no local volume is
+                # available.
+                media_url = attachment.file.url
+                if not media_url.startswith(('http://', 'https://')):
+                    media_url = settings.BASE_URL.rstrip('/') + media_url
+                try:
+                    file_response = requests.get(
+                        media_url,
+                        timeout=ZOHO_REQUEST_TIMEOUT,
+                    )
+                    file_response.raise_for_status()
+                except requests.RequestException as exc:
+                    raise ZohoTransientError(
+                        f'Unable to fetch attachment {filename}: {exc}'
+                    ) from exc
+                upload_file = BytesIO(file_response.content)
+                close_upload_file = upload_file.close
+
+            response = _request(
+                'POST',
+                f'{ZOHO_API_DOMAIN}/crm/v2/{module_name}/{record_id}/Attachments',
+                files={'file': (filename, upload_file)},
+            )
+        finally:
+            if close_upload_file:
+                close_upload_file()
+
+        data = _response_json(
+            response,
+            f'Attach {filename} to {module_name}/{record_id}',
+        )
+        if not _record_id_from_success(data):
+            _raise_zoho_error(
+                response,
+                data,
+                f'Attach {filename} to {module_name}/{record_id}',
+            )
+        existing_names.add(filename)
+
+
+def _save_remote_id(order, module_name, record_id):
+    from .models import ZohoSyncJob
+
+    ZohoSyncJob.objects.update_or_create(
+        order_type=get_order_type(order),
+        order_id=order.id,
+        defaults={
+            'zoho_module': module_name,
+            'zoho_record_id': record_id,
+        },
+    )
+
+
+def sync_order_to_zoho(order, module_name, data_payload, attach_files=True):
+    payload = deepcopy(data_payload)
+    if not payload.get('data'):
+        raise ZohoPermanentError(f'No record data supplied for {module_name}')
+
+    external_key = get_order_external_key(order)
+    record = payload['data'][0]
+    record[EXTERNAL_ORDER_KEY_FIELD] = external_key
+
+    record_id = create_record_idempotently(
+        module_name=module_name,
+        record=record,
+        unique_field=EXTERNAL_ORDER_KEY_FIELD,
+        unique_value=external_key,
+    )
+    _save_remote_id(order, module_name, record_id)
 
     if attach_files:
-        file_urls = [settings.BASE_URL + fa.file.url for fa in order.file_attachments.all()]
-        for url in file_urls:
-            file_response = requests.get(url)
-            file_response.raise_for_status()
-            filename = url.split('/')[-1]
-            files = {
-                'file': (filename, file_response.content)
-            }
-            attach_url = f'{ZOHO_API_DOMAIN}/crm/v2/{module_name}/{record_id}/Attachments'
-            attach_headers = {
-                'Authorization': f'Zoho-oauthtoken {access_token}'
-            }
-            response = requests.post(attach_url, headers=attach_headers, files=files)
-            print(f'Attach "{filename}":', response.status_code, response.text)
+        sync_order_attachments(order, module_name, record_id)
 
     order.zoho_synced = True
     order.save(update_fields=['zoho_synced'])
-    return True
+    return record_id
 
 
 # -------- Generic helpers to read/update Zoho records --------
 def get_record_by_id(module_name: str, record_id: str, fields: list | None = None):
     """Fetch Zoho CRM record by id. Optionally restrict fields with ?fields=A,B.
-    Returns parsed JSON dict or None on error.
+    Returns parsed JSON dict, or None when the record does not exist.
     """
-    for attempt in range(2):
-        access_token = get_access_token(force_refresh=(attempt == 1))
-        headers = {
-            "Authorization": f"Zoho-oauthtoken {access_token}",
-        }
-        params = {}
-        if fields:
-            params["fields"] = ",".join(fields)
-        url = f"{ZOHO_API_DOMAIN}/crm/v2/{module_name}/{record_id}"
-        resp = requests.get(url, headers=headers, params=params)
-        if resp.status_code == 401 and attempt == 0:
-            # token expired, retry once
-            continue
-        try:
-            data = resp.json()
-            if 'data' in data and len(data['data']) > 0:
-                return data['data'][0]
-        except Exception:
-            return None
-    return None
+    params = {}
+    if fields:
+        params['fields'] = ','.join(fields)
+    response = _request(
+        'GET',
+        f'{ZOHO_API_DOMAIN}/crm/v2/{module_name}/{record_id}',
+        params=params,
+    )
+    if response.status_code in (204, 404):
+        return None
+    data = _response_json(response, f'Get {module_name}/{record_id}')
+    if response.status_code >= 400:
+        _raise_zoho_error(response, data, f'Get {module_name}/{record_id}')
+    records = data.get('data') or []
+    return records[0] if records else None
 
 
 def update_record_fields(module_name: str, record_id: str, fields_dict: dict) -> bool:
     """Update Zoho CRM record fields with provided dict.
     Returns True if update succeeded.
     """
-    import logging
-    logger = logging.getLogger(__name__)
-    
-    payload = {"data": [{"id": record_id, **fields_dict}]}
-    for attempt in range(2):
-        access_token = get_access_token(force_refresh=(attempt == 1))
-        headers = {
-            "Authorization": f"Zoho-oauthtoken {access_token}",
-            "Content-Type": "application/json",
-        }
-        url = f"{ZOHO_API_DOMAIN}/crm/v2/{module_name}"
-        
-        logger.info(f"[Zoho] PUT {url} payload={payload}")
-        resp = requests.put(url, headers=headers, json=payload)
-        logger.info(f"[Zoho] Response status={resp.status_code}, body={resp.text}")
-        
-        if resp.status_code == 401 and attempt == 0:
-            # token expired, retry once
-            continue
-            
-        try:
-            data = resp.json()
-            if 'data' in data and len(data['data']) > 0:
-                item = data['data'][0]
-                # Check both 'code' and 'status' fields for success
-                code = item.get('code', '').upper()
-                status = item.get('status', '').lower()
-                if code == 'SUCCESS' or status == 'success':
-                    logger.info(f"[Zoho] ✅ Successfully updated {module_name}/{record_id}")
-                    return True
-                else:
-                    logger.warning(f"[Zoho] Update failed: code={code}, status={status}, message={item.get('message')}")
-        except Exception as e:
-            logger.exception(f"[Zoho] Exception parsing response: {e}")
-            
-    return False
+    payload = {
+        'data': [{'id': record_id, **fields_dict}],
+        'trigger': [],
+    }
+    response = _request(
+        'PUT',
+        f'{ZOHO_API_DOMAIN}/crm/v2/{module_name}',
+        json=payload,
+    )
+    data = _response_json(response, f'Update {module_name}/{record_id}')
+    if _record_id_from_success(data):
+        logger.info('[Zoho] Updated %s/%s', module_name, record_id)
+        return True
+    _raise_zoho_error(response, data, f'Update {module_name}/{record_id}')
 
 
 # =============================================================================
 # LEAD ATTRIBUTION RECORDS
 # =============================================================================
 
-def create_attribution_record(attribution_data: dict, lead_name: str = '') -> str | None:
+def create_attribution_record(
+    attribution_data: dict,
+    lead_name: str = '',
+    *,
+    external_key: str,
+) -> str | None:
     """
     Create a Lead Attribution Record in Zoho CRM.
 
@@ -207,70 +413,21 @@ def create_attribution_record(attribution_data: dict, lead_name: str = '') -> st
     """
     from .services.attribution import build_zoho_attribution_payload
 
-    print(f"\n🔍 [DEBUG] create_attribution_record called")
-    print(f"🔍 [DEBUG] Input attribution_data: {attribution_data}")
-    print(f"🔍 [DEBUG] Lead name: {lead_name}")
-
-    logger.info(f"[Zoho Attribution] Building payload from: {attribution_data}")
+    logger.info('[Zoho Attribution] Building payload for %s', external_key)
     payload = build_zoho_attribution_payload(attribution_data, lead_name)
 
     if not payload:
-        print(f"❌ [DEBUG] build_zoho_attribution_payload returned None!")
-        logger.warning("[Zoho Attribution] build_zoho_attribution_payload returned None!")
+        logger.warning('[Zoho Attribution] No payload for %s', external_key)
         return None
 
-    print(f"✅ [DEBUG] Payload built: {payload}")
-    logger.info(f"[Zoho Attribution] Payload built: {payload}")
-    zoho_payload = {"data": [payload]}
-
-    for attempt in range(2):
-        access_token = get_access_token(force_refresh=(attempt == 1))
-        headers = {
-            "Authorization": f"Zoho-oauthtoken {access_token}",
-            "Content-Type": "application/json"
-        }
-
-        url = f"{ZOHO_API_DOMAIN}/crm/v2/{ZOHO_ATTRIBUTION_MODULE}"
-        logger.info(f"[Zoho] Creating Attribution Record: {payload.get('Name')}")
-
-        try:
-            print(f"\n🔍 [DEBUG] POST {url}")
-            print(f"🔍 [DEBUG] Request body: {zoho_payload}")
-            logger.info(f"[Zoho Attribution] POST {url}")
-            logger.info(f"[Zoho Attribution] Request body: {zoho_payload}")
-            resp = requests.post(url, headers=headers, json=zoho_payload)
-            print(f"🔍 [DEBUG] Response status: {resp.status_code}")
-            print(f"🔍 [DEBUG] Response body: {resp.text}")
-            logger.info(f"[Zoho Attribution] Response status: {resp.status_code}")
-            logger.info(f"[Zoho Attribution] Response body: {resp.text}")
-            resp_data = resp.json()
-
-            if resp.status_code == 401 and attempt == 0:
-                logger.warning("[Zoho] Token expired, refreshing...")
-                continue
-
-            # Extract record ID from response
-            if 'data' in resp_data and len(resp_data['data']) > 0:
-                item = resp_data['data'][0]
-                if item.get('code') == 'SUCCESS' or item.get('status') == 'success':
-                    record_id = item.get('details', {}).get('id')
-                    if record_id:
-                        print(f"✅ [DEBUG] Attribution Record created: {record_id}")
-                        logger.info(f"[Zoho] ✅ Created Attribution Record: {record_id}")
-                        return str(record_id)
-                else:
-                    print(f"❌ [DEBUG] Attribution creation failed: {item}")
-                    logger.warning(f"[Zoho] Attribution creation failed: {item}")
-            else:
-                print(f"❌ [DEBUG] Unexpected response: {resp_data}")
-                logger.warning(f"[Zoho] Unexpected response: {resp_data}")
-
-        except Exception as e:
-            logger.exception(f"[Zoho] Exception creating Attribution Record: {e}")
-            if attempt == 1:
-                return None
-
-    return None
+    payload['Name'] = f'DCMN Attribution {external_key.removeprefix("dcmn:attribution:")}'
+    payload[EXTERNAL_ORDER_KEY_FIELD] = external_key
+    return create_record_idempotently(
+        module_name=ZOHO_ATTRIBUTION_MODULE,
+        record=payload,
+        unique_field=EXTERNAL_ORDER_KEY_FIELD,
+        unique_value=external_key,
+    )
 
 
 def sync_order_with_attribution(order, module_name: str, data_payload: dict, attach_files: bool = True) -> bool:
@@ -293,30 +450,33 @@ def sync_order_with_attribution(order, module_name: str, data_payload: dict, att
     attribution_data = getattr(order, 'attribution_data', None)
     attribution_record_id = None
 
-    # DEBUG: Print to console (always visible)
-    print(f"\n🔍 [DEBUG] sync_order_with_attribution called for order {order.id}")
-    print(f"🔍 [DEBUG] Has attribution_data: {bool(attribution_data)}")
-    if attribution_data:
-        print(f"🔍 [DEBUG] Attribution data: {attribution_data}")
-
-    logger.info(f"[Zoho Attribution] Order {order.id} has attribution_data: {bool(attribution_data)}")
-    if attribution_data:
-        logger.info(f"[Zoho Attribution] Data: {attribution_data}")
+    logger.info(
+        '[Zoho Attribution] Order %s has attribution data: %s',
+        order.id,
+        bool(attribution_data),
+    )
 
     # Step 1: Create Attribution Record if we have data
     if attribution_data:
-        print(f"🔍 [DEBUG] Creating attribution record...")
-        logger.info(f"[Zoho Attribution] Creating attribution record for order {order.id}...")
+        logger.info(
+            '[Zoho Attribution] Creating attribution record for order %s',
+            order.id,
+        )
         attribution_record_id = create_attribution_record(
             attribution_data,
-            lead_name=getattr(order, 'name', '')
+            lead_name=getattr(order, 'name', ''),
+            external_key=get_attribution_external_key(order),
         )
         if attribution_record_id:
-            print(f"✅ [DEBUG] Attribution record created: {attribution_record_id}")
-            logger.info(f"[Zoho Attribution] ✅ Created record: {attribution_record_id}")
+            logger.info(
+                '[Zoho Attribution] Created record %s',
+                attribution_record_id,
+            )
         else:
-            print(f"❌ [DEBUG] Failed to create attribution record!")
-            logger.warning(f"[Zoho Attribution] ❌ Failed to create attribution record")
+            logger.warning(
+                '[Zoho Attribution] No attribution record was created for order %s',
+                order.id,
+            )
 
     # Step 2: Add Attribution lookup to order payload
     if attribution_record_id and 'data' in data_payload and len(data_payload['data']) > 0:
@@ -349,7 +509,7 @@ def sync_fbi_order_to_zoho(order: FbiApostilleOrder, tracking_id: str | None = N
                 "Certificate": str(order.count),
                 "Shipping_speed": order.shipping_option.label,
                 "Amount": float(order.total_price),
-                "Status": "Order Received",
+                "Stage": "Order Received",
                 "Payment_Status": "Fully Paid" if order.is_paid else "Not Paid",
                 "Submission_Date": order.created_at.date().isoformat(),
                 "Client_Contact": {"id": contact_id},
@@ -617,7 +777,7 @@ def sync_fingerprinting_to_zoho(order):
     client_comment = "\n".join(comment_parts)
 
     record = {
-        "Name": order.name,
+        "Name": f"Fingerprinting ID{order.id} | {order.name}",
         "Email": order.email,
         "Phone": order.phone,
         "Appointment_Type": order.service_location,   # 'Office' | 'Mobile'

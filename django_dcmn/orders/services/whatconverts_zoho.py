@@ -4,9 +4,7 @@ Zoho CRM sync for WhatConverts phone leads.
 """
 
 import logging
-import requests
-from typing import Dict, Optional
-from .attribution import build_zoho_attribution_payload, SOURCE_CATEGORIES
+from typing import Dict
 
 logger = logging.getLogger(__name__)
 
@@ -25,71 +23,103 @@ def sync_phone_lead_to_zoho(phone_lead: 'PhoneCallLead') -> bool:
     Returns:
         True if successful, False otherwise
     """
-    from ..zoho_client import ZohoCRMClient
+    from .whatconverts import build_attribution_from_phone_lead
+    from ..zoho_errors import ZohoPermanentError
+    from ..zoho_sync import (
+        EXTERNAL_ORDER_KEY_FIELD,
+        ZOHO_ATTRIBUTION_MODULE,
+        create_attribution_record as create_order_attribution_record,
+        create_record_idempotently,
+        get_attribution_external_key,
+        get_or_create_contact_id,
+        get_order_external_key,
+        update_record_fields,
+    )
 
-    try:
-        # If already synced to Zoho — don't create a duplicate record
-        # The lead may have been moved further in the pipeline by a manager
-        if phone_lead.zoho_synced and phone_lead.zoho_lead_id:
-            logger.info(f"⏭️ Phone lead {phone_lead.id} already synced to Zoho (lead_id={phone_lead.zoho_lead_id}), skipping")
-            return True
+    zoho_module = phone_lead.zoho_module or 'Get_A_Quote_Leads'
+    external_key = get_order_external_key(phone_lead)
+    lead_payload = build_zoho_lead_payload(phone_lead)
+    lead_payload[EXTERNAL_ORDER_KEY_FIELD] = external_key
 
-        client = ZohoCRMClient()
+    logger.info(
+        '[Zoho Phone] Syncing phone lead %s to %s',
+        phone_lead.id,
+        zoho_module,
+    )
 
-        # Build lead payload
-        lead_payload = build_zoho_lead_payload(phone_lead)
-
-        # Determine target module - fallback to Get a Quote
-        if phone_lead.zoho_module:
-            zoho_module = phone_lead.zoho_module
-        else:
-            zoho_module = 'Get_A_Quote_Leads'  # Default to Get a Quote if service unknown
-            logger.info(f"⚠️ Service not detected, defaulting to Get_A_Quote_Leads module")
-
-        logger.info(f"📤 Syncing phone lead {phone_lead.id} to Zoho module: {zoho_module}")
-        logger.info(f"   Payload: {lead_payload}")
-
-        # Create lead in Zoho
-        response = client.create_record(zoho_module, lead_payload)
-
-        if not response or not response.get('data'):
-            logger.error(f"❌ Failed to create lead in Zoho: {response}")
-            return False
-
-        # Extract lead ID safely
-        try:
-            lead_id = response['data'][0]['details']['id']
-        except (KeyError, IndexError, TypeError) as e:
-            logger.error(f"❌ Zoho returned unexpected response structure: {response}")
-            # Mark as synced even if we can't get the ID — the record was created
-            phone_lead.zoho_synced = True
-            phone_lead.save()
-            return False
-
+    if phone_lead.zoho_lead_id:
+        lead_id = phone_lead.zoho_lead_id
+        update_record_fields(
+            zoho_module,
+            lead_id,
+            {EXTERNAL_ORDER_KEY_FIELD: external_key},
+        )
+    else:
+        lead_id = create_record_idempotently(
+            module_name=zoho_module,
+            record=lead_payload,
+            unique_field=EXTERNAL_ORDER_KEY_FIELD,
+            unique_value=external_key,
+        )
+        phone_lead.zoho_module = zoho_module
         phone_lead.zoho_lead_id = lead_id
-        phone_lead.zoho_synced = True
-        phone_lead.save()
+        phone_lead.save(update_fields=['zoho_module', 'zoho_lead_id', 'updated_at'])
 
-        logger.info(f"✅ Created lead in Zoho {zoho_module}: {lead_id}")
+    contact_id = get_or_create_contact_id(
+        phone_lead.contact_name,
+        phone_lead.contact_email,
+        phone_lead.contact_phone,
+    )
+    lookup_field = CONTACT_LOOKUP_FIELD.get(zoho_module)
+    if contact_id and lookup_field:
+        update_record_fields(
+            zoho_module,
+            lead_id,
+            {lookup_field: {'id': contact_id}},
+        )
 
-        # Create/find Contact and link to lead
-        contact_id = _get_or_create_contact_for_phone_lead(phone_lead)
-        if contact_id:
-            _link_contact_to_lead(zoho_module, lead_id, contact_id, client)
+    attribution_external_key = get_attribution_external_key(phone_lead)
+    if phone_lead.zoho_attribution_id:
+        attribution_id = phone_lead.zoho_attribution_id
+        update_record_fields(
+            ZOHO_ATTRIBUTION_MODULE,
+            attribution_id,
+            {EXTERNAL_ORDER_KEY_FIELD: attribution_external_key},
+        )
+    else:
+        attribution_id = create_order_attribution_record(
+            build_attribution_from_phone_lead(phone_lead),
+            lead_name=phone_lead.contact_name or 'Phone Lead',
+            external_key=attribution_external_key,
+        )
+        if not attribution_id:
+            raise ZohoPermanentError(
+                f'No attribution payload for phone lead #{phone_lead.id}'
+            )
+        phone_lead.zoho_attribution_id = attribution_id
+        phone_lead.save(update_fields=['zoho_attribution_id', 'updated_at'])
 
-        # Create Attribution Record
-        attribution_id = create_attribution_record(phone_lead, lead_id, zoho_module, client)
+    update_record_fields(
+        zoho_module,
+        lead_id,
+        {'Attribution_Record': str(attribution_id)},
+    )
 
-        if attribution_id:
-            phone_lead.zoho_attribution_id = attribution_id
-            phone_lead.save()
-            logger.info(f"✅ Created attribution record: {attribution_id}")
-
-        return True
-
-    except Exception as e:
-        logger.error(f"❌ Error syncing phone lead {phone_lead.id} to Zoho: {e}", exc_info=True)
-        return False
+    phone_lead.zoho_synced = True
+    phone_lead.zoho_module = zoho_module
+    phone_lead.zoho_lead_id = lead_id
+    phone_lead.zoho_attribution_id = attribution_id
+    phone_lead.save(
+        update_fields=[
+            'zoho_synced',
+            'zoho_module',
+            'zoho_lead_id',
+            'zoho_attribution_id',
+            'updated_at',
+        ]
+    )
+    logger.info('[Zoho Phone] Synced phone lead %s', phone_lead.id)
+    return True
 
 
 # Module → Contact lookup field name
@@ -103,106 +133,6 @@ CONTACT_LOOKUP_FIELD = {
     'Notary_Services': 'Client_Name',
     'Get_A_Quote_Leads': 'Name_of_Client',
 }
-
-
-def _get_or_create_contact_for_phone_lead(phone_lead: 'PhoneCallLead') -> Optional[str]:
-    """
-    Find or create a Zoho Contact for a phone lead.
-    Search order: phone number first, then email.
-
-    Returns:
-        Contact ID or None
-    """
-    from ..zoho_sync import get_access_token, ZOHO_API_DOMAIN
-
-    phone = phone_lead.contact_phone
-    email = phone_lead.contact_email
-    name = phone_lead.contact_name or 'Phone Lead'
-
-    if not phone and not email:
-        logger.info(f"⏭️ No phone or email for phone lead {phone_lead.id}, skipping contact creation")
-        return None
-
-    try:
-        access_token = get_access_token()
-        headers = {
-            "Authorization": f"Zoho-oauthtoken {access_token}",
-            "Content-Type": "application/json"
-        }
-
-        # 1. Search by phone number
-        if phone:
-            search_url = f"{ZOHO_API_DOMAIN}/crm/v2/Contacts/search?phone={phone}"
-            resp = requests.get(search_url, headers=headers, timeout=30)
-            if resp.status_code == 200:
-                data = resp.json()
-                if 'data' in data and len(data['data']) > 0:
-                    contact_id = data['data'][0]['id']
-                    logger.info(f"📇 Found existing contact by phone {phone}: {contact_id}")
-                    return contact_id
-
-        # 2. Search by email
-        if email:
-            search_url = f"{ZOHO_API_DOMAIN}/crm/v2/Contacts/search?email={email}"
-            resp = requests.get(search_url, headers=headers, timeout=30)
-            if resp.status_code == 200:
-                data = resp.json()
-                if 'data' in data and len(data['data']) > 0:
-                    contact_id = data['data'][0]['id']
-                    logger.info(f"📇 Found existing contact by email {email}: {contact_id}")
-                    return contact_id
-
-        # 3. Create new contact
-        create_url = f"{ZOHO_API_DOMAIN}/crm/v2/Contacts"
-        payload = {
-            "data": [{
-                "Last_Name": name,
-                "Email": email or "",
-                "Phone": phone or "",
-            }]
-        }
-        resp = requests.post(create_url, headers=headers, json=payload, timeout=30)
-
-        try:
-            data = resp.json()
-            if 'data' in data and len(data['data']) > 0:
-                item = data['data'][0]
-                if 'details' in item:
-                    contact_id = item['details']['id']
-                    logger.info(f"📇 Created new contact for {name}: {contact_id}")
-                    return contact_id
-                elif item.get('code') == 'DUPLICATE_DATA' and 'details' in item:
-                    contact_id = item['details']['id']
-                    logger.info(f"📇 Contact already exists (duplicate): {contact_id}")
-                    return contact_id
-        except (KeyError, IndexError, TypeError):
-            pass
-
-        logger.warning(f"⚠️ Failed to create contact for phone lead {phone_lead.id}: {resp.text}")
-        return None
-
-    except Exception as e:
-        logger.error(f"❌ Error creating contact for phone lead {phone_lead.id}: {e}", exc_info=True)
-        return None
-
-
-def _link_contact_to_lead(zoho_module: str, lead_id: str, contact_id: str, client: 'ZohoCRMClient'):
-    """
-    Link a Zoho Contact to a lead record via the module's lookup field.
-    Silently skips modules that don't have a contact lookup field.
-    """
-    lookup_field = CONTACT_LOOKUP_FIELD.get(zoho_module)
-    if not lookup_field:
-        logger.info(f"⏭️ Module {zoho_module} has no contact lookup field, skipping link")
-        return
-
-    link_payload = {lookup_field: {"id": contact_id}}
-    response = client.update_record(zoho_module, lead_id, link_payload)
-
-    if response:
-        logger.info(f"🔗 Linked contact {contact_id} to {zoho_module} record {lead_id} via {lookup_field}")
-    else:
-        logger.warning(f"⚠️ Failed to link contact {contact_id} to {zoho_module} record {lead_id}")
 
 
 def build_zoho_lead_payload(phone_lead: 'PhoneCallLead') -> Dict:
@@ -371,75 +301,6 @@ def calculate_rating(lead_score: int) -> str:
         return 'Warm'
     else:
         return 'Cold'
-
-
-def create_attribution_record(
-    phone_lead: 'PhoneCallLead',
-    zoho_lead_id: str,
-    zoho_module: str,
-    client: 'ZohoCRMClient'
-) -> Optional[str]:
-    """
-    Create Lead Attribution Record in Zoho.
-
-    Args:
-        phone_lead: PhoneCallLead instance
-        zoho_lead_id: Zoho lead/deal ID
-        zoho_module: Module name where lead was created
-        client: ZohoCRMClient instance
-
-    Returns:
-        Attribution record ID or None
-    """
-    try:
-        # Build attribution payload using existing function
-        from .whatconverts import build_attribution_from_phone_lead
-        attribution_data = build_attribution_from_phone_lead(phone_lead)
-
-        # Build Zoho payload
-        zoho_payload = build_zoho_attribution_payload(
-            attribution_data=attribution_data,
-            lead_name=phone_lead.contact_name or 'Phone Lead'
-        )
-
-        if not zoho_payload:
-            logger.warning("Could not build attribution payload")
-            return None
-
-        logger.info(f"📤 Creating attribution record for lead {zoho_lead_id}")
-
-        # Step 1: Create attribution record in Zoho
-        response = client.create_record('Lead_Attribution_Records', zoho_payload)
-
-        if not response or not response.get('data'):
-            logger.error(f"❌ Failed to create attribution record: {response}")
-            return None
-
-        record_data = response['data'][0]
-        if record_data.get('code') != 'SUCCESS' and record_data.get('status') != 'success':
-            logger.error(f"❌ Attribution creation failed: {record_data}")
-            return None
-
-        attribution_id = record_data.get('details', {}).get('id')
-        if not attribution_id:
-            logger.error(f"❌ No ID in attribution response: {record_data}")
-            return None
-
-        # Step 2: Link attribution to lead by updating the lead record
-        # Attribution_Record is a lookup field ON the lead/deal, not on the attribution record
-        link_payload = {'Attribution_Record': str(attribution_id)}
-        link_response = client.update_record(zoho_module, zoho_lead_id, link_payload)
-
-        if link_response and link_response.get('data'):
-            logger.info(f"✅ Linked attribution {attribution_id} to lead {zoho_lead_id}")
-        else:
-            logger.warning(f"⚠️ Attribution created but failed to link to lead: {link_response}")
-
-        return str(attribution_id)
-
-    except Exception as e:
-        logger.error(f"❌ Error creating attribution record: {e}", exc_info=True)
-        return None
 
 
 def update_order_stage_to_received(order_type: str, order_id: int) -> bool:
