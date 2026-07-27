@@ -5,7 +5,7 @@ from .files import save_file_attachments, build_file_links
 from .notifications import send_staff_notification, build_order_extra_body
 from .tracking import create_order_tracking
 from .attribution import process_attribution
-from ..tasks import sync_order_to_zoho_task, send_tracking_email_task
+from ..tasks import enqueue_zoho_sync, send_tracking_email_task
 import logging
 
 logger = logging.getLogger(__name__)
@@ -69,10 +69,7 @@ def process_new_order(
     # 4. Sync to Zoho (async) - attribution will be included automatically
     if sync_to_zoho:
         try:
-            if tid:
-                sync_order_to_zoho_task.delay(order.id, order_type, tracking_id=tid)
-            else:
-                sync_order_to_zoho_task.delay(order.id, order_type)
+            enqueue_zoho_sync(order.id, order_type, tracking_id=tid)
             logger.info(f"Queued Zoho sync for {order_type} order {order.id}")
         except Exception as e:
             logger.exception(f"Failed to queue Zoho sync for {order_type} order {order.id}: {e}")

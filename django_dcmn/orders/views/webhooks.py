@@ -3,6 +3,8 @@
 
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
+from django.conf import settings
+from django.db import transaction
 
 import json
 import logging
@@ -18,6 +20,9 @@ def whatconverts_test_webhook(request):
 
     URL: /api/webhook/whatconverts-test/
     """
+    if not settings.DEBUG:
+        return JsonResponse({'error': 'Not found'}, status=404)
+
     # Collect all data
     webhook_data = {
         'method': request.method,
@@ -119,9 +124,12 @@ def whatconverts_webhook(request):
 
         # Process the phone lead
         from ..services.whatconverts import process_whatconverts_phone_lead
-        from ..services.whatconverts_zoho import sync_phone_lead_to_zoho
+        from ..tasks import enqueue_zoho_sync
 
-        phone_lead = process_whatconverts_phone_lead(data)
+        with transaction.atomic():
+            phone_lead = process_whatconverts_phone_lead(data)
+            if phone_lead is not None:
+                enqueue_zoho_sync(phone_lead.id, 'phone')
 
         # None = matching order exists, phone lead intentionally skipped
         if phone_lead is None:
@@ -132,27 +140,16 @@ def whatconverts_webhook(request):
                 'message': '90% probability: clarification call about existing order'
             })
 
-        # Sync to Zoho
-        success = sync_phone_lead_to_zoho(phone_lead)
-
-        if success:
-            logger.info(f"✅ Successfully processed and synced phone lead {phone_lead.id}")
-
-            return JsonResponse({
-                'status': 'success',
+        logger.info('Queued phone lead %s for Zoho sync', phone_lead.id)
+        return JsonResponse(
+            {
+                'status': 'queued',
                 'phone_lead_id': phone_lead.id,
-                'zoho_lead_id': phone_lead.zoho_lead_id,
-                'zoho_attribution_id': phone_lead.zoho_attribution_id,
                 'detected_service': phone_lead.detected_service,
                 'matched_with_form': phone_lead.matched_with_form,
-            })
-        else:
-            logger.warning(f"⚠️ Phone lead {phone_lead.id} created but Zoho sync failed")
-            return JsonResponse({
-                'status': 'partial',
-                'message': 'Lead saved but Zoho sync failed',
-                'phone_lead_id': phone_lead.id,
-            })
+            },
+            status=202,
+        )
 
     except json.JSONDecodeError as e:
         logger.error(f"❌ Invalid JSON: {e}")

@@ -400,7 +400,15 @@ def process_whatconverts_phone_lead(webhook_data: Dict) -> Optional['PhoneCallLe
 
     if existing_lead:
         logger.info(f"🔄 Updating existing phone lead {existing_lead.id}")
+        preserve_fields = {
+            'zoho_lead_id',
+            'zoho_attribution_id',
+            'zoho_synced',
+            'zoho_module',
+        }
         for key, value in parsed.items():
+            if key in preserve_fields and getattr(existing_lead, key, None):
+                continue
             setattr(existing_lead, key, value)
         existing_lead.save()
         phone_lead = existing_lead

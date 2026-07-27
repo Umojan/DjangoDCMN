@@ -21,6 +21,7 @@ from .models import (
     PreCheckSubmission,
     FingerprintingSubmission,
     PhoneCallLead,
+    ZohoSyncJob,
     Track,
 )
 
@@ -223,3 +224,32 @@ class PhoneCallLeadAdmin(admin.ModelAdmin):
 class TrackAdmin(admin.ModelAdmin):
     list_display = ('tid', 'updated_at', 'created_at')
     search_fields = ('tid',)
+
+
+@admin.register(ZohoSyncJob)
+class ZohoSyncJobAdmin(admin.ModelAdmin):
+    list_display = (
+        'order_type',
+        'order_id',
+        'status',
+        'attempts',
+        'zoho_module',
+        'zoho_record_id',
+        'last_attempt_at',
+        'updated_at',
+    )
+    list_filter = ('status', 'order_type', 'zoho_module', 'updated_at')
+    search_fields = ('order_type', 'order_id', 'zoho_record_id', 'last_error')
+    readonly_fields = (
+        'order_type',
+        'order_id',
+        'attempts',
+        'zoho_module',
+        'zoho_record_id',
+        'tracking_id',
+        'last_error',
+        'last_attempt_at',
+        'synced_at',
+        'created_at',
+        'updated_at',
+    )

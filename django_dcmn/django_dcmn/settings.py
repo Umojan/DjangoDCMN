@@ -69,6 +69,13 @@ TRUSTPILOT_TRIGGER_EMAIL = config('TRUSTPILOT_TRIGGER_EMAIL', default='dcmobilen
 # ====== CELERY ======
 CELERY_BROKER_URL = config("REDIS_URL")
 CELERY_RESULT_BACKEND = config("REDIS_URL")
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_BEAT_SCHEDULE = {
+    'reconcile-pending-zoho-syncs-every-5-minutes': {
+        'task': 'orders.tasks.reconcile_pending_zoho_syncs',
+        'schedule': 300.0,
+    },
+}
 
 
 # SECURITY WARNING: don't run with debug turned on in production!

@@ -30,20 +30,27 @@ class TrackingApiTests(TestCase):
         pub = reverse('tracking_public', kwargs={'tid': tid})
         r2 = self.client.get(pub)
         self.assertEqual(r2.status_code, 200)
-        self.assertIn('steps', r2.data)
+        self.assertIn('timeline', r2.data)
 
     def test_crm_update_with_mapping(self):
         # prepare track
         Track.objects.create(
-            tid='ABC123', name='Jane Doe', email='jane@example.com',
-            service='fbi_apostille', current_stage='document_received')
+            tid='ABC123',
+            service='fbi_apostille',
+            data={
+                'name': 'Jane Doe',
+                'email': 'jane@example.com',
+                'service': 'fbi_apostille',
+                'current_stage': 'document_received',
+            },
+        )
 
         url = reverse('tracking_crm_update')
         payload = {
             'tid': 'ABC123',
-            'crm_stage_name': 'Submitted'
+            'current_stage': 'submitted'
         }
         resp = self.client.post(url, payload, format='json', HTTP_X_ZOHO_TOKEN=self.token)
         self.assertEqual(resp.status_code, 200)
         t = Track.objects.get(tid='ABC123')
-        self.assertEqual(t.current_stage, 'submitted')
+        self.assertEqual(t.data['current_stage'], 'submitted')
