@@ -50,6 +50,8 @@ EMAIL_TIMEOUT = 10
 # EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
 #
 EMAIL_OFFICE_RECEIVER = os.getenv('EMAIL_OFFICE_RECEIVER', '').split(',')
+# Managers for Business Account / Partner applications (falls back to EMAIL_OFFICE_RECEIVER)
+APPLICATIONS_NOTIFY_EMAILS = [e.strip() for e in os.getenv('APPLICATIONS_NOTIFY_EMAILS', '').split(',') if e.strip()]
 EMAIL_CLIENT_FROM = config("EMAIL_CLIENT_FROM")
 
 
@@ -59,6 +61,15 @@ ZOHO_CLIENT_ID = os.getenv('ZOHO_CLIENT_ID')
 ZOHO_CLIENT_SECRET = os.getenv('ZOHO_CLIENT_SECRET')
 ZOHO_WEBHOOK_TOKEN = config('ZOHO_WEBHOOK_TOKEN', default='')
 ZOHO_LEADS_WON_FIELD = 'Number_of_Leads_Won'  # API name of the field in Zoho Contacts
+# Business Account / Partner applications → Zoho. Module defaults to Leads (no B2B pipeline exists yet).
+ZOHO_APPLICATIONS_MODULE = config('ZOHO_APPLICATIONS_MODULE', default='Leads')
+# Comma-separated Zoho user IDs (e.g. Jules, Daveys) — round-robin by application id. Empty = API user.
+ZOHO_APPLICATIONS_OWNER_IDS = [o.strip() for o in config('ZOHO_APPLICATIONS_OWNER_IDS', default='').split(',') if o.strip()]
+
+
+# ====== CLOUDFLARE TURNSTILE (B2B application forms) ======
+TURNSTILE_SECRET_KEY = config('TURNSTILE_SECRET_KEY', default='')
+TURNSTILE_REQUIRE_TOKEN = config('TURNSTILE_REQUIRE_TOKEN', default=False, cast=bool)
 
 
 # ====== REVIEWS ======
@@ -144,6 +155,11 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
     ],
+    'DEFAULT_THROTTLE_RATES': {
+        # Business Account / Partner application forms (per client IP)
+        'applications_burst': config('APPLICATIONS_THROTTLE_BURST', default='5/min'),
+        'applications_sustained': config('APPLICATIONS_THROTTLE_SUSTAINED', default='20/hour'),
+    },
 }
 
 # Database

@@ -282,3 +282,140 @@ class PublicTrackSerializer(serializers.Serializer):
             "shipping": data.get('shipping', ''),
             "translation_required": data.get('translation_r', False),
         })
+
+# ====== Business Account / Partner applications ======
+class _FlexibleBooleanField(serializers.BooleanField):
+    """Accept true/'true'/'on'/1 from the site bridge; anything else is False."""
+
+    def to_internal_value(self, data):
+        if isinstance(data, str) and data.strip().lower() in ('on', 'yes', 'checked'):
+            return True
+        try:
+            return super().to_internal_value(data)
+        except serializers.ValidationError:
+            return False
+
+
+class ApplicationSerializer(serializers.Serializer):
+    """
+    Validates the JSON contract from the Webflow bridge (dcmn-apply.js).
+
+    Select values are validated as free strings (the client may edit the
+    selects in Webflow). Unknown keys are ignored. Program-specific keys
+    (organization/company, city_state/state_country, ...) are normalised
+    onto the shared model columns in `to_application_fields()`.
+    """
+
+    MAX_TEXT = 500
+    MAX_NOTES = 5000
+
+    program = serializers.CharField(required=False, allow_blank=True)
+    contact_name = serializers.CharField(max_length=255, error_messages={
+        'required': 'Please enter your name.', 'blank': 'Please enter your name.'})
+    email = serializers.EmailField(max_length=254, error_messages={
+        'required': 'Please enter your email address.', 'blank': 'Please enter your email address.',
+        'invalid': 'Please enter a valid email address.'})
+    phone = serializers.CharField(max_length=50, error_messages={
+        'required': 'Please enter your phone number.', 'blank': 'Please enter your phone number.'})
+
+    # Business account naming
+    organization = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    role = serializers.CharField(max_length=MAX_TEXT, required=False, allow_blank=True)
+    city_state = serializers.CharField(max_length=MAX_TEXT, required=False, allow_blank=True)
+    org_type = serializers.CharField(max_length=MAX_TEXT, required=False, allow_blank=True)
+    order_frequency = serializers.CharField(max_length=MAX_TEXT, required=False, allow_blank=True)
+
+    # Partner naming
+    company = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    website = serializers.CharField(max_length=MAX_TEXT, required=False, allow_blank=True)
+    state_country = serializers.CharField(max_length=MAX_TEXT, required=False, allow_blank=True)
+    business_type = serializers.CharField(max_length=MAX_TEXT, required=False, allow_blank=True)
+    monthly_volume = serializers.CharField(max_length=MAX_TEXT, required=False, allow_blank=True)
+    start_timing = serializers.CharField(max_length=MAX_TEXT, required=False, allow_blank=True)
+    delivery_preference = serializers.CharField(max_length=MAX_TEXT, required=False, allow_blank=True)
+    partner_terms_ack = _FlexibleBooleanField(required=False, default=False)
+
+    # Shared
+    services = serializers.ListField(
+        child=serializers.CharField(max_length=100), required=False, default=list,
+        error_messages={'not_a_list': 'Services must be a list.'})
+    countries = serializers.CharField(max_length=MAX_TEXT, required=False, allow_blank=True)
+    notes = serializers.CharField(max_length=MAX_NOTES, required=False, allow_blank=True, error_messages={
+        'max_length': 'Notes are too long (5000 characters max).'})
+    source_page = serializers.CharField(max_length=MAX_TEXT, required=False, allow_blank=True)
+    page_url = serializers.CharField(max_length=1000, required=False, allow_blank=True)
+    attribution = serializers.JSONField(required=False, allow_null=True)
+    turnstile_token = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+    def __init__(self, *args, program: str, **kwargs):
+        self.program = program
+        super().__init__(*args, **kwargs)
+
+    def validate_services(self, value):
+        return [str(v).strip() for v in value if str(v).strip()][:50]
+
+    def validate_page_url(self, value):
+        value = (value or '').strip()
+        if value and not value.lower().startswith(('http://', 'https://')):
+            return ''
+        return value
+
+    def validate(self, attrs):
+        from .models import Application
+        from rest_framework.exceptions import ValidationError
+
+        if self.program == Application.PROGRAM_PARTNER:
+            if not (attrs.get('company') or '').strip():
+                raise ValidationError({'detail': 'Please enter your company name.'})
+            if not attrs.get('partner_terms_ack'):
+                raise ValidationError({'detail': 'Please confirm the partner terms to continue.'})
+        else:
+            if not (attrs.get('organization') or '').strip():
+                raise ValidationError({'detail': 'Please enter your organization name.'})
+        return attrs
+
+    def to_application_fields(self) -> dict:
+        """Map validated payload onto Application model columns."""
+        from .models import Application
+
+        d = self.validated_data
+        partner = self.program == Application.PROGRAM_PARTNER
+        return {
+            'program': self.program,
+            'contact_name': d['contact_name'].strip(),
+            'email': d['email'].strip().lower(),
+            'phone': d['phone'].strip(),
+            'organization': (d.get('company') if partner else d.get('organization') or '').strip(),
+            'role': (d.get('role') or '').strip(),
+            'website': (d.get('website') or '').strip(),
+            'location': ((d.get('state_country') if partner else d.get('city_state')) or '').strip(),
+            'org_type': ((d.get('business_type') if partner else d.get('org_type')) or '').strip(),
+            'services': d.get('services') or [],
+            'volume': ((d.get('monthly_volume') if partner else d.get('order_frequency')) or '').strip(),
+            'start_timing': (d.get('start_timing') or '').strip(),
+            'countries': (d.get('countries') or '').strip(),
+            'delivery_preference': (d.get('delivery_preference') or '').strip(),
+            'notes': (d.get('notes') or '').strip(),
+            'partner_terms_ack': bool(d.get('partner_terms_ack')),
+            'source_page': (d.get('source_page') or '').strip(),
+            'page_url': d.get('page_url') or '',
+        }
+
+    @staticmethod
+    def first_error_message(errors) -> str:
+        """Flatten DRF errors into one short human-readable sentence."""
+        if isinstance(errors, dict):
+            if 'detail' in errors:
+                return ApplicationSerializer.first_error_message(errors['detail'])
+            for key, value in errors.items():
+                msg = ApplicationSerializer.first_error_message(value)
+                if msg:
+                    return msg
+            return 'Please check the form and try again.'
+        if isinstance(errors, (list, tuple)):
+            for item in errors:
+                msg = ApplicationSerializer.first_error_message(item)
+                if msg:
+                    return msg
+            return ''
+        return str(errors)

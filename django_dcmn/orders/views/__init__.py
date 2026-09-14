@@ -17,6 +17,11 @@ from .orders import (
     FbiOptionsView,
 )
 
+from .applications import (
+    BusinessAccountApplyView,
+    PartnerApplyView,
+)
+
 from .stripe import (
     CreateStripeSessionView,
     stripe_webhook,
@@ -50,6 +55,9 @@ __all__ = [
     'CreatePreCheckView',
     'CreateFingerprintingView',
     'FbiOptionsView',
+    # B2B applications
+    'BusinessAccountApplyView',
+    'PartnerApplyView',
     # Stripe
     'CreateStripeSessionView',
     'stripe_webhook',

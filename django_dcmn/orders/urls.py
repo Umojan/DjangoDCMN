@@ -12,6 +12,8 @@ from .views import (
     CreateQuoteRequestView,
     CreatePreCheckView,
     CreateFingerprintingView,
+    BusinessAccountApplyView,
+    PartnerApplyView,
 
     stripe_webhook,
     test_email,
@@ -34,6 +36,8 @@ urlpatterns = [
     path('quote/create-order/', CreateQuoteRequestView.as_view(), name='create-quote-request'),
     path('pre-check/submit/', CreatePreCheckView.as_view(), name='pre-check-submit'),
     path('fingerprinting/submit/', CreateFingerprintingView.as_view(), name='fingerprinting-submit'),
+    path('business-accounts/apply/', BusinessAccountApplyView.as_view(), name='business-account-apply'),
+    path('partners/apply/', PartnerApplyView.as_view(), name='partner-apply'),
 
     path('fbi/options/', FbiOptionsView.as_view(), name='fbi_options'),
     path("create-stripe-session/", CreateStripeSessionView.as_view(), name="create_stripe_session"),
