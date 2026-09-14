@@ -662,3 +662,9 @@ The record is ALWAYS saved and 200 returned even if Zoho/email fail.
 - Env (Railway): `APPLICATIONS_NOTIFY_EMAILS`, `ZOHO_APPLICATIONS_OWNER_IDS`, `ZOHO_APPLICATIONS_MODULE` (optional),
   `TURNSTILE_SECRET_KEY`, `TURNSTILE_REQUIRE_TOKEN`, `APPLICATIONS_THROTTLE_BURST`, `APPLICATIONS_THROTTLE_SUSTAINED` (all optional).
 - Tests: `DJANGO_SETTINGS_MODULE=django_dcmn.settings_test python3 manage.py test orders` (sqlite + locmem cache, no Redis needed).
+- Frontend bridge: source of truth is `frontend/dcmn-apply.js` (repo root). A compacted copy is embedded as page footer custom
+  code on the Webflow pages `/business-accounts` and `/partners` (page IDs 6a9025add986e63fb726b032 / 6a93477dd6bc5a0407a36595).
+  It intercepts the native Webflow submit AFTER the page validation scripts, POSTs JSON, redirects to the thank-you page on 2xx,
+  shows `detail` in `.w-form-fail` on 400/429, and falls back to the native Webflow submission on network errors / 5xx / 404
+  (so leads are never lost if the API is down). Webflow's Turnstile keeps the submit button disabled until the challenge passes;
+  the token is forwarded as `turnstile_token`. When changing the JS, update both the repo file and the Webflow footer code.
