@@ -6,7 +6,8 @@ from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
 from .models import FbiApostilleOrder, EmbassyLegalizationOrder, TranslationOrder, ApostilleOrder, MarriageOrder, \
-    I9VerificationOrder, QuoteRequest, PreCheckSubmission, FingerprintingSubmission, PhoneCallLead, ZohoSyncJob
+    I9VerificationOrder, QuoteRequest, PreCheckSubmission, FingerprintingSubmission, PhoneCallLead, ZohoSyncJob, \
+    Application
 from .zoho_sync import (
     EXTERNAL_ORDER_KEY_FIELD,
     get_order_external_key,
@@ -18,6 +19,7 @@ from .zoho_sync import (
     sync_i9_order_to_zoho, sync_quote_request_to_zoho,
     sync_precheck_to_zoho,
     sync_fingerprinting_to_zoho,
+    sync_application_to_zoho,
     sync_order_attachments,
     update_record_fields,
 )
@@ -52,6 +54,7 @@ ORDER_TYPE_MAP = {
     'pre-check': (PreCheckSubmission, sync_precheck_to_zoho),
     'fingerprinting': (FingerprintingSubmission, sync_fingerprinting_to_zoho),
     'phone': (PhoneCallLead, sync_phone_lead_to_zoho),
+    'application': (Application, sync_application_to_zoho),
 }
 
 
@@ -281,7 +284,7 @@ def sync_order_to_zoho_task(self, order_id, order_type, tracking_id=None):
                 job.zoho_module = matched_phone_lead.zoho_module
                 job.zoho_record_id = matched_phone_lead.zoho_lead_id
             else:
-                if canonical in ('quote', 'pre-check', 'fingerprinting'):
+                if canonical in ('quote', 'pre-check', 'fingerprinting', 'application'):
                     result = sync_func(order)
                 else:
                     result = sync_func(

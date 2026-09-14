@@ -30,6 +30,7 @@ ORDER_TYPE_BY_MODEL = {
     'prechecksubmission': 'pre-check',
     'fingerprintingsubmission': 'fingerprinting',
     'phonecalllead': 'phone',
+    'application': 'application',
 }
 
 
@@ -794,3 +795,194 @@ def sync_fingerprinting_to_zoho(order):
 
     data = {"data": [record]}
     return sync_order_to_zoho(order, zoho_module, data, attach_files=False)
+
+
+# =============================================================================
+# BUSINESS ACCOUNT / PARTNER APPLICATIONS (module: Leads by default)
+# =============================================================================
+#
+# There is no dedicated B2B pipeline in Zoho yet (verified Sep 2026), so the
+# applications land in the standard Leads module with a clear marker
+# (Tag + first Description line + Lead_Source), as requested in the task spec.
+# The module is configurable via ZOHO_APPLICATIONS_MODULE so it can be moved to
+# a dedicated "Partners / Business Accounts" module without code changes to
+# the endpoint flow — only build_application_lead_payload() would need adjusting
+# for module-specific field names.
+
+APPLICATION_LEAD_STATUS = 'Not Contacted'
+APPLICATION_LEAD_SOURCE = {
+    'partner': 'Partner',          # existing Lead_Source picklist value
+    'business_account': None,      # no matching picklist value in the org; Tag/Description mark the program
+}
+APPLICATION_TAGS = {
+    'partner': 'Partner Application',
+    'business_account': 'Business Account Request',  # Zoho tag names are limited to 25 chars
+}
+_MODULE_FIELDS_CACHE_TTL = 24 * 3600
+
+
+def module_has_field(module_name: str, field_api_name: str) -> bool:
+    """Check (cached for 24h) whether a Zoho module exposes a field."""
+    cache_key = f'zoho_module_fields:{module_name}'
+    api_names = cache.get(cache_key)
+    if api_names is None:
+        response = _request(
+            'GET',
+            f'{ZOHO_API_DOMAIN}/crm/v2/settings/fields',
+            params={'module': module_name},
+        )
+        data = _response_json(response, f'Fields of {module_name}')
+        if response.status_code >= 400:
+            _raise_zoho_error(response, data, f'Fields of {module_name}')
+        api_names = [f.get('api_name') for f in data.get('fields', [])]
+        cache.set(cache_key, api_names, timeout=_MODULE_FIELDS_CACHE_TTL)
+    return field_api_name in api_names
+
+
+def _split_contact_name(full_name: str) -> tuple[str, str]:
+    parts = (full_name or '').strip().split()
+    if not parts:
+        return '', 'DCMN Applicant'
+    if len(parts) == 1:
+        return '', parts[0][:80]
+    return ' '.join(parts[:-1])[:40], parts[-1][:80]
+
+
+def _application_owner_id(order) -> str | None:
+    """Pick an owner from ZOHO_APPLICATIONS_OWNER_IDS (round-robin by application id)."""
+    owner_ids = [o for o in (getattr(settings, 'ZOHO_APPLICATIONS_OWNER_IDS', None) or []) if o]
+    if not owner_ids:
+        return None
+    return owner_ids[order.id % len(owner_ids)]
+
+
+def _find_leads_by_email(email: str) -> list[dict]:
+    """Best-effort duplicate lookup; never raises."""
+    if not email:
+        return []
+    try:
+        response = _request(
+            'GET',
+            f'{ZOHO_API_DOMAIN}/crm/v2/Leads/search',
+            params={'email': email, 'fields': 'Company,Last_Name,Created_Time'},
+        )
+        if response.status_code in (200,):
+            return response.json().get('data') or []
+    except Exception:
+        logger.warning('[Zoho] Duplicate email lookup failed for %s', email, exc_info=True)
+    return []
+
+
+def build_application_lead_payload(order, duplicates: list[dict] | None = None) -> dict:
+    from .services.applications import build_questionnaire, PROGRAM_LABELS
+
+    first_name, last_name = _split_contact_name(order.contact_name)
+    description = build_questionnaire(order)
+    if duplicates:
+        dup_lines = ', '.join(
+            f"{d.get('Company') or '-'} / {d.get('Last_Name') or '-'} ({str(d.get('Created_Time') or '')[:10]}, id {d.get('id')})"
+            for d in duplicates[:5]
+        )
+        description = f"⚠ duplicate email — existing lead(s): {dup_lines}\n{description}"
+
+    labels = PROGRAM_LABELS[order.program]
+    record = {
+        'Last_Name': last_name,
+        'Company': (order.organization or '')[:200] or 'Unknown',
+        'Email': order.email,
+        'Phone': (order.phone or '')[:30],
+        'Lead_Status': APPLICATION_LEAD_STATUS,
+        'Description': description[:32000],
+    }
+    if first_name:
+        record['First_Name'] = first_name
+    if order.website:
+        record['Website'] = order.website[:255]
+    if order.role:
+        record['Designation'] = order.role[:100]
+    lead_source = APPLICATION_LEAD_SOURCE.get(order.program)
+    if lead_source:
+        record['Lead_Source'] = lead_source
+    owner_id = _application_owner_id(order)
+    if owner_id:
+        record['Owner'] = {'id': owner_id}
+    logger.info('[Zoho] %s payload for application #%s prepared', labels['title'], order.id)
+    return record
+
+
+def _ensure_tags_exist(module_name: str, tag_names: list[str]) -> None:
+    """Create module tags (Zoho's add_tags does not auto-create missing tags)."""
+    response = _request(
+        'POST',
+        f'{ZOHO_API_DOMAIN}/crm/v2/settings/tags',
+        params={'module': module_name},
+        json={'tags': [{'name': name} for name in tag_names]},
+    )
+    logger.info('[Zoho] Ensure tags %s on %s: HTTP %s', tag_names, module_name, response.status_code)
+
+
+def add_tags_to_record(module_name: str, record_id: str, tag_names: list[str]) -> bool:
+    """Attach tags to a record (Zoho ignores `Tag` on create; this is the supported way).
+    Missing tags are created once, then the call is retried. Best-effort: never raises."""
+    if not tag_names:
+        return False
+    try:
+        for attempt in range(2):
+            response = _request(
+                'POST',
+                f'{ZOHO_API_DOMAIN}/crm/v2/{module_name}/{record_id}/actions/add_tags',
+                params={'tag_names': ','.join(tag_names), 'over_write': 'false'},
+            )
+            data = _response_json(response, f'Tag {module_name}/{record_id}')
+            if _record_id_from_success(data):
+                return True
+            if attempt == 0 and 'tags not found' in response.text.lower():
+                _ensure_tags_exist(module_name, tag_names)
+                continue
+            logger.warning('[Zoho] Tagging %s/%s failed: %s', module_name, record_id, response.text[:300])
+            return False
+    except Exception:
+        logger.warning('[Zoho] Tagging %s/%s raised', module_name, record_id, exc_info=True)
+    return False
+
+
+def sync_application_to_zoho(order):
+    """Create a Zoho Lead for a Business Account / Partner application.
+
+    Uses the idempotent External_Order_Key path when the target module has the
+    field (as all order modules do after the reliability hotfix). If the module
+    lacks it (standard Leads module today), falls back to a plain create guarded
+    by the already-stored zoho_lead_id, so a retry never creates a second lead.
+    """
+    from .models import Application
+
+    module_name = getattr(settings, 'ZOHO_APPLICATIONS_MODULE', None) or 'Leads'
+
+    if order.zoho_lead_id:
+        logger.info('[Zoho] Application #%s already has lead %s, skipping create', order.id, order.zoho_lead_id)
+        _save_remote_id(order, module_name, order.zoho_lead_id)
+        if not order.zoho_synced:
+            order.zoho_synced = True
+            order.save(update_fields=['zoho_synced'])
+        return order.zoho_lead_id
+
+    duplicates = _find_leads_by_email(order.email) if module_name == 'Leads' else []
+    record = build_application_lead_payload(order, duplicates)
+
+    if module_has_field(module_name, EXTERNAL_ORDER_KEY_FIELD):
+        record_id = sync_order_to_zoho(order, module_name, {'data': [record]}, attach_files=False)
+    else:
+        response = _request('POST', f'{ZOHO_API_DOMAIN}/crm/v2/{module_name}', json={'data': [record]})
+        data = _response_json(response, f'Create {module_name}')
+        record_id = _record_id_from_success(data)
+        if not record_id:
+            _raise_zoho_error(response, data, f'Create {module_name}')
+        _save_remote_id(order, module_name, record_id)
+        order.zoho_synced = True
+        order.save(update_fields=['zoho_synced'])
+
+    Application.objects.filter(pk=order.pk).update(zoho_lead_id=str(record_id))
+    order.zoho_lead_id = str(record_id)
+    add_tags_to_record(module_name, str(record_id), [APPLICATION_TAGS[order.program]])
+    logger.info('[Zoho] ✅ Application #%s → %s/%s', order.id, module_name, record_id)
+    return record_id
