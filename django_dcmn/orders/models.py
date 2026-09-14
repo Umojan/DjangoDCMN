@@ -376,6 +376,87 @@ class PreCheckSubmission(models.Model):
         verbose_name_plural = 'Pre-Check — Submissions'
 
 
+# --- Business Account / Partner applications (B2B forms) ---
+class Application(models.Model):
+    """Application from the /business-accounts and /partners site forms.
+
+    One model covers both programs. Program-specific labels differ on the site
+    (organization vs company, city_state vs state_country, org_type vs
+    business_type, order_frequency vs monthly_volume) but map onto the same
+    columns here.
+    """
+
+    PROGRAM_BUSINESS_ACCOUNT = 'business_account'
+    PROGRAM_PARTNER = 'partner'
+    PROGRAM_CHOICES = [
+        (PROGRAM_BUSINESS_ACCOUNT, 'Business Account'),
+        (PROGRAM_PARTNER, 'Partner'),
+    ]
+
+    program = models.CharField(max_length=32, choices=PROGRAM_CHOICES, db_index=True)
+
+    # Contact
+    contact_name = models.CharField(max_length=255)
+    email = models.EmailField(db_index=True)
+    phone = models.CharField(max_length=50)
+    organization = models.CharField(max_length=255, help_text="Organization (business account) / Company (partner)")
+    role = models.CharField(max_length=255, blank=True, help_text="Business account: contact role/title")
+    website = models.CharField(max_length=500, blank=True, help_text="Partner: company website")
+    location = models.CharField(max_length=255, blank=True, help_text="city_state (business account) / state_country (partner)")
+
+    # Questionnaire
+    org_type = models.CharField(max_length=255, blank=True, help_text="org_type (business account) / business_type (partner)")
+    services = models.JSONField(default=list, blank=True, help_text="Selected service keys")
+    volume = models.CharField(max_length=255, blank=True, help_text="order_frequency (business account) / monthly_volume (partner)")
+    start_timing = models.CharField(max_length=255, blank=True)
+    countries = models.CharField(max_length=500, blank=True)
+    delivery_preference = models.CharField(max_length=255, blank=True)
+    notes = models.TextField(blank=True)
+    partner_terms_ack = models.BooleanField(default=False)
+
+    # Context
+    source_page = models.CharField(max_length=500, blank=True)
+    page_url = models.URLField(max_length=1000, blank=True)
+    attribution_data = models.JSONField(blank=True, null=True, help_text="Marketing attribution data (DCMNTracker)")
+    raw_payload = models.JSONField(blank=True, null=True, help_text="Full JSON payload as received")
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=500, blank=True)
+
+    # Integrations
+    zoho_synced = models.BooleanField(default=False)
+    zoho_lead_id = models.CharField(max_length=100, blank=True, help_text="Zoho Leads record ID")
+    email_sent = models.BooleanField(default=False, help_text="Manager notification email sent")
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    # Compatibility with shared helpers (attribution, notifications) that
+    # expect .name on order-like objects.
+    @property
+    def name(self):
+        return self.contact_name
+
+    @property
+    def program_label(self):
+        return dict(self.PROGRAM_CHOICES).get(self.program, self.program)
+
+    @property
+    def zoho_error(self):
+        """Last Zoho sync error from the durable outbox (empty when healthy)."""
+        job = ZohoSyncJob.objects.filter(order_type='application', order_id=self.id).only('last_error').first()
+        return job.last_error if job else ''
+
+    @property
+    def zoho_url(self):
+        return f"https://crm.zoho.com/crm/tab/Leads/{self.zoho_lead_id}" if self.zoho_lead_id else ''
+
+    def __str__(self):
+        return f"{self.program_label} application #{self.id} — {self.organization} ({self.contact_name})"
+
+    class Meta:
+        verbose_name = 'B2B — Application (Business Account / Partner)'
+        verbose_name_plural = 'B2B — Applications (Business Account / Partner)'
+        ordering = ['-created_at']
+
+
 # --- Phone Call Leads (WhatConverts) ---
 class PhoneCallLead(models.Model):
     """Store phone call leads from WhatConverts"""

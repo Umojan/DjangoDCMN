@@ -21,6 +21,7 @@ from .models import (
     PreCheckSubmission,
     FingerprintingSubmission,
     PhoneCallLead,
+    Application,
     ZohoSyncJob,
     Track,
 )
@@ -141,6 +142,43 @@ class FingerprintingSubmissionAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'email', 'service_type', 'preferred_date', 'preferred_time', 'service_location', 'created_at')
     list_filter = ('service_type', 'service_location', 'created_at')
     search_fields = ('name', 'email', 'phone', 'address')
+
+
+
+# ====== B2B Applications (Business Account / Partner) ======
+@admin.register(Application)
+class ApplicationAdmin(admin.ModelAdmin):
+    list_display = ('id', 'program', 'organization', 'contact_name', 'email', 'phone', 'location',
+                    'zoho_synced', 'zoho_lead_link', 'email_sent', 'created_at')
+    list_filter = ('program', 'zoho_synced', 'email_sent', 'created_at')
+    search_fields = ('organization', 'contact_name', 'email', 'phone', 'location', 'countries', 'notes', 'zoho_lead_id')
+    readonly_fields = ('created_at', 'zoho_lead_link', 'zoho_sync_error', 'services_list', 'raw_payload', 'attribution_data', 'ip', 'user_agent')
+    date_hierarchy = 'created_at'
+    fieldsets = (
+        ('Program', {'fields': ('program', 'created_at')}),
+        ('Contact', {'fields': ('contact_name', 'organization', 'email', 'phone', 'role', 'website', 'location')}),
+        ('Questionnaire', {'fields': ('org_type', 'services_list', 'volume', 'start_timing', 'countries',
+                                      'delivery_preference', 'partner_terms_ack', 'notes')}),
+        ('Integrations', {'fields': ('zoho_synced', 'zoho_lead_id', 'zoho_lead_link', 'zoho_sync_error', 'email_sent')}),
+        ('Context', {'fields': ('source_page', 'page_url', 'attribution_data', 'ip', 'user_agent', 'raw_payload'),
+                     'classes': ('collapse',)}),
+    )
+
+    @admin.display(description='Zoho lead')
+    def zoho_lead_link(self, obj):
+        from django.utils.html import format_html
+        if obj.zoho_lead_id:
+            return format_html('<a href="{}" target="_blank">{}</a>', obj.zoho_url, obj.zoho_lead_id)
+        return '—'
+
+    @admin.display(description='Zoho sync error')
+    def zoho_sync_error(self, obj):
+        return obj.zoho_error or '—'
+
+    @admin.display(description='Services')
+    def services_list(self, obj):
+        from .services.applications import service_labels
+        return ', '.join(service_labels(obj.services)) or '—'
 
 
 @admin.register(PhoneCallLead)
