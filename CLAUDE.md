@@ -15,6 +15,7 @@ django_dcmn/
 │   ├── zoho_client.py               # New ZohoCRMClient wrapper class
 │   ├── views/
 │   │   ├── orders.py                # Order creation API views
+│   │   ├── applications.py          # B2B forms: /business-accounts/apply/, /partners/apply/
 │   │   ├── stripe.py                # Stripe payment + webhook
 │   │   └── webhooks.py              # WhatConverts webhook handler
 │   └── services/
@@ -25,6 +26,7 @@ django_dcmn/
 │       ├── whatconverts.py           # WhatConverts webhook parsing, service detection, dedup
 │       ├── whatconverts_zoho.py      # Phone lead → Zoho CRM sync
 │       ├── zoho_update.py            # Update existing Zoho record with form data (matched phone lead)
+│       ├── applications.py          # B2B applications: questionnaire text, manager email, Turnstile
 │       ├── files.py                 # File attachment handling
 │       ├── notifications.py         # Staff email notifications
 │       └── tracking.py              # Order tracking (TID creation)
@@ -575,6 +577,8 @@ When phone lead sets `order.zoho_synced = True`, this task becomes a no-op.
 | `POST /api/stripe/webhook/` | stripe_webhook | Stripe payment webhook |
 | `POST /api/webhook/whatconverts/` | whatconverts_webhook | WhatConverts phone leads |
 | `POST /api/webhook/whatconverts-test/` | whatconverts_test_webhook | Test/debug webhook |
+| `POST /api/business-accounts/apply/` | BusinessAccountApplyView | B2B: Business Account application (JSON) |
+| `POST /api/partners/apply/` | PartnerApplyView | B2B: Partner application (JSON) |
 
 ---
 
@@ -622,3 +626,39 @@ sync_order_to_zoho_task (Celery)
 ```
 
 **Key**: `zoho_update.py` does NOT set stage — stage is handled earlier by `phone_lead_matcher.py` with conditional logic (only advance from "Phone Call Received", never roll back).
+
+
+---
+
+## B2B Applications (Business Accounts / Partners) — added Sep 2026
+
+Site pages `/business-accounts` and `/partners` (Webflow) post JSON via the `dcmn-apply.js` bridge to
+`POST /api/business-accounts/apply/` and `POST /api/partners/apply/`.
+
+**Contract:** `2xx → {"ok": true, "id": <id>}`, `400/429 → {"detail": "<human message>"}`.
+The record is ALWAYS saved and 200 returned even if Zoho/email fail.
+
+- Model: `orders.Application` (one model, `program` = `business_account` | `partner`). Program-specific
+  form keys are normalised: `organization`/`company` → `organization`, `city_state`/`state_country` → `location`,
+  `org_type`/`business_type` → `org_type`, `order_frequency`/`monthly_volume` → `volume`.
+- Serializer: `ApplicationSerializer(data, program=...)` — plain `Serializer`, selects validated as free strings,
+  unknown keys ignored (kept in `raw_payload`). `first_error_message()` flattens errors into one `detail` string.
+- Anti-spam: DRF throttles `applications_burst` (5/min) + `applications_sustained` (20/hour) per IP;
+  honeypot fields `website_confirm` / `fax` → fake 200, nothing saved; Cloudflare Turnstile verified only when
+  `TURNSTILE_SECRET_KEY` is set (missing token allowed unless `TURNSTILE_REQUIRE_TOKEN=True`).
+- Zoho: order_type `application` in `ORDER_TYPE_MAP` / `signals.py` / `ORDER_TYPE_BY_MODEL` → durable outbox
+  (`ZohoSyncJob`) → `sync_application_to_zoho()` → module **`Leads`** (no B2B pipeline exists in Zoho;
+  configurable via `ZOHO_APPLICATIONS_MODULE`). Marker: Description first line `[PARTNER APPLICATION]` /
+  `[BUSINESS ACCOUNT APPLICATION]`, Tag `Partner Application` / `Business Account Request` (Zoho tag names ≤25 chars; added via
+  `/actions/add_tags` — Zoho ignores `Tag` on create), `Lead_Source=Partner` for partners, `Lead_Status=Not Contacted`.
+  `External_Order_Key` field was created on Leads (Sep 2026) so the idempotent create path is used; if the module
+  lacks the field the code falls back to a plain create guarded by `Application.zoho_lead_id`.
+  Duplicate email → still created, Description prefixed with `⚠ duplicate email — existing lead(s): ...`.
+  Owner: `ZOHO_APPLICATIONS_OWNER_IDS` (comma-separated Zoho user IDs, round-robin by application id); empty → API user
+  ("Customer Service"). Users API needs a scope the token lacks, so IDs must be taken from the Zoho UI.
+- Email: `send_application_notification()` → `APPLICATIONS_NOTIFY_EMAILS` (fallback `EMAIL_OFFICE_RECEIVER`),
+  subject `New Partner application — {company} ({state_country})` / `New Business Account application — {organization} ({org_type})`,
+  body = questionnaire + admin link. Sent synchronously at request time (Zoho lead id is not known yet). No client auto-reply.
+- Env (Railway): `APPLICATIONS_NOTIFY_EMAILS`, `ZOHO_APPLICATIONS_OWNER_IDS`, `ZOHO_APPLICATIONS_MODULE` (optional),
+  `TURNSTILE_SECRET_KEY`, `TURNSTILE_REQUIRE_TOKEN`, `APPLICATIONS_THROTTLE_BURST`, `APPLICATIONS_THROTTLE_SUSTAINED` (all optional).
+- Tests: `DJANGO_SETTINGS_MODULE=django_dcmn.settings_test python3 manage.py test orders` (sqlite + locmem cache, no Redis needed).
