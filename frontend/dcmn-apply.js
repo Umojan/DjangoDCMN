@@ -1,5 +1,5 @@
 /*!
- * DCMN Apply bridge v1.0.0
+ * DCMN Apply bridge v1.1.0
  * Routes the Webflow forms on /business-accounts and /partners to the DCMN backend
  * (POST /api/business-accounts/apply/, POST /api/partners/apply/) instead of the
  * native Webflow form submission.
@@ -9,7 +9,10 @@
  *  - builds the JSON contract expected by the backend (svc_* checkboxes -> services[]);
  *  - 2xx  -> redirect to the form's thank-you page;
  *  - 400/429 -> shows `detail` from the API inside .w-form-fail;
- *  - network error / 5xx / 404 -> falls back to the native Webflow submission so no lead is lost.
+ *  - network error / 5xx / 404 -> falls back to the native Webflow submission so no lead is lost;
+ *  - Webflow keeps the submit button disabled until its Turnstile widget returns a token; if that
+ *    never happens (widget error / blocked script) the button is unlocked after UNLOCK_AFTER_MS so a
+ *    real visitor can still apply (the backend has its own throttling + honeypot).
  *
  * Source of truth: DjangoDCMN repo, frontend/dcmn-apply.js. Deployed as page footer custom code.
  */
@@ -21,6 +24,7 @@
     "Partner Application":          { endpoint: "/api/partners/apply/",          redirect: "/partners-thank-you",          program: "partner" }
   };
   var GENERIC_ERROR = "Something went wrong. Please try again — or call 202-247-0837 or email support@dcmobilenotary.com.";
+  var UNLOCK_AFTER_MS = 10000;
 
   function serialize(form, program) {
     var out = { program: program, services: [] }, el, i, name, v;
@@ -133,9 +137,36 @@
     xhr.send(JSON.stringify(payload));
   }
 
+  function unlockWhenTurnstileStalls(form) {
+    var btn = form.querySelector('input[type="submit"], button[type="submit"]');
+    if (!btn || !form.hasAttribute("data-turnstile-sitekey")) return;
+    var armed = false;
+    function arm() {
+      if (armed) return; armed = true;
+      setTimeout(function () {
+        if (btn.disabled && btn.classList.contains("w-form-loading")) {
+          btn.disabled = false;
+          btn.classList.remove("w-form-loading");
+          var wrap = form.closest(".w-form"); if (wrap) wrap.classList.remove("w-form-loading");
+          form.dataset.dcmnTurnstile = "stalled";
+          track("application_turnstile_stalled", (ROUTES[form.getAttribute("data-name")] || {}).program);
+        }
+      }, UNLOCK_AFTER_MS);
+    }
+    if (typeof IntersectionObserver !== "undefined") {
+      var io = new IntersectionObserver(function (entries) {
+        if (entries[0].isIntersecting) { io.disconnect(); arm(); }
+      }, { rootMargin: "200px" });
+      io.observe(form);
+    } else {
+      arm();
+    }
+  }
+
   function bind(form, route) {
     if (form.dataset.dcmnApply) return;
     form.dataset.dcmnApply = "1";
+    unlockWhenTurnstileStalls(form);
     form.addEventListener("submit", function (e) {
       if (form.dataset.dcmnNative === "1") return; // fallback in progress -> Webflow handles it
       e.preventDefault();

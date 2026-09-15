@@ -669,4 +669,5 @@ The record is ALWAYS saved and 200 returned even if Zoho/email fail.
   It intercepts the native Webflow submit AFTER the page validation scripts, POSTs JSON, redirects to the thank-you page on 2xx,
   shows `detail` in `.w-form-fail` on 400/429, and falls back to the native Webflow submission on network errors / 5xx / 404
   (so leads are never lost if the API is down). Webflow's Turnstile keeps the submit button disabled until the challenge passes;
-  the token is forwarded as `turnstile_token`. When changing the JS, update both the repo file and the Webflow footer code.
+  the token is forwarded as `turnstile_token`. If Turnstile never returns a token (widget error 600010 in automated browsers,
+  blocked script) the bridge unlocks the button 10 s after the form scrolls into view (`application_turnstile_stalled` GA event). When changing the JS, update both the repo file and the Webflow footer code.
