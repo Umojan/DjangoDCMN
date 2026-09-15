@@ -1,5 +1,5 @@
 /*!
- * DCMN Apply bridge v1.1.0
+ * DCMN Apply bridge v1.1.1
  * Routes the Webflow forms on /business-accounts and /partners to the DCMN backend
  * (POST /api/business-accounts/apply/, POST /api/partners/apply/) instead of the
  * native Webflow form submission.
@@ -82,6 +82,7 @@
   function setBusy(form, busy) {
     var btn = form.querySelector('input[type="submit"], button[type="submit"]');
     if (!btn) return;
+    form.dataset.dcmnBusy = busy ? "1" : "";
     if (busy) {
       btn.dataset.dcmnLabel = btn.value || btn.textContent;
       var wait = btn.getAttribute("data-wait") || "Sending...";
@@ -141,10 +142,16 @@
     var btn = form.querySelector('input[type="submit"], button[type="submit"]');
     if (!btn || !form.hasAttribute("data-turnstile-sitekey")) return;
     var armed = false;
+    function hasToken() {
+      var input = form.querySelector('[name="cf-turnstile-response"]');
+      return !!(input && input.value);
+    }
     function arm() {
       if (armed) return; armed = true;
       setTimeout(function () {
-        if (btn.disabled && btn.classList.contains("w-form-loading")) {
+        // Webflow leaves the button disabled (with or without w-form-loading) when
+        // Turnstile never calls back or errors out. Unlock unless a token arrived.
+        if (btn.disabled && form.dataset.dcmnBusy !== "1" && !hasToken()) {
           btn.disabled = false;
           btn.classList.remove("w-form-loading");
           var wrap = form.closest(".w-form"); if (wrap) wrap.classList.remove("w-form-loading");
@@ -153,6 +160,9 @@
         }
       }, UNLOCK_AFTER_MS);
     }
+    // Start the timer when the form is in view or the visitor starts interacting with it.
+    form.addEventListener("focusin", arm, { once: true });
+    form.addEventListener("pointerdown", arm, { once: true });
     if (typeof IntersectionObserver !== "undefined") {
       var io = new IntersectionObserver(function (entries) {
         if (entries[0].isIntersecting) { io.disconnect(); arm(); }
