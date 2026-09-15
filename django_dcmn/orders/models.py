@@ -426,6 +426,7 @@ class Application(models.Model):
     zoho_synced = models.BooleanField(default=False)
     zoho_lead_id = models.CharField(max_length=100, blank=True, help_text="Zoho Leads record ID")
     email_sent = models.BooleanField(default=False, help_text="Manager notification email sent")
+    client_email_sent = models.BooleanField(default=False, help_text="Confirmation email sent to the applicant")
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     # Compatibility with shared helpers (attribution, notifications) that

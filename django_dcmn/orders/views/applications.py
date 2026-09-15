@@ -24,7 +24,11 @@ from rest_framework.views import APIView
 from ..models import Application
 from ..serializers import ApplicationSerializer
 from ..services.attribution import get_client_ip, process_attribution
-from ..services.applications import send_application_notification, verify_turnstile
+from ..services.applications import (
+    send_application_confirmation,
+    send_application_notification,
+    verify_turnstile,
+)
 from ..tasks import enqueue_zoho_sync
 
 logger = logging.getLogger(__name__)
@@ -90,8 +94,9 @@ class BaseApplicationView(APIView):
         except Exception:
             logger.exception("Failed to enqueue Zoho sync for application %s", app.id)
 
-        # Managers email
+        # Managers email + confirmation to the applicant (both best-effort)
         send_application_notification(app)
+        send_application_confirmation(app)
 
         return Response({'ok': True, 'id': app.id}, status=status.HTTP_200_OK)
 

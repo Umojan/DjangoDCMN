@@ -658,7 +658,9 @@ The record is ALWAYS saved and 200 returned even if Zoho/email fail.
   ("Customer Service"). Users API needs a scope the token lacks, so IDs must be taken from the Zoho UI.
 - Email: `send_application_notification()` → `APPLICATIONS_NOTIFY_EMAILS` (fallback `EMAIL_OFFICE_RECEIVER`),
   subject `New Partner application — {company} ({state_country})` / `New Business Account application — {organization} ({org_type})`,
-  body = questionnaire + admin link. Sent synchronously at request time (Zoho lead id is not known yet). No client auto-reply.
+  body = questionnaire + admin link. Sent synchronously at request time (Zoho lead id is not known yet).
+  Client confirmation: `send_application_confirmation()` → HTML `templates/emails/application_confirmation.html` (same look as
+  fingerprinting_confirmation) with the full questionnaire, subject `... application received — DC Mobile Notary`, flag `client_email_sent`.
 - Env (Railway): `APPLICATIONS_NOTIFY_EMAILS`, `ZOHO_APPLICATIONS_OWNER_IDS`, `ZOHO_APPLICATIONS_MODULE` (optional),
   `TURNSTILE_SECRET_KEY`, `TURNSTILE_REQUIRE_TOKEN`, `APPLICATIONS_THROTTLE_BURST`, `APPLICATIONS_THROTTLE_SUSTAINED` (all optional).
 - Tests: `DJANGO_SETTINGS_MODULE=django_dcmn.settings_test python3 manage.py test orders` (sqlite + locmem cache, no Redis needed).

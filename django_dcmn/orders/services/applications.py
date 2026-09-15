@@ -12,7 +12,7 @@ import requests
 from datetime import datetime
 
 from django.conf import settings
-from django.core.mail import EmailMessage
+from django.core.mail import EmailMessage, EmailMultiAlternatives
 
 from ..models import Application
 
@@ -208,6 +208,71 @@ def send_application_notification(app: Application) -> bool:
         return True
     except Exception:
         logger.exception("Failed to send application notification for %s #%s", app.program, app.id)
+        return False
+
+
+def build_confirmation_subject(app: Application) -> str:
+    if app.program == Application.PROGRAM_PARTNER:
+        return 'Partner application received — DC Mobile Notary'
+    return 'Business Account application received — DC Mobile Notary'
+
+
+def send_application_confirmation(app: Application) -> bool:
+    """HTML confirmation to the applicant (same look as the other client emails). Never raises."""
+    from django.template.loader import render_to_string
+
+    if not app.email:
+        return False
+    labels = PROGRAM_LABELS[app.program]
+    context = {
+        'title': f"{labels['title']} Received",
+        'name': app.contact_name,
+        'program_label': 'Partner Program account' if app.program == Application.PROGRAM_PARTNER else 'Business Account',
+        'is_partner': app.program == Application.PROGRAM_PARTNER,
+        'organization_label': labels['organization'],
+        'organization': app.organization,
+        'email': app.email,
+        'phone': app.phone,
+        'role': app.role,
+        'website': app.website,
+        'location_label': labels['location'],
+        'location': app.location,
+        'org_type_label': labels['org_type'],
+        'org_type': app.org_type,
+        'services': ', '.join(service_labels(app.services)),
+        'volume_label': labels['volume'],
+        'volume': app.volume,
+        'start_timing': app.start_timing,
+        'countries': app.countries,
+        'delivery_preference': app.delivery_preference,
+        'notes': app.notes,
+        'application_id': app.id,
+    }
+    html_content = render_to_string('emails/application_confirmation.html', context)
+    text_content = (
+        f"Hi {app.contact_name},\n\n"
+        f"Thank you for your {labels['title'].lower()}. Jules or Daveys will call you within one business day. "
+        f"In a hurry? Call (202) 247-0837.\n\n"
+        f"{build_questionnaire(app, include_marker=False)}\n\n"
+        f"DC Mobile Notary — support@dcmobilenotary.com"
+    )
+    try:
+        email = EmailMultiAlternatives(
+            subject=build_confirmation_subject(app),
+            body=text_content,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'support@dcmobilenotary.net'),
+            to=[app.email],
+            reply_to=['support@dcmobilenotary.com'],
+            headers={'Message-ID': f"<application-confirmation-{app.id}@dcmobilenotary.com>"},
+        )
+        email.attach_alternative(html_content, 'text/html')
+        email.send()
+        Application.objects.filter(pk=app.pk).update(client_email_sent=True)
+        app.client_email_sent = True
+        logger.info("✅ Application confirmation sent to %s for %s #%s", app.email, app.program, app.id)
+        return True
+    except Exception:
+        logger.exception("Failed to send application confirmation for %s #%s", app.program, app.id)
         return False
 
 

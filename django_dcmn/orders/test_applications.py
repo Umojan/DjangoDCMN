@@ -86,8 +86,8 @@ class ApplicationEndpointTests(TestCase):
         job = ZohoSyncJob.objects.get(order_type='application', order_id=app.id)
         self.assertEqual(job.status, ZohoSyncJob.STATUS_PENDING)
 
-        # Manager email
-        self.assertEqual(len(mail.outbox), 1)
+        # Manager email + client confirmation
+        self.assertEqual(len(mail.outbox), 2)
         email = mail.outbox[0]
         self.assertEqual(email.subject, 'New Business Account application — Acme LLP (Law firm)')
         self.assertEqual(email.to, ['jules@example.com', 'daveys@example.com'])
@@ -97,6 +97,18 @@ class ApplicationEndpointTests(TestCase):
         self.assertEqual(email.reply_to, ['jane@acme.com'])
         app.refresh_from_db()
         self.assertTrue(app.email_sent)
+
+        confirmation = mail.outbox[1]
+        self.assertEqual(confirmation.to, ['jane@acme.com'])
+        self.assertEqual(confirmation.subject, 'Business Account application received — DC Mobile Notary')
+        self.assertEqual(confirmation.reply_to, ['support@dcmobilenotary.com'])
+        self.assertIn('Jules or Daveys', confirmation.body)
+        html = confirmation.alternatives[0][0]
+        self.assertIn('Business Account Application Received', html)
+        self.assertIn('Acme LLP', html)
+        self.assertIn('Federal apostille', html)
+        self.assertIn('We need weekly pickups.', html)
+        self.assertTrue(app.client_email_sent)
 
         # CORS header for the site origin
         self.assertEqual(resp['Access-Control-Allow-Origin'], 'https://www.dcmobilenotary.com')
@@ -112,6 +124,9 @@ class ApplicationEndpointTests(TestCase):
         self.assertEqual(app.volume, '16-40')
         self.assertTrue(app.partner_terms_ack)
         self.assertEqual(mail.outbox[0].subject, 'New Partner application — Docs Express (Florida / Spain)')
+        self.assertEqual(mail.outbox[1].subject, 'Partner application received — DC Mobile Notary')
+        self.assertEqual(mail.outbox[1].to, ['carlos@docs.example'])
+        self.assertIn('Partner Program account', mail.outbox[1].alternatives[0][0])
 
     def test_partner_requires_terms_ack(self):
         payload = {**PARTNER_PAYLOAD, 'partner_terms_ack': False}
@@ -157,11 +172,13 @@ class ApplicationEndpointTests(TestCase):
 
     def test_zoho_or_email_failure_does_not_break_response(self):
         with patch('orders.views.applications.enqueue_zoho_sync', side_effect=RuntimeError('boom')), \
-             patch('orders.services.applications.EmailMessage.send', side_effect=RuntimeError('mail down')):
+             patch('orders.services.applications.EmailMessage.send', side_effect=RuntimeError('mail down')), \
+             patch('orders.services.applications.EmailMultiAlternatives.send', side_effect=RuntimeError('mail down')):
             resp = self.client.post(self.ba_url, BA_PAYLOAD, format='json')
         self.assertEqual(resp.status_code, 200)
         app = Application.objects.get(id=resp.json()['id'])
         self.assertFalse(app.email_sent)
+        self.assertFalse(app.client_email_sent)
         # outbox intent still exists thanks to the post_save signal
         self.assertTrue(ZohoSyncJob.objects.filter(order_type='application', order_id=app.id).exists())
 

@@ -149,8 +149,8 @@ class FingerprintingSubmissionAdmin(admin.ModelAdmin):
 @admin.register(Application)
 class ApplicationAdmin(admin.ModelAdmin):
     list_display = ('id', 'program', 'organization', 'contact_name', 'email', 'phone', 'location',
-                    'zoho_synced', 'zoho_lead_link', 'email_sent', 'created_at')
-    list_filter = ('program', 'zoho_synced', 'email_sent', 'created_at')
+                    'zoho_synced', 'zoho_lead_link', 'email_sent', 'client_email_sent', 'created_at')
+    list_filter = ('program', 'zoho_synced', 'email_sent', 'client_email_sent', 'created_at')
     search_fields = ('organization', 'contact_name', 'email', 'phone', 'location', 'countries', 'notes', 'zoho_lead_id')
     readonly_fields = ('created_at', 'zoho_lead_link', 'zoho_sync_error', 'services_list', 'raw_payload', 'attribution_data', 'ip', 'user_agent')
     date_hierarchy = 'created_at'
@@ -159,7 +159,7 @@ class ApplicationAdmin(admin.ModelAdmin):
         ('Contact', {'fields': ('contact_name', 'organization', 'email', 'phone', 'role', 'website', 'location')}),
         ('Questionnaire', {'fields': ('org_type', 'services_list', 'volume', 'start_timing', 'countries',
                                       'delivery_preference', 'partner_terms_ack', 'notes')}),
-        ('Integrations', {'fields': ('zoho_synced', 'zoho_lead_id', 'zoho_lead_link', 'zoho_sync_error', 'email_sent')}),
+        ('Integrations', {'fields': ('zoho_synced', 'zoho_lead_id', 'zoho_lead_link', 'zoho_sync_error', 'email_sent', 'client_email_sent')}),
         ('Context', {'fields': ('source_page', 'page_url', 'attribution_data', 'ip', 'user_agent', 'raw_payload'),
                      'classes': ('collapse',)}),
     )
