@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 import dj_database_url
+from celery.schedules import crontab
 from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -72,9 +73,20 @@ TURNSTILE_SECRET_KEY = config('TURNSTILE_SECRET_KEY', default='')
 TURNSTILE_REQUIRE_TOKEN = config('TURNSTILE_REQUIRE_TOKEN', default=False, cast=bool)
 
 
-# ====== REVIEWS ======
+# ====== REVIEWS (gated review flow, see reviews/services.py) ======
 GOOGLE_REVIEW_URL = config('GOOGLE_REVIEW_URL', default='https://search.google.com/local/writereview?placeid=ChIJi7ayhx-3t4kRpyVMzASAj9s')
 TRUSTPILOT_TRIGGER_EMAIL = config('TRUSTPILOT_TRIGGER_EMAIL', default='dcmobilenotary.com+cd7dabbed2@invite.trustpilot.com')
+TRUSTPILOT_REVIEW_URL = config('TRUSTPILOT_REVIEW_URL', default='https://www.trustpilot.com/evaluate/dcmobilenotary.com')
+# Stars >= threshold go to Google / Trustpilot; below → internal feedback form + managers + Zoho note/task
+REVIEWS_POSITIVE_THRESHOLD = config('REVIEWS_POSITIVE_THRESHOLD', default=4, cast=int)
+# Managers who receive negative-feedback alerts (falls back to APPLICATIONS_NOTIFY_EMAILS, then EMAIL_OFFICE_RECEIVER)
+REVIEWS_NOTIFY_EMAILS = [e.strip() for e in os.getenv('REVIEWS_NOTIFY_EMAILS', '').split(',') if e.strip()]
+REVIEWS_FEEDBACK_PATH = config('REVIEWS_FEEDBACK_PATH', default='/feedback')
+REVIEWS_THANKS_PATH = config('REVIEWS_THANKS_PATH', default='/review-thanks')
+REVIEWS_TOKEN_MAX_AGE_DAYS = config('REVIEWS_TOKEN_MAX_AGE_DAYS', default=90, cast=int)
+# One reminder if no star was clicked N days after the review email (0 disables); never for emails older than MAX days
+REVIEWS_REMINDER_DAYS = config('REVIEWS_REMINDER_DAYS', default=3, cast=int)
+REVIEWS_REMINDER_MAX_DAYS = config('REVIEWS_REMINDER_MAX_DAYS', default=14, cast=int)
 
 
 # ====== CELERY ======
@@ -85,6 +97,11 @@ CELERY_BEAT_SCHEDULE = {
     'reconcile-pending-zoho-syncs-every-5-minutes': {
         'task': 'orders.tasks.reconcile_pending_zoho_syncs',
         'schedule': 300.0,
+    },
+    # Gated review flow: one reminder to customers who never clicked a star (daily, 15:00 UTC = 11:00 ET)
+    'send-review-reminders-daily': {
+        'task': 'reviews.tasks.send_review_reminders',
+        'schedule': crontab(hour=15, minute=0),
     },
 }
 
@@ -159,6 +176,8 @@ REST_FRAMEWORK = {
         # Business Account / Partner application forms (per client IP)
         'applications_burst': config('APPLICATIONS_THROTTLE_BURST', default='5/min'),
         'applications_sustained': config('APPLICATIONS_THROTTLE_SUSTAINED', default='20/hour'),
+        # Negative review feedback form (per client IP)
+        'reviews_feedback': config('REVIEWS_FEEDBACK_THROTTLE', default='10/hour'),
     },
 }
 

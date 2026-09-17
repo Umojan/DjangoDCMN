@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Negative feedback</title></head>
+<body style="margin:0; padding:24px; background:#f8f9fa; font-family: Arial, sans-serif; color:#222;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="max-width:640px; margin:0 auto; background:#fff; border-radius:8px; border:1px solid #e6e6e6;">
+        <tr>
+            <td style="padding:18px 24px; background:{% if update %}#fff3cd{% else %}#fde2e1{% endif %}; border-radius:8px 8px 0 0;">
+                <div style="font-size:18px; font-weight:bold; color:#8a1f1f;">
+                    {% if update %}✍ Customer added written feedback{% else %}⚠ Negative rating received{% endif %}
+                </div>
+                <div style="font-size:28px; color:#f5b301; margin-top:6px; letter-spacing:2px;">{{ review.stars }} <span style="font-size:14px; color:#555; letter-spacing:0;">{{ review.rating|default:"?" }}/5</span></div>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding:20px 24px;">
+                <table cellpadding="0" cellspacing="0" style="font-size:14px; line-height:1.7;">
+                    <tr><td style="color:#666; padding-right:16px;">Customer</td><td><strong>{{ rr.name|default:"—" }}</strong></td></tr>
+                    <tr><td style="color:#666; padding-right:16px;">Email</td><td><a href="mailto:{{ rr.email }}" style="color:#003e9c;">{{ rr.email }}</a></td></tr>
+                    <tr><td style="color:#666; padding-right:16px;">Phone</td><td>{{ review.callback_phone|default:rr.phone|default:"—" }}</td></tr>
+                    <tr><td style="color:#666; padding-right:16px;">Service</td><td>{{ service_label }}</td></tr>
+                    {% if rr.tracking_id %}<tr><td style="color:#666; padding-right:16px;">Tracking ID</td><td>{% if tracking_url %}<a href="{{ tracking_url }}" style="color:#003e9c;">{{ rr.tracking_id }}</a>{% else %}{{ rr.tracking_id }}{% endif %}</td></tr>{% endif %}
+                    <tr><td style="color:#666; padding-right:16px;">Rated at</td><td>{{ review.rated_at|date:"M j, Y H:i" }}</td></tr>
+                    {% if review.callback_requested %}<tr><td style="color:#666; padding-right:16px;">Callback</td><td><strong style="color:#8a1f1f;">Customer asked to be called back</strong></td></tr>{% endif %}
+                </table>
+
+                <div style="margin-top:18px; padding:14px 16px; background:#f6f7f9; border-left:4px solid #8a1f1f; border-radius:4px; font-size:14px; line-height:1.6; white-space:pre-wrap;">{% if review.feedback_text %}{{ review.feedback_text }}{% else %}<em style="color:#777;">No written feedback (yet). If the customer fills in the form later you'll get a second email.</em>{% endif %}</div>
+
+                <p style="font-size:14px; margin:20px 0 0 0;">
+                    {% if zoho_url %}<a href="{{ zoho_url }}" style="display:inline-block; background:#003e9c; color:#fff; text-decoration:none; padding:10px 18px; border-radius:5px; font-weight:bold;">Open in Zoho CRM</a>&nbsp;&nbsp;{% endif %}
+                    <a href="{{ admin_url }}" style="display:inline-block; background:#eee; color:#222; text-decoration:none; padding:10px 18px; border-radius:5px;">Open in admin</a>
+                </p>
+                <p style="font-size:12px; color:#888; margin:18px 0 0 0;">
+                    This review was routed internally and was not sent to Google or Trustpilot. A note and a call-back task were added to the Zoho record.
+                    Reply to this email to answer the customer directly.
+                </p>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

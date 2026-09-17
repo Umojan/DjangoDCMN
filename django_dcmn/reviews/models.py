@@ -48,6 +48,11 @@ class ReviewRequest(models.Model):
     
     # Status
     is_sent = models.BooleanField(default=False, help_text="Whether review request was sent")
+    # True when the customer received the star-rating email (new gated flow, Sep 2026).
+    # Only these requests are eligible for the reminder and the rating links.
+    stars_email_sent = models.BooleanField(default=False)
+    reminder_sent_at = models.DateTimeField(null=True, blank=True)
+    trustpilot_invite_sent_at = models.DateTimeField(null=True, blank=True)
     
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
@@ -70,3 +75,64 @@ class ReviewRequest(models.Model):
             frontend_url = getattr(settings, 'FRONTEND_URL', '')
             return f"{frontend_url}/tracking?tid={self.tracking_id}"
         return None
+
+    @property
+    def first_name(self) -> str:
+        return (self.name or '').strip().split(' ')[0] if self.name else ''
+
+
+class Review(models.Model):
+    """Customer rating collected from the star links in the review email.
+
+    Positive ratings (>= REVIEWS_POSITIVE_THRESHOLD) are routed to a public platform
+    (Google / Trustpilot); everything else stays internal and goes to the managers + Zoho.
+    """
+
+    ROUTE_GOOGLE = 'google'
+    ROUTE_TRUSTPILOT = 'trustpilot'
+    ROUTE_INTERNAL = 'internal'
+    ROUTE_CHOICES = [
+        (ROUTE_GOOGLE, 'Google'),
+        (ROUTE_TRUSTPILOT, 'Trustpilot'),
+        (ROUTE_INTERNAL, 'Internal (managers)'),
+    ]
+
+    request = models.OneToOneField(ReviewRequest, on_delete=models.CASCADE, related_name='review')
+    rating = models.PositiveSmallIntegerField(null=True, blank=True, help_text='1-5 stars')
+    route = models.CharField(max_length=20, choices=ROUTE_CHOICES, default=ROUTE_INTERNAL)
+    rated_at = models.DateTimeField(null=True, blank=True)
+
+    feedback_text = models.TextField(blank=True, default='')
+    callback_requested = models.BooleanField(default=False)
+    callback_phone = models.CharField(max_length=50, blank=True, default='')
+    feedback_at = models.DateTimeField(null=True, blank=True)
+
+    manager_notified = models.BooleanField(default=False)
+    notified_with_feedback = models.BooleanField(default=False)
+    zoho_note_id = models.CharField(max_length=50, blank=True, default='')
+    zoho_task_id = models.CharField(max_length=50, blank=True, default='')
+    zoho_error = models.TextField(blank=True, default='')
+
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=300, blank=True, default='')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = '⭐ Review'
+        verbose_name_plural = '⭐ Reviews'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        stars = '★' * (self.rating or 0) + '☆' * (5 - (self.rating or 0))
+        return f"{stars} {self.request.email} ({self.route})"
+
+    @property
+    def is_positive(self) -> bool:
+        return self.route in (self.ROUTE_GOOGLE, self.ROUTE_TRUSTPILOT)
+
+    @property
+    def stars(self) -> str:
+        r = self.rating or 0
+        return '★' * r + '☆' * (5 - r)

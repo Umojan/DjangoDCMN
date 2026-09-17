@@ -243,46 +243,32 @@ def process_review_request_task(self, review_request_id: int):
         raise self.retry(exc=e)
 
 
-def _send_google_review_email(review_request):
+def _send_review_request_email(review_request, template='emails/review_thank_you.html', subject_prefix='Order Completed'):
+    """Send the "Order Completed" email with the 5 star-rating links (gated review flow).
+
+    Same email for first-time and returning customers. The public platform (Google vs
+    Trustpilot) is decided only after a positive click — see reviews/services.py.
+    Trustpilot AFS is NOT bcc'd here any more; the invite goes out after a positive rating.
     """
-    Send "Order Completed" email with Google Review button.
-    For first-time customers.
-    """
+    from .services import star_links
+
     tracking_url = None
     if review_request.tracking_id:
         tracking_url = f"{FRONTEND_URL}/tracking?tid={review_request.tracking_id}"
-    
+
     service_label = _get_service_label(review_request.zoho_module)
-    
-    try:
-        html_content = render_to_string('emails/review_thank_you.html', {
-            'name': review_request.name or 'Valued Customer',
-            'service_label': service_label,
-            'tid': review_request.tracking_id,
-            'tracking_url': tracking_url,
-            'review_url': GOOGLE_REVIEW_URL,
-        })
-    except Exception as e:
-        logger.warning(f"Template not found, using fallback: {e}")
-        html_content = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif; padding: 20px;">
-            <h2>Order Completed! 🎉</h2>
-            <p>Hi {review_request.name or 'Valued Customer'},</p>
-            <p>Your order has been successfully completed. Thank you for choosing DC Mobile Notary!</p>
-            <p>We'd love your feedback:</p>
-            <p><a href="{GOOGLE_REVIEW_URL}" style="display: inline-block; padding: 12px 24px; 
-               background-color: #4285f4; color: white; text-decoration: none; border-radius: 5px;">
-               ⭐ Leave a Google Review</a></p>
-            <p>Thank you!</p>
-        </body>
-        </html>
-        """
-    
-    subject = f"Order Completed — {service_label}"
+    html_content = render_to_string(template, {
+        'name': review_request.first_name or 'Valued Customer',
+        'service_label': service_label,
+        'tid': review_request.tracking_id,
+        'tracking_url': tracking_url,
+        'stars': star_links(review_request),
+    })
+
+    subject = f"{subject_prefix} — {service_label}"
     if review_request.tracking_id:
-        subject = f"Order Completed — {service_label} — {review_request.tracking_id}"
-    
+        subject = f"{subject} — {review_request.tracking_id}"
+
     msg = EmailMessage(
         subject=subject,
         body=html_content,
@@ -291,57 +277,95 @@ def _send_google_review_email(review_request):
     )
     msg.content_subtype = 'html'
     msg.send(fail_silently=False)
-    
-    logger.info(f"📧 Google Review email sent to {review_request.email}")
+
+    if not review_request.stars_email_sent:
+        review_request.stars_email_sent = True
+        review_request.save(update_fields=['stars_email_sent'])
+
+    logger.info(f"📧 Review request email ({review_request.review_type or 'n/a'}) sent to {review_request.email}")
+
+
+# Backwards-compatible names (management command, old call sites)
+def _send_google_review_email(review_request):
+    _send_review_request_email(review_request)
 
 
 def _send_trustpilot_email(review_request):
-    """
-    Send "Order Completed" email with TrustPilot AFS in BCC.
-    TrustPilot will automatically send a verified review invitation.
-    For returning customers.
-    """
-    tracking_url = None
-    if review_request.tracking_id:
-        tracking_url = f"{FRONTEND_URL}/tracking?tid={review_request.tracking_id}"
-    
-    service_label = _get_service_label(review_request.zoho_module)
-    
+    _send_review_request_email(review_request)
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=120)
+def notify_negative_task(self, review_id: int):
+    """Manager email + Zoho note/task for a negative rating. Idempotent (see services.notify_negative)."""
+    from .models import Review
+    from .services import notify_negative
+
     try:
-        html_content = render_to_string('emails/review_thank_you_trustpilot.html', {
-            'name': review_request.name or 'Valued Customer',
-            'service_label': service_label,
-            'tid': review_request.tracking_id,
-            'tracking_url': tracking_url,
-        })
+        review = Review.objects.select_related('request').get(id=review_id)
+    except Review.DoesNotExist:
+        logger.error(f"Review {review_id} not found")
+        return
+    if review.is_positive:
+        return
+    try:
+        result = notify_negative(review)
+        logger.info(f"Review {review_id}: negative notification → {result}")
     except Exception as e:
-        logger.warning(f"Template not found, using fallback: {e}")
-        html_content = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif; padding: 20px;">
-            <h2>Order Completed! 🎉</h2>
-            <p>Hi {review_request.name or 'Valued Customer'},</p>
-            <p>Your order has been successfully completed. Thank you for choosing DC Mobile Notary!</p>
-            <p>We truly appreciate your continued trust in our services.</p>
-            <p>Thank you!</p>
-        </body>
-        </html>
-        """
-    
-    subject = f"Order Completed — {service_label}"
-    if review_request.tracking_id:
-        subject = f"Order Completed — {service_label} — {review_request.tracking_id}"
-    
-    # Send to customer with TrustPilot AFS in BCC
-    # TrustPilot will see this email and send their own review invitation
-    msg = EmailMessage(
-        subject=subject,
-        body=html_content,
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        to=[review_request.email],
-        bcc=[TRUSTPILOT_TRIGGER_EMAIL],  # TrustPilot AFS trigger
-    )
-    msg.content_subtype = 'html'
-    msg.send(fail_silently=False)
-    
-    logger.info(f"📧 TrustPilot email sent to {review_request.email} (BCC: TrustPilot AFS)")
+        logger.exception(f"Review {review_id}: negative notification failed: {e}")
+        raise self.retry(exc=e)
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=120)
+def send_trustpilot_invite_task(self, review_request_id: int):
+    """Positive rating from a returning customer → short thank-you email bcc'd to Trustpilot AFS."""
+    from .models import ReviewRequest
+    from .services import send_trustpilot_invite
+
+    try:
+        rr = ReviewRequest.objects.get(id=review_request_id)
+    except ReviewRequest.DoesNotExist:
+        return
+    try:
+        if send_trustpilot_invite(rr):
+            logger.info(f"📧 Trustpilot invite sent for ReviewRequest {review_request_id}")
+    except Exception as e:
+        logger.exception(f"Trustpilot invite failed for {review_request_id}: {e}")
+        raise self.retry(exc=e)
+
+
+@shared_task
+def send_review_reminders():
+    """Celery beat (daily): one gentle reminder to customers who never clicked a star.
+
+    Only requests that got the star email (stars_email_sent) between REVIEWS_REMINDER_DAYS and
+    REVIEWS_REMINDER_MAX_DAYS ago, with no Review and no reminder yet.
+    """
+    from django.utils import timezone as tz
+    from datetime import timedelta
+    from .models import ReviewRequest
+
+    days = int(getattr(settings, 'REVIEWS_REMINDER_DAYS', 3))
+    max_days = int(getattr(settings, 'REVIEWS_REMINDER_MAX_DAYS', 14))
+    if days <= 0:
+        return 0
+    now = tz.now()
+    qs = ReviewRequest.objects.filter(
+        is_sent=True,
+        stars_email_sent=True,
+        reminder_sent_at__isnull=True,
+        review__isnull=True,
+        sent_at__lte=now - timedelta(days=days),
+        sent_at__gte=now - timedelta(days=max_days),
+    ).order_by('sent_at')[:200]
+
+    sent = 0
+    for rr in qs:
+        try:
+            _send_review_request_email(rr, template='emails/review_reminder.html', subject_prefix='Quick question about your order')
+            rr.reminder_sent_at = now
+            rr.save(update_fields=['reminder_sent_at'])
+            sent += 1
+        except Exception as e:
+            logger.exception(f"Review reminder failed for {rr.id}: {e}")
+    logger.info(f"Review reminders sent: {sent}")
+    return sent

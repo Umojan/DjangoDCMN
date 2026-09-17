@@ -3,37 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Order Completed</title>
+    <title>How did we do?</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f8f9fa;">
     <table width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9fa; padding: 40px 0; font-family: Arial, sans-serif;">
         <tr>
             <td align="center">
                 <table width="600" cellpadding="0" cellspacing="0" style="background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-width: 600px;">
-                    <!-- Header -->
                     <tr style="background: #003e9c;">
                         <td style="padding: 30px 20px; text-align: center;">
                             <img src="https://cdn.prod.website-files.com/6432b1408e9cf5532f6bc77b/6433b649d57930296844cac0_dcmobilenotarylogo.png"
                                  alt="DC Mobile Notary" width="80" style="display: block; margin: 0 auto;">
                         </td>
                     </tr>
-
-                    <!-- Content -->
                     <tr>
                         <td style="padding: 40px 30px 20px 30px;">
-                            <h2 style="color: #003e9c; margin: 0 0 12px 0; font-size: 24px; text-align: center;">Your order is complete 🎉</h2>
-                            <p style="font-size: 16px; color: #333; line-height: 1.6; margin: 0 0 14px 0;">Hi <strong>{{ name }}</strong>,</p>
+                            <h2 style="color: #003e9c; margin: 0 0 12px 0; font-size: 22px; text-align: center;">How did we do, {{ name }}?</h2>
                             <p style="font-size: 16px; color: #333; line-height: 1.6; margin: 0 0 14px 0;">
-                                Your <strong>{{ service_label }}</strong> order{% if tid %} <span style="color:#666;">({{ tid }})</span>{% endif %} has been successfully completed.
-                                Thank you for choosing DC Mobile Notary!
+                                A few days ago we completed your <strong>{{ service_label }}</strong> order{% if tid %} ({{ tid }}){% endif %}.
+                                If you have two seconds, we'd love to know how it went &mdash; just tap a star.
                             </p>
-                            <p style="font-size: 16px; color: #333; line-height: 1.6; margin: 0;">
-                                One quick question &mdash; how did we do? Tap a star below. It takes two seconds.
+                            <p style="font-size: 14px; color: #666; line-height: 1.6; margin: 0;">
+                                This is the only reminder we'll send.
                             </p>
                         </td>
                     </tr>
-
-                    <!-- Stars -->
                     <tr>
                         <td style="padding: 10px 20px 10px 20px;" align="center">
                             <table cellpadding="0" cellspacing="0" role="presentation" style="margin: 0 auto;">
@@ -52,27 +46,16 @@
                             <p style="font-size: 12px; color: #888; margin: 12px 0 0 0;">1 = poor &nbsp;&middot;&nbsp; 5 = excellent</p>
                         </td>
                     </tr>
-
-                    <!-- Order details / tracking -->
                     <tr>
                         <td style="padding: 20px 30px 40px 30px;">
-                            {% if tracking_url %}
-                            <p style="font-size: 14px; color: #666; line-height: 1.6; margin: 20px 0 0 0; text-align: center;">
-                                <a href="{{ tracking_url }}" style="color: #003e9c; text-decoration: underline;">View order details</a>
-                            </p>
-                            {% endif %}
-                            <p style="font-size: 14px; color: #666; line-height: 1.6; margin: 25px 0 0 0;">
-                                Something wasn't right? Reply to this email or write to
-                                <a href="mailto:support@dcmobilenotary.com" style="color: #003e9c; text-decoration: none;">support@dcmobilenotary.com</a>
-                                &mdash; a real person will get back to you the same business day.
+                            <p style="font-size: 14px; color: #666; line-height: 1.6; margin: 20px 0 0 0;">
+                                Something wasn't right? Just reply to this email &mdash; a real person will get back to you the same business day.
                             </p>
                             <p style="font-size: 14px; color: #666; line-height: 1.6; margin: 15px 0 0 0;">
                                 Thank you for choosing <strong>DC Mobile Notary</strong>!
                             </p>
                         </td>
                     </tr>
-
-                    <!-- Footer -->
                     <tr style="background: #f1f1f1;">
                         <td style="padding: 25px 20px; text-align: center; font-size: 13px; color: #999; line-height: 1.6;">
                             <strong>DC Mobile Notary</strong><br>
