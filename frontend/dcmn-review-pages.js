@@ -8,6 +8,7 @@
  * state styles (.is-visible / .is-open / :hover / :focus, Webflow's .w-checkbox wrapper) that the
  * WHTML CSS parser does not accept as single-class rules. Markup: centered card (.fb-* / .rt-* classes),
  * elements addressed by data-rv="title|stars|pill|intro|form|option|phone-wrap|error|submit|success|invalid|public|trustpilot|google".
+ * No privacy note under the submit button (removed on request, 2026-09-17).
  *
  * Both pages receive ?t=<signed token> from the backend redirect
  * (POST /api/reviews/r/<token>/<stars>/ → 302). They call:
