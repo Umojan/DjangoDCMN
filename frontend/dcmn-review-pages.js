@@ -30,8 +30,11 @@
     var h = ''; for (var i = 1; i <= 5; i++) h += '<span' + (i > n ? ' class="rv-off"' : '') + '>★</span>';
     el.innerHTML = h;
   };
-  var BTN = 'Send to the management team';
-  if (!t) { hideForm(); show('invalid'); return; }
+  var BTN = 'Send to the management team', busy = false;
+  // Webflow's site-wide Turnstile disables every form submit button until the challenge passes.
+  // This form never goes through Webflow (see the capture-phase submit handler), so keep it enabled.
+  setInterval(function () { var b = q('submit'); if (b && !busy && b.disabled) b.disabled = false; }, 300);
+  if (!t) { stars(0); hideForm(); show('invalid'); return; }
 
   fetch(API + 'r/' + encodeURIComponent(t) + '/')
     .then(function (r) { if (!r.ok) throw 0; return r.json(); })
@@ -45,16 +48,17 @@
       if (c.google_url) { var p = q('public'); if (p) p.href = c.google_url; }
       try { gtag('event', 'review_feedback_view', { rating: c.rating || 0 }); } catch (_) {}
     })
-    .catch(function () { hideForm(); show('invalid'); });
+    .catch(function () { stars(0); hideForm(); show('invalid'); });
 
   var cb = document.getElementById('rv-callback');
   if (cb) cb.addEventListener('change', function () { q('phone-wrap').classList.toggle('is-open', cb.checked); });
 
-  function setBtn(busy) { var b = q('submit'); if (!b) return; b.disabled = !!busy; b.value = busy ? 'Sending…' : BTN; }
+  function setBtn(b) { busy = !!b; var el = q('submit'); if (!el) return; el.disabled = busy; el.value = busy ? 'Sending…' : BTN; }
   function fail(err, msg) { err.textContent = msg; err.classList.add('is-visible'); setBtn(false); }
 
   function submit(e) {
     e.preventDefault(); e.stopImmediatePropagation();  // keep Webflow's own form handler out
+    if (busy) return;
     var msg = (document.getElementById('rv-message').value || '').trim();
     var call = !!(cb && cb.checked);
     var phone = (document.getElementById('rv-phone').value || '').trim();
@@ -68,7 +72,7 @@
       .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
       .then(function (x) {
         if (x.ok) {
-          hideForm(); show('success'); window.scrollTo({ top: 0, behavior: 'smooth' });
+          setBtn(false); hideForm(); show('success'); window.scrollTo({ top: 0, behavior: 'smooth' });
           try { gtag('event', 'review_feedback_submitted', { callback: call }); } catch (_) {}
         } else {
           fail(err, (x.j && x.j.detail) || 'Something went wrong. Please try again or email support@dcmobilenotary.com.');
@@ -77,6 +81,10 @@
       .catch(function () { fail(err, 'Network error. Please try again or email support@dcmobilenotary.com.'); });
   }
   document.addEventListener('submit', function (e) { if (e.target && e.target.id === 'rv-feedback-form') submit(e); }, true);
+  document.addEventListener('click', function (e) {
+    var b = e.target && e.target.closest && e.target.closest('[data-rv="submit"]');
+    if (b) { e.preventDefault(); submit(e); }
+  }, true);
 })();
 
 /* ===================== /review-thanks ===================== */
