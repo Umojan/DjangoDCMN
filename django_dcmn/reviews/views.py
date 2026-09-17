@@ -174,7 +174,7 @@ class RateView(View):
 
 
 class ReviewContextView(APIView):
-    """Public context for /feedback and /review-thanks pages: who the customer is, what order."""
+    """Public context for the /feedback page: who the customer is, what order."""
 
     def get(self, request, token: str):
         rr = parse_token(token)

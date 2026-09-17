@@ -693,7 +693,7 @@ Customer clicks star N:
   GET  /api/reviews/r/<token>/<N>/  → interstitial HTML that auto-POSTs (link scanners never record a rating)
   POST /api/reviews/r/<token>/<N>/  → services.record_rating() (FIRST click wins) → 302:
       N ≥ REVIEWS_POSITIVE_THRESHOLD (4) and review_type=google      → GOOGLE_REVIEW_URL
-      N ≥ threshold and review_type=trustpilot                        → /review-thanks?t=…  + send_trustpilot_invite_task
+      N ≥ threshold and review_type=trustpilot                        → TRUSTPILOT_REVIEW_URL (evaluate form) + send_trustpilot_invite_task
                                                                          (short thank-you email bcc'd to TRUSTPILOT_TRIGGER_EMAIL → Trustpilot AFS invite)
       N < threshold                                                   → /feedback?t=…  + notify_negative_task (countdown 15 min)
   GET  /api/reviews/r/<token>/      → public context for the pages (first name, service, TID, rating, route, urls)
@@ -713,10 +713,10 @@ Celery beat daily 15:00 UTC: reviews.tasks.send_review_reminders — ONE reminde
 - Old records (`stars_email_sent=False`) are never reminded. `requeue_pending_reviews` command still works (both legacy senders map to the star email).
 - Templates: `emails/review_thank_you.html` (stars), `review_reminder.html`, `review_trustpilot_invite.html`, `review_negative_alert.html`,
   `reviews/rate_redirect.html` (interstitial), `reviews/rate_invalid.html`.
-- Webflow pages (noindex): `/feedback` (id 6aabdd2193443f86601dbaf7) and `/review-thanks` (id 6aabdd2193443f86601dbb2b); page scripts
-  source of truth `frontend/dcmn-review-pages.js`. /feedback keeps a small "share publicly on Google" link so we never block public reviews
+- Webflow page (noindex): `/feedback` (id 6aabdd2193443f86601dbaf7); page script source of truth `frontend/dcmn-review-pages.js`.
+  `/review-thanks` (id 6aabdd2193443f86601dbb2b) exists as a DRAFT only — positive ratings go straight to the platform, no interstitial page. /feedback keeps a small "share publicly on Google" link so we never block public reviews
   (Google policy on review gating).
 - Settings: `REVIEWS_POSITIVE_THRESHOLD`, `REVIEWS_NOTIFY_EMAILS`, `REVIEWS_REMINDER_DAYS`, `REVIEWS_REMINDER_MAX_DAYS`,
-  `REVIEWS_TOKEN_MAX_AGE_DAYS`, `REVIEWS_FEEDBACK_PATH`, `REVIEWS_THANKS_PATH`, `TRUSTPILOT_REVIEW_URL`, throttle `reviews_feedback` (10/hour).
+  `REVIEWS_TOKEN_MAX_AGE_DAYS`, `REVIEWS_FEEDBACK_PATH`, `TRUSTPILOT_REVIEW_URL`, throttle `reviews_feedback` (10/hour).
 - Tests: `DJANGO_SETTINGS_MODULE=django_dcmn.settings_test python3 manage.py test reviews`.
 - Migrations are NOT run on Railway deploy (Procfile only starts gunicorn) — run `manage.py migrate` from a machine whose `.env` points at prod.

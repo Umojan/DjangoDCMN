@@ -82,7 +82,6 @@ REVIEWS_POSITIVE_THRESHOLD = config('REVIEWS_POSITIVE_THRESHOLD', default=4, cas
 # Managers who receive negative-feedback alerts (falls back to APPLICATIONS_NOTIFY_EMAILS, then EMAIL_OFFICE_RECEIVER)
 REVIEWS_NOTIFY_EMAILS = [e.strip() for e in os.getenv('REVIEWS_NOTIFY_EMAILS', '').split(',') if e.strip()]
 REVIEWS_FEEDBACK_PATH = config('REVIEWS_FEEDBACK_PATH', default='/feedback')
-REVIEWS_THANKS_PATH = config('REVIEWS_THANKS_PATH', default='/review-thanks')
 REVIEWS_TOKEN_MAX_AGE_DAYS = config('REVIEWS_TOKEN_MAX_AGE_DAYS', default=90, cast=int)
 # One reminder if no star was clicked N days after the review email (0 disables); never for emails older than MAX days
 REVIEWS_REMINDER_DAYS = config('REVIEWS_REMINDER_DAYS', default=3, cast=int)

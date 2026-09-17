@@ -4,7 +4,8 @@ Flow (Sep 2026):
   Zoho "Send Review" stage → ReviewRequest → email with 5 star links
   → GET  /api/reviews/r/<token>/<stars>/  (interstitial page, auto-POSTs)
   → POST /api/reviews/r/<token>/<stars>/  (records Review, 302):
-        rating >= REVIEWS_POSITIVE_THRESHOLD → Google (first order) / Trustpilot (returning)
+        rating >= REVIEWS_POSITIVE_THRESHOLD → 302 straight to the Google review form (first order)
+                                                or the Trustpilot review form (returning customer)
         rating <  threshold                  → FRONTEND_URL/feedback?t=<token> (internal form)
   → POST /api/reviews/feedback/  → text saved → managers email + Zoho note + Zoho task
 """
@@ -82,10 +83,6 @@ def feedback_page_url(token: str) -> str:
     return f"{frontend_url()}{getattr(settings, 'REVIEWS_FEEDBACK_PATH', '/feedback')}?t={token}"
 
 
-def thanks_page_url(token: str) -> str:
-    return f"{frontend_url()}{getattr(settings, 'REVIEWS_THANKS_PATH', '/review-thanks')}?t={token}"
-
-
 def notification_recipients() -> list[str]:
     for key in ('REVIEWS_NOTIFY_EMAILS', 'APPLICATIONS_NOTIFY_EMAILS', 'EMAIL_OFFICE_RECEIVER'):
         recipients = [e.strip() for e in (getattr(settings, key, None) or []) if e and e.strip()]
@@ -140,7 +137,8 @@ def redirect_target(review: Review, token: str) -> str:
     if review.route == Review.ROUTE_GOOGLE:
         return google_review_url()
     if review.route == Review.ROUTE_TRUSTPILOT:
-        return thanks_page_url(token)
+        # Straight to the Trustpilot review form; the verified AFS invite email goes out in the background.
+        return trustpilot_review_url()
     return feedback_page_url(token)
 
 

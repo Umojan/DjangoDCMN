@@ -18,6 +18,7 @@ from .tasks import _send_review_request_email, send_review_reminders
     BASE_URL='https://api.example.com',
     FRONTEND_URL='https://www.example.com',
     GOOGLE_REVIEW_URL='https://google.example/review',
+    TRUSTPILOT_REVIEW_URL='https://tp.example/evaluate',
     TRUSTPILOT_TRIGGER_EMAIL='afs@trustpilot.example',
     REVIEWS_NOTIFY_EMAILS=['manager@example.com'],
     REVIEWS_POSITIVE_THRESHOLD=4,
@@ -91,7 +92,7 @@ class ReviewGatingTests(TestCase):
         self.rr.save()
         resp = self.client.post(f'/api/reviews/r/{self.token}/5/')
         self.assertEqual(resp.status_code, 302)
-        self.assertEqual(resp['Location'], f'https://www.example.com/review-thanks?t={self.token}')
+        self.assertEqual(resp['Location'], 'https://tp.example/evaluate')
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, ['client@example.com'])
         self.assertEqual(mail.outbox[0].bcc, ['afs@trustpilot.example'])

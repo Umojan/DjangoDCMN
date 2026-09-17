@@ -1,17 +1,18 @@
 /*
  * DC Mobile Notary — gated review flow, page scripts (source of truth).
  *
- * These two IIFEs are embedded as page FOOTER custom code on the Webflow pages:
- *   /feedback       (page id 6aabdd2193443f86601dbaf7)  → FEEDBACK block
- *   /review-thanks  (page id 6aabdd2193443f86601dbb2b)  → THANKS block
+ * This IIFE is embedded as page FOOTER custom code on the Webflow page
+ *   /feedback       (page id 6aabdd2193443f86601dbaf7)
+ * (/review-thanks, page id 6aabdd2193443f86601dbb2b, is a DRAFT: positive ratings now redirect
+ *  straight to the Google / Trustpilot review form, no intermediate page.)
  * Page HEAD custom code carries <meta name="robots" content="noindex, nofollow"> and the
  * state styles (.is-visible / .is-open / :hover / :focus, Webflow's .w-checkbox wrapper) that the
  * WHTML CSS parser does not accept as single-class rules. Markup: centered card (.fb-* / .rt-* classes),
- * elements addressed by data-rv="title|stars|pill|intro|form|option|phone-wrap|error|submit|success|invalid|public|trustpilot|google".
+ * elements addressed by data-rv="title|stars|pill|intro|form|option|phone-wrap|error|submit|success|invalid|public".
  * No privacy note under the submit button (removed on request, 2026-09-17).
  *
- * Both pages receive ?t=<signed token> from the backend redirect
- * (POST /api/reviews/r/<token>/<stars>/ → 302). They call:
+ * The page receives ?t=<signed token> from the backend redirect
+ * (POST /api/reviews/r/<token>/<stars>/ → 302). It calls:
  *   GET  /api/reviews/r/<token>/   → { name, service_label, tracking_id, rating, route,
  *                                     feedback_submitted, google_url, trustpilot_url }
  *   POST /api/reviews/feedback/    → { token, message, callback_requested, phone } → { ok } | { detail }
@@ -93,35 +94,4 @@
     var b = e.target && e.target.closest && e.target.closest('[data-rv="submit"]');
     if (b) { e.preventDefault(); submit(e); }
   }, true);
-})();
-
-/* ===================== /review-thanks ===================== */
-(function () {
-  var API = 'https://api.dcmobilenotary.net/api/reviews/';
-  var t = new URLSearchParams(location.search).get('t') || '';
-  var q = function (k) { return document.querySelector('[data-rv="' + k + '"]'); };
-  var hide = function (k) { var el = q(k); if (el) el.style.display = 'none'; };
-  var stars = function (n) {
-    var el = q('stars'); if (!el) return;
-    if (!n) { el.style.display = 'none'; return; }
-    var h = ''; for (var i = 1; i <= 5; i++) h += '<span' + (i > n ? ' class="rt-off"' : '') + '>★</span>';
-    el.innerHTML = h;
-  };
-  if (!t) { stars(0); hide('pill'); return; }
-  fetch(API + 'r/' + encodeURIComponent(t) + '/')
-    .then(function (r) { if (!r.ok) throw 0; return r.json(); })
-    .then(function (c) {
-      q('title').textContent = 'Thank you for the ' + (c.rating ? c.rating + '-star ' : '') + 'rating' + (c.name ? ', ' + c.name : '') + '!';
-      var pill = [c.service_label, c.tracking_id].filter(Boolean).join(' · ');
-      if (pill) q('pill').textContent = pill; else hide('pill');
-      stars(c.rating);
-      if (c.trustpilot_url) q('trustpilot').href = c.trustpilot_url;
-      if (c.google_url) q('google').href = c.google_url;
-      try { gtag('event', 'review_thanks_view', { rating: c.rating || 0 }); } catch (_) {}
-    })
-    .catch(function () { stars(0); hide('pill'); });
-  document.addEventListener('click', function (e) {
-    var a = e.target.closest && e.target.closest('[data-rv="trustpilot"],[data-rv="google"]');
-    if (a) { try { gtag('event', 'review_platform_click', { platform: a.getAttribute('data-rv') }); } catch (_) {} }
-  });
 })();
