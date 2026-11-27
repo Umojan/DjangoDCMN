@@ -6,10 +6,12 @@ import warnings
 from unittest.mock import patch
 
 from django.core import mail
+from django.core.mail import get_connection
 from django.core.cache import CacheKeyWarning, cache
 from django.test import override_settings
 
 from crm import alerts
+from crm.alerts import FAST_SEND_TIMEOUT, alert_ops, fast_sends
 from crm.testing import NoNetworkTestCase
 
 # Independent of crm.alerts' own patterns: any address, or a 10-digit number not inside a longer digit run.
@@ -126,3 +128,31 @@ class CheckBeatTests(NoNetworkTestCase):
         cache.delete(alerts.BEAT_HEARTBEAT_KEY)
         self.assertFalse(alerts.check_beat())  # not checked again yet
         self.assertEqual(mail.outbox, [])
+
+
+class FastSendTests(NoNetworkTestCase):
+    @override_settings(OPS_ALERT_EMAILS=['ops@example.com'])
+    def test_alerts_inside_a_button_call_use_the_short_send_timeout(self):
+        with patch('crm.alerts.get_connection', wraps=get_connection) as connection:
+            self.assertTrue(alert_ops('slow', 'a', 'Background alert', 'body'))
+            connection.assert_not_called()                     # background: the backend default
+            with fast_sends():
+                self.assertTrue(alert_ops('slow', 'b', 'Button alert', 'body'))
+        connection.assert_called_once_with(requests_timeout=FAST_SEND_TIMEOUT)
+        self.assertEqual(len(mail.outbox), 2)
+
+    @override_settings(OPS_ALERT_EMAILS=['ops@example.com'])
+    def test_slow_send_inside_a_button_call_goes_to_a_worker(self):
+        def slow_then_fine(**kwargs):
+            if kwargs.get('requests_timeout') == FAST_SEND_TIMEOUT:
+                raise TimeoutError('Resend answered after 2 s')
+            return get_connection(**kwargs)
+
+        with patch('crm.alerts.get_connection', side_effect=slow_then_fine), fast_sends(), \
+                self.assertLogs('crm.alerts', 'WARNING') as logs:
+            self.assertTrue(alert_ops('link_failed', 'dcmn:qr:1:apostille', 'Engine create failed', 'body'))
+
+        self.assertIn('ops_alert_deferred', '\n'.join(logs.output))
+        (sent,) = mail.outbox                                  # the worker (eager here) sent it
+        self.assertEqual(sent.subject, '[DCMN ops] Engine create failed')
+        self.assertFalse(alert_ops('link_failed', 'dcmn:qr:1:apostille', 'Engine create failed', 'body'))   # deduped

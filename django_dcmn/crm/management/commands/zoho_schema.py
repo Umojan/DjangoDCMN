@@ -217,8 +217,8 @@ class Command(BaseCommand):
                                       'this token is not for the prod org.')
         run['checks'].append({'check': 'gaql_layout', 'ok': True, 'layout_id': schema_spec.GAQL_LAYOUT_ID})
 
-        # The prod token has no ZohoCRM.org.READ [06-facts]: Zoho answers 401 OAUTH_SCOPE_MISMATCH (after the one
-        # token refresh crm.zoho does on any 401) and the layout fingerprint above is the guard.
+        # The prod token has no ZohoCRM.org.READ [06-facts]: Zoho answers 401 OAUTH_SCOPE_MISMATCH (crm.zoho never
+        # refreshes the token for it) and the layout fingerprint above is the guard.
         try:
             body = zoho.zoho_call('GET', 'org', api='v6')
         except ZohoPermanentError as exc:

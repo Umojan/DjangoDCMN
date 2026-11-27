@@ -25,7 +25,7 @@ string button.dcmn_create_service(String recordId, String moduleApi, String serv
 	[
 		url :"https://api.dcmobilenotary.net/api/crm/v1/related-services/"
 		type :POST
-		headers:{"Content-Type":"application/json"}
+		headers:{"Content-Type":"application/json","Accept":"application/json"}
 		body:body.toString()
 		connection:"dcmn_api"
 		detailed:true

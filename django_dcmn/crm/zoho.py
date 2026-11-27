@@ -18,7 +18,6 @@ from django.conf import settings
 from django.core.cache import cache
 
 from orders.zoho_errors import ZohoPermanentError, ZohoTransientError
-from orders.zoho_sync import get_access_token
 
 from . import flags
 
@@ -52,6 +51,15 @@ INLINE_MIN_REMAINING_S = 2.5
 TOKEN_CACHE_KEY = 'zoho_access_token'
 TOKEN_TTL_S = 2900
 TOKEN_URL = 'https://accounts.zoho.com/oauth/v2/token'
+LEGACY_TOKEN_TIMEOUT: 'Timeout' = (5, 45)   # orders.zoho_sync.ZOHO_REQUEST_TIMEOUT, for background refreshes
+# Zoho allows 10 token requests per 10 minutes per refresh token and answers the next ones with HTTP 200
+# {"error": "Access Denied", "error_description": "You have made too many requests continuously…"} (seen live
+# 2026-11-27). That is transient: no worker asks again until the window is over, and the callers retry.
+TOKEN_COOLDOWN_KEY = 'crm:zoho:token_cooldown'
+TOKEN_COOLDOWN_S = 600
+# A 401 no new token can fix (the prod token has no ZohoCRM.org.READ, 06-facts) never costs a refresh; every
+# other 401 refreshes once, as before.
+NO_REFRESH_401_CODES = frozenset({'OAUTH_SCOPE_MISMATCH'})
 
 
 class _ZohoErrorInfo:
@@ -84,6 +92,10 @@ class CircuitOpen(ZohoTransient):
     """Zoho failed repeatedly; no HTTP call is made until the circuit closes."""
 
 
+class TokenCooldown(CircuitOpen):
+    """Zoho throttled the token refresh a moment ago; no HTTP call is made until TOKEN_COOLDOWN_S is over."""
+
+
 @dataclass
 class CreateResult:
     id: str
@@ -107,12 +119,15 @@ def zoho_call(method: str, path: str, *, params: dict | None = None, json: dict 
     url = f'{API_BASES[api]}/{path}'
     try:
         response = _send(method, url, path, params=params, json=json, timeout=timeout)
-        if response.status_code == 401:
+        if response.status_code == 401 and _error_code(response) not in NO_REFRESH_401_CODES:
             if _is_fast(timeout):   # no second refresh inside a short budget: the next call refreshes
                 _forget_token(response.request_token)
             else:
                 response = _send(method, url, path, params=params, json=json, timeout=timeout, force_refresh=True)
         body = _parse(method, path, response)
+    except CircuitOpen as exc:   # the token cooldown: no HTTP was made, so not a Zoho failure
+        logger.info('zoho_no_call method=%s path=%s code=%s', method, path, exc.code)
+        raise
     except ZohoTransientError as exc:
         logger.warning('zoho_transient method=%s path=%s code=%s', method, path, getattr(exc, 'code', ''))
         _record_failure()
@@ -130,13 +145,15 @@ def _is_fast(timeout: Timeout) -> bool:
 
 def _send(method: str, url: str, path: str, *, params, json, timeout: Timeout,
           force_refresh: bool = False) -> requests.Response:
+    # A fast call refreshes within its own timeout; a background one with the legacy (5, 45).
+    refresh_timeout = timeout if _is_fast(timeout) else LEGACY_TOKEN_TIMEOUT
     try:
-        if _is_fast(timeout):
-            token = (None if force_refresh else cache.get(TOKEN_CACHE_KEY)) or refresh_token(timeout)
-        else:
-            token = get_access_token(force_refresh=force_refresh)
+        token = (None if force_refresh else cache.get(TOKEN_CACHE_KEY)) or refresh_token(refresh_timeout)
+    except TokenCooldown:
+        raise
     except ZohoTransientError as exc:
-        raise ZohoTransient(f'{method} {path}: token refresh failed', code='TOKEN_REFRESH') from exc
+        raise ZohoTransient(f'{method} {path}: token refresh failed',
+                            code=getattr(exc, 'code', '') or 'TOKEN_REFRESH') from exc
     except ZohoPermanentError as exc:
         raise ZohoPermanent(f'{method} {path}: token refresh failed', code='TOKEN_REFRESH') from exc
     headers = {'Authorization': f'Zoho-oauthtoken {token}'}
@@ -153,21 +170,57 @@ def _send(method: str, url: str, path: str, *, params, json, timeout: Timeout,
 def refresh_token(timeout: Timeout) -> str:
     """A new OAuth access token within `timeout`, stored where the legacy code reads it.
 
-    Mirrors orders.zoho_sync.get_access_token(force_refresh=True) with the caller's timeout.
+    Mirrors orders.zoho_sync.get_access_token(force_refresh=True) with the caller's timeout, except that a
+    throttled refresh is transient (`TOKEN_RATE_LIMIT`) and pauses every refresh for TOKEN_COOLDOWN_S.
     """
+    if cache.get(TOKEN_COOLDOWN_KEY):
+        raise TokenCooldown('token refresh paused: Zoho throttled it', code='TOKEN_RATE_LIMIT')
     params = {'refresh_token': settings.ZOHO_REFRESH_TOKEN, 'client_id': settings.ZOHO_CLIENT_ID,
               'client_secret': settings.ZOHO_CLIENT_SECRET, 'grant_type': 'refresh_token'}
     try:
         response = requests.post(TOKEN_URL, params=params, timeout=timeout)
-        response.raise_for_status()
-        token = response.json()['access_token']
-    except (requests.Timeout, requests.ConnectionError, requests.HTTPError) as exc:
+    except (requests.Timeout, requests.ConnectionError) as exc:
         raise ZohoTransient(f'token refresh failed: {type(exc).__name__}', code='TOKEN_REFRESH') from exc
-    except (ValueError, KeyError, TypeError) as exc:
-        raise ZohoPermanent('token refresh answered without access_token', code='TOKEN_REFRESH') from exc
-    cache.set(TOKEN_CACHE_KEY, token, TOKEN_TTL_S)
-    logger.info('zoho_token_refreshed read_timeout=%s', timeout[1])
-    return token
+    try:
+        body = response.json()
+    except ValueError:
+        body = None
+    body = body if isinstance(body, dict) else {}
+    token = body.get('access_token')
+    if response.ok and isinstance(token, str) and token:
+        cache.set(TOKEN_CACHE_KEY, token, TOKEN_TTL_S)
+        logger.info('zoho_token_refreshed read_timeout=%s', timeout[1])
+        return token
+    if _is_throttled(body):
+        cache.set(TOKEN_COOLDOWN_KEY, 1, TOKEN_COOLDOWN_S)
+        logger.warning('zoho_token_throttled http=%s cooldown_s=%s', response.status_code, TOKEN_COOLDOWN_S)
+        raise ZohoTransient('token refresh throttled by Zoho', code='TOKEN_RATE_LIMIT',
+                            http_status=response.status_code)
+    if not response.ok:
+        raise ZohoTransient(f'token refresh failed: HTTP {response.status_code}', code='TOKEN_REFRESH',
+                            http_status=response.status_code)
+    logger.error('zoho_token_refresh_refused error=%s', str(body.get('error') or 'no access_token')[:40])
+    raise ZohoPermanent('token refresh answered without access_token', code='TOKEN_REFRESH')
+
+
+def _is_throttled(body: dict) -> bool:
+    """Zoho's answer to an 11th token request inside 10 minutes (HTTP 200, no access_token)."""
+    error = str(body.get('error') or '').strip().casefold()
+    description = str(body.get('error_description') or '').casefold()
+    return error == 'access denied' or 'too many requests' in description
+
+
+def token_cooling_down() -> bool:
+    return bool(cache.get(TOKEN_COOLDOWN_KEY))
+
+
+def _error_code(response) -> str:
+    """The upper-case Zoho error code of a response, '' when it has none."""
+    try:
+        body = response.json()
+    except ValueError:
+        return ''
+    return str(_first_item(body).get('code') or '').upper()
 
 
 def _forget_token(token: str | None) -> None:

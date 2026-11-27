@@ -390,6 +390,57 @@ class CircuitTests(PipelineTestCase):
         self.assertEqual(self.ops_alerts('not synced'), [])
 
 
+class TokenThrottleTests(PipelineTestCase):
+    def test_throttled_token_refresh_retries_and_never_skips_a_step(self):
+        quote = v5_quote()
+        cache.delete(zoho.TOKEN_CACHE_KEY)
+        self.http.queue(FakeResponse(200, {'error': 'Access Denied', 'error_description':
+                                           'You have made too many requests continuously. Please try again after '
+                                           'some time.'}))
+
+        with self.assertLogs('crm.zoho', 'WARNING'):
+            self.assertEqual(pipeline.run(quote.pk), 'retry')
+
+        quote.refresh_from_db()
+        self.assertEqual((quote.sync_status, quote.sync_last_error), ('retry', 'contact: TOKEN_RATE_LIMIT'))
+        self.assertEqual([c.url for c in self.http.calls], [zoho.TOKEN_URL])
+        self.assertEqual(self.ops_alerts('not synced'), [])
+
+        QuoteSubmission.objects.filter(pk=quote.pk).update(sync_next_at=timezone.now())
+        self.assertEqual(pipeline.run(quote.pk), 'retry')     # still paused: no second token request
+        self.assertEqual(len(self.http.calls), 1)
+
+        cache.delete(zoho.TOKEN_COOLDOWN_KEY)                  # the window is over: a token is minted again
+        self.warm_zoho_token()
+        QuoteSubmission.objects.filter(pk=quote.pk).update(sync_next_at=timezone.now())
+        self.assertEqual(pipeline.run(quote.pk), 'synced')
+        quote.refresh_from_db()
+        self.assertTrue(quote.zoho_attribution_id)            # the non-blocking steps were not skipped
+        self.assertTrue(quote.zoho_note_id)
+
+
+class TokenCooldownTests(PipelineTestCase):
+    def test_cooldown_never_spends_the_tries_of_a_non_blocking_step(self):
+        quote = v5_quote(zoho_contact_action='matched', sync_step='contact')
+        cache.delete(zoho.TOKEN_CACHE_KEY)
+        cache.set(zoho.TOKEN_COOLDOWN_KEY, 1, zoho.TOKEN_COOLDOWN_S)
+
+        for _ in range(pipeline.NON_BLOCKING_TRIES + 2):
+            QuoteSubmission.objects.filter(pk=quote.pk).update(sync_next_at=timezone.now())
+            self.assertEqual(pipeline.run(quote.pk), 'retry')
+        quote.refresh_from_db()
+        self.assertEqual((quote.sync_step, quote.sync_last_error), ('contact', 'attribution: TOKEN_RATE_LIMIT'))
+        self.assertNoHttp()
+        self.assertEqual(cache.get(zoho.CIRCUIT_FAILURES_KEY), None)   # no Zoho failure was counted
+
+        cache.delete(zoho.TOKEN_COOLDOWN_KEY)
+        self.warm_zoho_token()
+        QuoteSubmission.objects.filter(pk=quote.pk).update(sync_next_at=timezone.now())
+        self.assertEqual(pipeline.run(quote.pk), 'synced')
+        quote.refresh_from_db()
+        self.assertTrue(quote.zoho_attribution_id)
+
+
 class PausedTests(PipelineTestCase):
     def test_sync_off_saves_paused_and_reconciler_rearms_when_on(self):
         quote = v5_quote()

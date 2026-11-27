@@ -8,19 +8,19 @@ from datetime import time as day_start
 from celery import shared_task
 from django.conf import settings
 from django.core.cache import cache
+from django.core.mail import EmailMessage
 from django.db.models import Count, Q
 from django.urls import reverse
 from django.utils import timezone
 
 from orders.zoho_errors import ZohoPermanentError, ZohoTransientError
-from orders.zoho_sync import get_access_token
 
 from quotes import flags as quote_flags
 from quotes.models import QuoteLine, QuoteRejection, QuoteSubmission
 from quotes.phone_match import followup_calls_on
 from quotes.render import ET
 
-from .. import flags
+from .. import flags, zoho
 from ..alerts import BEAT_HEARTBEAT_KEY, alert_ops
 from ..auth import ignored_tokens_on
 from ..messages import trigger_word
@@ -47,15 +47,24 @@ def beat_heartbeat() -> None:
     cache.set(BEAT_HEARTBEAT_KEY, time.time(), HEARTBEAT_TTL_S)
 
 
+@shared_task(name='crm.tasks.send_ops_alert', autoretry_for=(Exception,), retry_backoff=60, max_retries=3)
+def send_ops_alert(subject: str, body: str, recipients: list[str]) -> str:
+    """An ops alert a button call could not send within its 10 s (already scrubbed and deduplicated)."""
+    EmailMessage(subject=subject, body=body, from_email=settings.DEFAULT_FROM_EMAIL, to=recipients).send()
+    return 'sent'
+
+
 @shared_task(name='crm.tasks.prewarm_zoho_token')
 def prewarm_zoho_token() -> str:
     """Beat, every 2,400 s: refresh the Zoho token so inline clicks find it warm (only while a feature is on)."""
     if not flags.zoho_background_enabled():
         return 'skipped'
+    if zoho.token_cooling_down():   # Zoho throttled the refresh: asking again only extends the block
+        return 'cooldown'
     if not cache.add(TOKEN_LOCK_KEY, 1, TOKEN_LOCK_TTL_S):
         return 'locked'
     try:
-        get_access_token(force_refresh=True)
+        zoho.refresh_token(zoho.LEGACY_TOKEN_TIMEOUT)
     except (ZohoTransientError, ZohoPermanentError) as exc:
         logger.warning('zoho_token_prewarm_failed code=%s', getattr(exc, 'code', type(exc).__name__))
         return 'failed'

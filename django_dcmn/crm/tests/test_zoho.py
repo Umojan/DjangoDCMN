@@ -3,6 +3,7 @@
 from unittest.mock import patch
 
 import requests
+from django.core.cache import cache
 
 from crm import contacts, zoho
 from crm.testing import FakeResponse, NoNetworkTestCase
@@ -307,6 +308,117 @@ class TimeoutTests(ZohoTestCase):
 
         self.assertEqual(zoho.fields_metadata(MODULE), [{'api_name': 'Stage'}])
         self.assertTrue(self.http.calls[0].url.startswith(zoho.API_BASES['v6']))
+
+
+THROTTLED = FakeResponse(200, {'error_description': 'You have made too many requests continuously. '
+                                                  'Please try again after some time.',
+                                'error': 'Access Denied', 'status': 'failure'})   # live answer, 2026-11-27
+
+
+class TokenThrottleTests(NoNetworkTestCase):
+    """Zoho answers an 11th token request within 10 minutes with HTTP 200 and no access_token."""
+
+    def test_throttled_refresh_is_transient_and_pauses_every_refresh(self):
+        self.http.queue(THROTTLED)
+
+        with self.assertRaises(zoho.ZohoTransient) as caught, self.assertLogs('crm.zoho', 'WARNING') as logs:
+            zoho.refresh_token((1.0, 4.0))
+
+        self.assertEqual(caught.exception.code, 'TOKEN_RATE_LIMIT')
+        self.assertIn('zoho_token_throttled', '\n'.join(logs.output))
+        self.assertTrue(zoho.token_cooling_down())
+        with self.assertRaises(zoho.TokenCooldown) as again:
+            zoho.refresh_token(zoho.LEGACY_TOKEN_TIMEOUT)       # inside the window: no HTTP at all
+        self.assertEqual(again.exception.code, 'TOKEN_RATE_LIMIT')
+        self.assertEqual(len(self.http.calls), 1)
+
+    def test_background_call_with_a_cold_token_retries_later_and_counts_for_the_circuit(self):
+        self.http.queue(THROTTLED)
+
+        with self.assertRaises(zoho.ZohoTransient) as caught, self.assertLogs('crm.zoho', 'WARNING'):
+            zoho.zoho_call('GET', 'Deals/1')
+
+        self.assertEqual(caught.exception.code, 'TOKEN_RATE_LIMIT')
+        self.assertEqual([c.url for c in self.http.calls], [zoho.TOKEN_URL])
+        self.assertEqual(self.http.calls[0].timeout, zoho.LEGACY_TOKEN_TIMEOUT)
+        self.assertEqual(len(cache.get(zoho.CIRCUIT_FAILURES_KEY) or []), 1)
+
+    def test_cached_token_keeps_working_during_the_pause(self):
+        cache.set(zoho.TOKEN_COOLDOWN_KEY, 1, zoho.TOKEN_COOLDOWN_S)
+        self.warm_zoho_token()
+        self.http.queue(FakeResponse(200, {'data': [{'id': '1'}]}))
+
+        self.assertEqual(zoho.get(MODULE, '1'), {'id': '1'})
+        self.assertEqual(len(self.http.calls), 1)
+
+    def test_refused_refresh_token_stays_permanent(self):
+        self.http.queue(FakeResponse(200, {'error': 'invalid_code'}))
+
+        with self.assertRaises(zoho.ZohoPermanent) as caught, self.assertLogs('crm.zoho', 'ERROR'):
+            zoho.refresh_token((1.0, 4.0))
+
+        self.assertEqual(caught.exception.code, 'TOKEN_REFRESH')
+        self.assertFalse(zoho.token_cooling_down())
+
+    def test_http_error_from_the_token_endpoint_is_transient_without_pause(self):
+        self.http.queue(FakeResponse(503))
+
+        with self.assertRaises(zoho.ZohoTransient) as caught:
+            zoho.refresh_token((1.0, 4.0))
+
+        self.assertEqual(caught.exception.code, 'TOKEN_REFRESH')
+        self.assertFalse(zoho.token_cooling_down())
+
+
+class UnauthorizedTests(ZohoTestCase):
+    def test_scope_mismatch_never_costs_a_token_refresh(self):
+        self.http.queue(FakeResponse(401, {'code': 'OAUTH_SCOPE_MISMATCH', 'details': {},
+                                           'message': 'invalid oauth scope to access this URL', 'status': 'error'}))
+
+        with self.assertRaises(zoho.ZohoPermanent) as caught:
+            zoho.zoho_call('GET', 'org', api='v6')
+
+        self.assertEqual(caught.exception.code, 'OAUTH_SCOPE_MISMATCH')
+        self.assertEqual(len(self.http.calls), 1)                   # no refresh, no second GET
+        self.assertEqual(cache.get(zoho.TOKEN_CACHE_KEY), 'test-token')
+
+    def test_invalid_token_refreshes_once_and_retries(self):
+        self.http.queue(FakeResponse(401, {'code': 'INVALID_TOKEN', 'details': {}, 'message': 'invalid oauth token',
+                                           'status': 'error'}),
+                        FakeResponse(200, {'access_token': 'fresh-token'}),
+                        FakeResponse(200, {'data': [{'id': '1'}]}))
+
+        self.assertEqual(zoho.get(MODULE, '1'), {'id': '1'})
+
+        self.assertEqual([c.url for c in self.http.calls][1], zoho.TOKEN_URL)
+        self.assertEqual(self.http.calls[2].headers['Authorization'], 'Zoho-oauthtoken fresh-token')
+
+    def test_unknown_401_code_still_refreshes_once(self):
+        self.http.queue(FakeResponse(401, {'code': 'SOME_NEW_AUTH_CODE', 'details': {}, 'status': 'error'}),
+                        FakeResponse(200, {'access_token': 'fresh-token'}),
+                        FakeResponse(200, {'data': [{'id': '1'}]}))
+
+        self.assertEqual(zoho.get(MODULE, '1'), {'id': '1'})
+        self.assertEqual(self.http.calls[1].url, zoho.TOKEN_URL)
+
+    def test_fast_call_drops_only_a_stale_token(self):
+        for code, dropped in (('INVALID_TOKEN', True), ('OAUTH_SCOPE_MISMATCH', False)):
+            with self.subTest(code=code):
+                self.warm_zoho_token()
+                self.http.queue(FakeResponse(401, {'code': code, 'details': {}, 'status': 'error'}))
+                with self.assertRaises((zoho.ZohoTransient, zoho.ZohoPermanent)), \
+                        self.assertLogs('crm.zoho', 'WARNING') if dropped else _no_logs():
+                    zoho.zoho_call('GET', 'Deals/1', timeout=(1.0, 2.5))
+                self.assertEqual(cache.get(zoho.TOKEN_CACHE_KEY) is None, dropped)
+                zoho._record_success()
+
+
+class _no_logs:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
 
 
 class ContactTests(ZohoTestCase):

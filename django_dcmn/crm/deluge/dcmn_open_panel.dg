@@ -14,7 +14,7 @@ string button.dcmn_open_panel(String recordId, String moduleApi, String userId, 
 	[
 		url :"https://api.dcmobilenotary.net/api/crm/v1/panel-links/"
 		type :POST
-		headers:{"Content-Type":"application/json"}
+		headers:{"Content-Type":"application/json","Accept":"application/json"}
 		body:body.toString()
 		connection:"dcmn_api"
 		detailed:true

@@ -85,7 +85,7 @@ class PurgeTests(NoNetworkTestCase):
 
 
 class PrewarmTests(NoNetworkTestCase):
-    @patch('crm.tasks.ops.get_access_token', return_value='fresh-token')
+    @patch('crm.zoho.refresh_token', return_value='fresh-token')
     def test_prewarm_under_lock_and_flag_gated(self, get_token):
         with override_settings(CRM_ENGINE_MODE='off', QUOTE_V3_ENABLED=False):
             self.assertEqual(prewarm_zoho_token(), 'skipped')
@@ -97,7 +97,7 @@ class PrewarmTests(NoNetworkTestCase):
                 cache.delete(TOKEN_LOCK_KEY)
                 get_token.reset_mock()
                 self.assertEqual(prewarm_zoho_token(), 'refreshed')
-                get_token.assert_called_once_with(force_refresh=True)
+                get_token.assert_called_once_with((5, 45))
                 self.assertEqual(prewarm_zoho_token(), 'locked')   # a second worker within 60 s
                 get_token.assert_called_once()
         self.assertNoHttp()

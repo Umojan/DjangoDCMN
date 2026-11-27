@@ -8,6 +8,7 @@ from datetime import timedelta
 from unittest.mock import patch
 
 import requests
+from django.core.cache import cache
 from django.test import override_settings
 from django.utils import timezone
 
@@ -15,6 +16,7 @@ from crm import engine, translation_capture as tc
 from crm.facts import SOURCE_FIELD_MAPS
 from crm.models import EngineRequest, ServiceLink, ServiceSignal
 from crm.tasks import apply_translation_signals
+from crm.tasks import translation as translation_task
 from crm.tests.support import EngineTestCase
 from crm.tests.test_translation_capture import FORMS, TICKED
 from crm.writeback import note_title, write_back
@@ -248,7 +250,8 @@ class ApplyTests(TranslationTestCase):
         fine = self.signal('embassy')
         self.synced(fine)
 
-        with patch('crm.zoho.get_access_token', side_effect=ZohoPermanentError('no token')), \
+        cache.delete('zoho_access_token')                       # cold: the refresh runs and is refused
+        with patch('crm.zoho.refresh_token', side_effect=ZohoPermanentError('no token')), \
                 self.assertLogs('crm', 'WARNING'):
             self.assertIn('retry=2', self.run_task())
         for signal in (gone, fine):
@@ -261,6 +264,42 @@ class ApplyTests(TranslationTestCase):
         fine.refresh_from_db()
         self.assertEqual((gone.state, gone.last_error, gone.attempts), ('error', 'record_not_found', 2))
         self.assertEqual(fine.state, 'evaluated')
+
+    @override_settings(CRM_ENGINE_MODE='off')
+    def test_engine_off_parks_written_signals_without_reading_notes_again(self):
+        first = self.signal('apostille')
+        record = self.synced(first)
+
+        self.assertIn('waiting=1', self.run_task())           # fields and the Note, then it waits for the engine
+        self.assertEqual(len(self.notes('Apostille_Services', record)), 1)
+        first.refresh_from_db()
+        self.assertEqual((first.state, first.data.get('note_posted')), ('fields_written', True))
+
+        calls = len(self.http.calls)
+        self.assertEqual(self.run_task(), 'expired=0')        # parked: no Notes read, nothing else to do
+        self.assertEqual(len(self.http.calls), calls)
+
+        later = self.signal('embassy')                        # a new request is never starved by written ones
+        self.synced(later)
+        ServiceSignal.objects.filter(pk=first.pk).update(data={})   # a row written before the flag existed
+        with patch('crm.tasks.translation.BATCH', 1):
+            self.assertIn('waiting=1', self.run_task())
+        later.refresh_from_db()
+        first.refresh_from_db()
+        self.assertEqual((later.state, first.data), ('fields_written', {}))
+
+    def test_note_flag_merges_into_the_stored_row(self):
+        signal = self.signal('apostille')
+        record = self.synced(signal)
+        signal.source_module, signal.source_record_id = 'Apostille_Services', record['id']
+        stale = signal.data
+        self.assertTrue(any(key.endswith('_raw') for key in stale))
+        ServiceSignal.objects.filter(pk=signal.pk).update(data={})   # an erase while the beat was working
+
+        translation_task._post_note(signal)
+
+        signal.refresh_from_db()
+        self.assertEqual(signal.data, {'note_posted': True})
 
     def test_flag_off_skips(self):
         self.synced(self.signal('apostille'))

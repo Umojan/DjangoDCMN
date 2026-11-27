@@ -17,6 +17,7 @@ from rest_framework.exceptions import (
     Throttled, UnsupportedMediaType,
 )
 from rest_framework.parsers import JSONParser
+from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -24,8 +25,8 @@ from quotes.antispam import client_ip
 from quotes.models import QuoteSubmission
 from quotes.render import ET
 
-from . import engine, flags, messages, sources, zoho
-from .alerts import alert_ops, check_beat
+from . import engine, flags, limits, messages, sources, zoho
+from .alerts import alert_ops, check_beat, fast_sends
 from .auth import ActionKeyAuthentication, CallerKeyThrottle, CallerScope
 from .models import EngineRequest
 from .panel.tokens import ACTION as PANEL_ACTION, TOKEN_MAX_AGE_S, make_panel_url
@@ -39,7 +40,9 @@ logger = logging.getLogger(__name__)
 API_VERSION = 'rs.v1'
 API_TRIGGERS = ('zoho_button', 'create_all')
 API_MODES = ('create', 'preview', 'suggest')
-SOURCE_READ_TIMEOUT: zoho.Timeout = (1.0, 4.0)   # one GET inside the 10 s Deluge limit
+# A Zoho button's source read, a cold-token refresh included, inside one deadline: Zoho kills a Button function
+# after 10 s (functions/limits-quotas), so the read never takes more than this.
+SOURCE_READ_BUDGET_S = 6.0
 PANEL_LINKS_KEY = 'crm:panel:links:{hour}'
 DONE_LINK_STATES = ('created', 'adopted')
 RUNNING_JOB_STATES = ('accepted', 'running')
@@ -78,8 +81,11 @@ class Refusal(Exception):
 
 # --- Shared with the panel ------------------------------------------------------------------------
 
-def gate_source(module: str, record_id: str, *, timeout: zoho.Timeout = SOURCE_READ_TIMEOUT) -> SourceRef:
-    """The §7.8 step 3 gates for a read of one source (engine off, module, circuit, test-only); one Zoho GET."""
+def gate_source(module: str, record_id: str, *, timeout: zoho.Timeout | None = None) -> SourceRef:
+    """The §7.8 step 3 gates for a read of one source (engine off, module, circuit, test-only); one Zoho GET.
+
+    Without `timeout` (a Zoho button) a cold-token refresh and the GET share SOURCE_READ_BUDGET_S.
+    """
     if flags.engine_mode() == 'off':
         raise Refusal(503, 'disabled', messages.DISABLED)
     try:
@@ -89,6 +95,11 @@ def gate_source(module: str, record_id: str, *, timeout: zoho.Timeout = SOURCE_R
     if zoho.circuit_is_open():
         raise Refusal(503, 'zoho_unavailable', messages.ZOHO_UNAVAILABLE)
     try:
+        if timeout is None:
+            budget = limits.Budget(time.monotonic() + SOURCE_READ_BUDGET_S)
+            if not cache.get(zoho.TOKEN_CACHE_KEY):
+                zoho.refresh_token(budget.timeout())
+            timeout = budget.timeout()
         src = sources.resolve(module, record_id, timeout=timeout)
     except SourceNotFound:
         raise Refusal(404, 'source_not_found', messages.SOURCE_NOT_FOUND) from None
@@ -215,7 +226,12 @@ class EngineAPIView(APIView):
     permission_classes = [CallerScope]
     throttle_classes = [CallerKeyThrottle]
     parser_classes = [JSONParser]
+    renderer_classes = [JSONRenderer]   # never the browsable HTML, whatever Accept Zoho's invokeurl sends
     allowed_callers: dict[str, frozenset[str]] = {}
+
+    def dispatch(self, request, *args, **kwargs):
+        with fast_sends():   # an alert never pushes the reply past Zoho's 10 s function limit
+            return super().dispatch(request, *args, **kwargs)
 
     def initial(self, request, *args, **kwargs):
         try:

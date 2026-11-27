@@ -21,7 +21,7 @@ from crm.panel.tokens import read_panel_token
 from crm.tasks.links import run_service_link
 from crm.tests.support import make_link, saved_quote
 from crm.tests.test_auth import RULES_KEY, ApiTestCase
-from crm.zoho import CIRCUIT_KEY
+from crm.zoho import CIRCUIT_KEY, TOKEN_CACHE_KEY, TOKEN_URL
 from quotes.models import GAQL_MODULE
 
 FIXTURES = Path(__file__).resolve().parent / 'fixtures'
@@ -234,6 +234,32 @@ class PanelLinkTests(ApiTestCase):
         first = self.client.get(f'/crm/panel/?t={token}')
         again = self.client.get(f'/crm/panel/?t={token}')
         self.assertEqual((first.status_code, again.status_code), (200, 403))
+
+    def test_cold_token_refresh_and_read_share_one_deadline(self):
+        cache.delete(TOKEN_CACHE_KEY)
+        clock = [1000.0]
+        crm = self.http.handler
+
+        def slow_refresh(call):
+            if call.url == TOKEN_URL:
+                clock[0] += 4.5                                    # accounts.zoho.com took 4.5 s
+            return crm(call)
+
+        self.http.handler = slow_refresh
+        with patch('crm.api_views.time.monotonic', lambda: clock[0]), \
+                patch('crm.zoho.time.monotonic', lambda: clock[0]):
+            response = self.post(body=self.link_body())
+
+        self.assertEqual((response.status_code, response.json()['detail']), (503, 'zoho_unavailable'))
+        self.assertEqual([c.url for c in self.http.calls], [TOKEN_URL])   # no GET started past the deadline
+        self.assertEqual(self.http.calls[0].timeout, (1.0, 4.0))
+
+    def test_answers_json_whatever_the_accept_header(self):
+        response = self.post(body=self.link_body(), HTTP_ACCEPT='text/html, image/gif, *; q=.2, */*; q=.2')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/json')
+        self.assertTrue(response.json()['ok'])
 
     def test_panel_link_only_add_service(self):
         response = self.post(body=self.link_body(action='create_service'))

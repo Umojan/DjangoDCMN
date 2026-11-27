@@ -246,7 +246,8 @@ class LogTests(SchemaTestCase):
         self.assertEqual(code, 0, out)
         authorizations = [(c.headers or {}).get('Authorization', '') for c in self.http.calls]
         self.assertIn(f'Zoho-oauthtoken {ZOHO_TEST_TOKEN}', authorizations)
-        self.assertIn(f'Zoho-oauthtoken {REFRESHED_TOKEN}', authorizations)   # the /org probe refreshed it
+        self.assertNotIn(f'Zoho-oauthtoken {REFRESHED_TOKEN}', authorizations)   # a scope 401 costs no refresh
+        self.assertFalse([c for c in self.http.calls if c.url.startswith('https://accounts.zoho.com/')])
         (path,) = list(self.log_dir.glob('zoho_schema_*.json'))
         text = path.read_text(encoding='utf-8')
         for secret in ('Zoho-oauthtoken', 'Authorization', ZOHO_TEST_TOKEN, REFRESHED_TOKEN):

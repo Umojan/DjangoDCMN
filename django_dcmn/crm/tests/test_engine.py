@@ -21,7 +21,7 @@ from crm.testing import FakeResponse
 from crm.tests.support import (
     CONTACT_ID, GAQL_ID, EngineTestCase, EngineTransactionTestCase, make_link, saved_quote,
 )
-from crm.zoho import CIRCUIT_KEY, KEY_FIELD
+from crm.zoho import CIRCUIT_KEY, KEY_FIELD, TOKEN_CACHE_KEY, TOKEN_COOLDOWN_KEY
 from orders.models import Track
 from quotes.models import GAQL_MODULE, QuoteLine
 
@@ -183,6 +183,22 @@ class ResultTests(EngineCase):
                          f'duplicated. Tell Vlad, ref {result.request.ref}.')
         self.assertEqual((result.request.state, result.request.error_code), ('failed', 'INVALID_DATA'))
         self.assertEqual(len(self.creates('Apostille_Services')), 1)
+
+
+class TokenThrottleTests(EngineCase):
+    def test_throttled_token_refresh_retries_the_link(self):
+        link = make_link(saved_quote(), 'apostille')
+        cache.delete(TOKEN_CACHE_KEY)
+        cache.set(TOKEN_COOLDOWN_KEY, 1, 600)                  # Zoho throttled the refresh a moment ago
+
+        engine.run_link(link.pk)
+
+        link.refresh_from_db()
+        self.assertEqual((link.state, link.last_error_code), ('retry', 'TOKEN_RATE_LIMIT'))
+        self.assertIsNotNone(link.next_attempt_at)
+        self.assertEqual(self.creates('Apostille_Services'), [])
+        self.assertEqual(mail.outbox, [])                      # no link_failed alert
+        self.assertNoHttp()
 
 
 class ExpandTests(EngineCase):

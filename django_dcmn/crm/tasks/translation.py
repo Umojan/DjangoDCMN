@@ -14,6 +14,7 @@ from collections.abc import Callable, Iterable
 
 from celery import shared_task
 from django.core.cache import cache
+from django.db import transaction
 from django.utils import timezone
 
 from orders.models import ZohoSyncJob
@@ -126,13 +127,29 @@ def _write_fields(signal: ServiceSignal) -> None:
                 ','.join(sorted(guarded.payload)))
 
 
+NOTE_POSTED = 'note_posted'   # signal.data flag: the Note is on the record, so no later beat reads its Notes
+
+
 def _post_note(signal: ServiceSignal) -> None:
     """Once per record (by title), shared with the write-back Note of the suggested link."""
+    if (signal.data or {}).get(NOTE_POSTED):
+        return
     module, record_id = signal.source_module, signal.source_record_id
     title = note_title(external_key(signal.source_key, SERVICE_KEY, 1), 'suggested')
-    if any(str(note.get('Note_Title') or '').startswith(title) for note in zoho.list_notes(module, record_id)):
-        return
-    zoho.add_note(module, record_id, title, note_text(signal, one_click=one_click_ready(module)))
+    if not any(str(note.get('Note_Title') or '').startswith(title) for note in zoho.list_notes(module, record_id)):
+        zoho.add_note(module, record_id, title, note_text(signal, one_click=one_click_ready(module)))
+    with transaction.atomic():   # merge into the stored row: an erase since this beat loaded it must stay erased
+        row = ServiceSignal.objects.select_for_update().only('data').get(pk=signal.pk)
+        row.data = {**(row.data or {}), NOTE_POSTED: True}
+        row.save(update_fields=['data'])
+    signal.data = row.data
+
+
+def _needs_beat(signal: ServiceSignal, jobs: dict, engine_off: bool) -> bool:
+    """A signal this beat can move: a synced waiting one, or a written one whose Note or rule is still due."""
+    if signal.state == 'waiting_source':
+        return (signal.order_type, signal.order_id) in jobs
+    return not (engine_off and (signal.data or {}).get(NOTE_POSTED))
 
 
 def apply_signal(signal: ServiceSignal, job: ZohoSyncJob | None = None) -> str:
@@ -196,7 +213,10 @@ def apply_translation_signals() -> str:
                    .update(state='expired'))
         open_signals = list(ServiceSignal.objects.filter(kind=KIND, state__in=OPEN_STATES).order_by('created_at'))
         jobs = _synced_jobs(s for s in open_signals if s.state == 'waiting_source')
-        ready = [s for s in open_signals if s.state == 'fields_written' or (s.order_type, s.order_id) in jobs][:BATCH]
+        engine_off = flags.engine_mode() == 'off'
+        # Synced waiting signals first, so written ones parked while the engine is off never starve new requests.
+        ready = sorted((s for s in open_signals if _needs_beat(s, jobs, engine_off)),
+                       key=lambda s: s.state != 'waiting_source')[:BATCH]
         outcomes: Counter = Counter()
         for signal in ready:
             try:

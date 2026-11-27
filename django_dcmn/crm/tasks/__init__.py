@@ -5,7 +5,7 @@ does not change when a work package replaces its submodule.
 """
 
 from .links import reconcile_service_links, run_service_link, scan_orphan_copies
-from .ops import beat_heartbeat, ops_daily_digest, prewarm_zoho_token, purge_engine_pii
+from .ops import beat_heartbeat, ops_daily_digest, prewarm_zoho_token, purge_engine_pii, send_ops_alert
 from .schema import refresh_zoho_schema
 from .translation import apply_translation_signals
 from .writeback import writeback_source
@@ -21,4 +21,5 @@ __all__ = [
     'beat_heartbeat',
     'prewarm_zoho_token',
     'purge_engine_pii',
+    'send_ops_alert',
 ]
