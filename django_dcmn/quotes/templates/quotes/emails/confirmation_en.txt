@@ -1,0 +1,15 @@
+{% autoescape off %}Hi{% if name %} {{ name }}{% endif %},
+
+Thank you for your quote request. We received it under reference {{ reference }}.
+
+What you asked for:
+{% for service in services %}- {{ service.name }}{% if service.price %}: {{ service.price }}{% endif %}
+{% endfor %}
+{% if has_review %}Prices marked "Price after free review" are confirmed once we have looked at your documents.
+{% endif %}
+Questions or changes? Reply to this email or call {{ phone }}.
+
+DC Mobile Notary
+Washington DC, USA
+{{ reply_to }}
+{% endautoescape %}

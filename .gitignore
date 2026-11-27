@@ -1,1 +1,4 @@
 /.env
+
+# local Zoho schema plans and e2e manifests
+django_dcmn/var/

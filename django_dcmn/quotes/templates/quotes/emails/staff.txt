@@ -1,0 +1,6 @@
+{% autoescape off %}{% for line in first_lines %}{{ line }}
+{% endfor %}
+{{ receipt }}
+
+{% for link in links %}{{ link.label }}{% if link.url %} {{ link.url }}{% endif %}{% if link.note %} {{ link.note }}{% endif %}
+{% endfor %}{% endautoescape %}

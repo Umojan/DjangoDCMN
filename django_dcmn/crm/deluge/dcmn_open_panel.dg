@@ -1,0 +1,38 @@
+string button.dcmn_open_panel(String recordId, String moduleApi, String userId, String action)
+{
+	src = Map();
+	src.put("module", moduleApi);
+	src.put("id", recordId);
+	actor = Map();
+	actor.put("zoho_user_id", userId);
+	actor.put("email", zoho.loginuserid);
+	body = Map();
+	body.put("source", src);
+	body.put("actor", actor);
+	body.put("action", action);
+	resp = invokeurl
+	[
+		url :"https://api.dcmobilenotary.net/api/crm/v1/panel-links/"
+		type :POST
+		headers:{"Content-Type":"application/json"}
+		body:body.toString()
+		connection:"dcmn_api"
+		detailed:true
+	];
+	code = resp.get("responseCode");
+	txt = ifnull(resp.get("responseText"), "").toString();
+	if(code == 200 && txt.startsWith("{"))
+	{
+		openUrl(txt.toMap().get("url"), "popup window");
+		return "Opening the DCMN panel…";
+	}
+	if(txt.startsWith("{"))
+	{
+		msg = ifnull(txt.toMap().get("message"), "");
+		if(msg != "")
+		{
+			return msg;
+		}
+	}
+	return "Could not open the DCMN panel (HTTP " + code + "). Use the DCMN staff panel button, or create the record by hand as before.";
+}

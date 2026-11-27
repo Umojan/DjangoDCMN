@@ -1,0 +1,18 @@
+{
+  "Name": "ZZ TEST · Triple Seal · ZZ TEST legacy client · Get A Quote record",
+  "External_Order_Key": "dcmn:rel:gaql:6686316000033717016:triple-seal",
+  "Stage": "TRIPLE SEAL ORDERS FROM APOSTILLE",
+  "Created_From": "https://crm.zoho.com/crm/org882204370/tab/CustomModule7/6686316000033717016",
+  "Client_Contact": {
+    "id": "6686316000000900001"
+  },
+  "Attribution_Record": {
+    "id": "6686316000000800001"
+  },
+  "Client_Name": "ZZ TEST legacy client",
+  "Client_Email": "zz-test+legacy@example.com",
+  "Client_Phone": "(202) 555-0147",
+  "Client_Address": "1 Example Street NW, Washington, DC 20001",
+  "Type_of_Legalization": "Triple Seal",
+  "Client_Notes_Comments": "[Get A Quote record] Triple Seal · from Zoho record\nMessage: Marriage certificate for Italy, please call after 5.\nQuote: https://crm.zoho.com/crm/org882204370/tab/CustomModule7/6686316000033717016"
+}

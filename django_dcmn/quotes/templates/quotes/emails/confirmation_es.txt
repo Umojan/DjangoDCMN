@@ -1,0 +1,15 @@
+{% autoescape off %}Hola{% if name %} {{ name }}{% endif %}:
+
+Gracias por su solicitud de presupuesto. La recibimos con la referencia {{ reference }}.
+
+Lo que nos pidió:
+{% for service in services %}- {{ service.name }}{% if service.price %}: {{ service.price }}{% endif %}
+{% endfor %}
+{% if has_review %}Los precios marcados "Precio tras una revisión gratuita" se confirman cuando revisemos sus documentos.
+{% endif %}
+¿Preguntas o cambios? Responda a este correo o llame al {{ phone }}.
+
+DC Mobile Notary
+Washington DC, USA
+{{ reply_to }}
+{% endautoescape %}

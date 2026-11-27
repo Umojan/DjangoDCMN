@@ -1,0 +1,4614 @@
+[
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": false,
+   "api_create": true,
+   "web_create": false,
+   "api_update": true
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Record Status",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": false,
+  "customizable_properties": null,
+  "display_label": "Record Status",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": false,
+  "multi_module_lookup": {},
+  "id": "6686316000016773603",
+  "created_time": null,
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": false,
+   "edit": false,
+   "quick_create": false,
+   "create": false
+  },
+  "separator": false,
+  "searchable": false,
+  "external": null,
+  "api_name": "Record_Status__s",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": false,
+  "child_fields": null,
+  "pick_list_values": [
+   {
+    "display_value": "Available",
+    "sequence_number": 1,
+    "reference_value": "Available",
+    "colour_code": null,
+    "actual_value": "Available",
+    "id": "6686316000016773673",
+    "type": "used"
+   },
+   {
+    "display_value": "Draft",
+    "sequence_number": 2,
+    "reference_value": "Draft",
+    "colour_code": null,
+    "actual_value": "Draft",
+    "id": "6686316000016773675",
+    "type": "used"
+   },
+   {
+    "display_value": "Trash",
+    "sequence_number": 3,
+    "reference_value": "Trash",
+    "colour_code": null,
+    "actual_value": "Trash",
+    "id": "6686316000016773677",
+    "type": "used"
+   }
+  ],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "string",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 2,
+  "modified_time": null,
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": true,
+   "record_operations_supported": true
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": false,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 120,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": false,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "picklist",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": false,
+  "blueprint_supported": false,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": true,
+   "api_create": true,
+   "web_create": true,
+   "api_update": true
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "FINGERPRINT SERVICES Name",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": false,
+  "customizable_properties": [
+   "fieldlabel",
+   "max_length_digits",
+   "unique",
+   "encrypted",
+   "tooltip",
+   "ai_governance_masking"
+  ],
+  "display_label": "CustomModule Name",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": false,
+  "multi_module_lookup": {},
+  "id": "6686316000016773605",
+  "created_time": null,
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": true,
+   "quick_create": true,
+   "create": true
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Name",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": false,
+  "child_fields": null,
+  "pick_list_values": [],
+  "system_mandatory": true,
+  "virtual_field": false,
+  "json_type": "string",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 1,
+  "modified_time": null,
+  "public": false,
+  "quick_sequence_number": "1",
+  "email_parser": {
+   "fields_update_supported": true,
+   "record_operations_supported": true
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": false,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 120,
+  "display_field": true,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "text",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": true,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": true,
+   "api_create": true,
+   "web_create": true,
+   "api_update": true
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "FINGERPRINT SERVICES Owner",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": true,
+  "customizable_properties": [
+   "fieldlabel",
+   "field_of_lookup",
+   "ai_governance_masking"
+  ],
+  "display_label": "FINGERPRINT SERVICES Owner",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": true,
+  "multi_module_lookup": {},
+  "id": "6686316000016773607",
+  "created_time": null,
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": true,
+   "quick_create": false,
+   "create": true
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Owner",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": false,
+  "child_fields": null,
+  "pick_list_values": [],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "jsonobject",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 8,
+  "modified_time": null,
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": false,
+   "record_operations_supported": false
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": false,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 120,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "ownerlookup",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": false,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": true,
+   "api_create": true,
+   "web_create": true,
+   "api_update": true
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Email",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": false,
+  "customizable_properties": [
+   "mandatory",
+   "fieldlabel",
+   "unique",
+   "encrypted",
+   "removal",
+   "private_field",
+   "tooltip",
+   "hipaa_field",
+   "add_to_other_layouts",
+   "field_masking",
+   "ai_governance_masking"
+  ],
+  "display_label": "Email",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": true,
+  "multi_module_lookup": {},
+  "id": "6686316000016773609",
+  "created_time": null,
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": true,
+   "quick_create": true,
+   "create": true
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Email",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": false,
+  "child_fields": null,
+  "pick_list_values": [],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "string",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 25,
+  "modified_time": null,
+  "public": false,
+  "quick_sequence_number": "2",
+  "email_parser": {
+   "fields_update_supported": false,
+   "record_operations_supported": true
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": false,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 100,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "email",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": false,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": false,
+   "api_create": false,
+   "web_create": false,
+   "api_update": false
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Created By",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": false,
+  "customizable_properties": [
+   "fieldlabel",
+   "removal",
+   "add_to_other_layouts",
+   "ai_governance_masking"
+  ],
+  "display_label": "Created By",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": true,
+  "multi_module_lookup": {},
+  "id": "6686316000016773613",
+  "created_time": null,
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": false,
+   "quick_create": false,
+   "create": false
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Created_By",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": false,
+  "child_fields": null,
+  "pick_list_values": [],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "jsonobject",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 20,
+  "modified_time": null,
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": false,
+   "record_operations_supported": false
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": false,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 120,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "ownerlookup",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": false,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": false,
+   "api_create": false,
+   "web_create": false,
+   "api_update": false
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Modified By",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": false,
+  "customizable_properties": [
+   "fieldlabel",
+   "removal",
+   "add_to_other_layouts",
+   "ai_governance_masking"
+  ],
+  "display_label": "Modified By",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": true,
+  "multi_module_lookup": {},
+  "id": "6686316000016773615",
+  "created_time": null,
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": false,
+   "quick_create": false,
+   "create": false
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Modified_By",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": false,
+  "child_fields": null,
+  "pick_list_values": [],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "jsonobject",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 20,
+  "modified_time": null,
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": false,
+   "record_operations_supported": false
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": false,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 120,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "ownerlookup",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": false,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": false,
+   "api_create": false,
+   "web_create": false,
+   "api_update": false
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Created Time",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": false,
+  "customizable_properties": null,
+  "display_label": "Created Time",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": false,
+  "multi_module_lookup": {},
+  "id": "6686316000016773617",
+  "created_time": null,
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": false,
+   "quick_create": false,
+   "create": false
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Created_Time",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": false,
+  "child_fields": null,
+  "pick_list_values": [],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "string",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 200,
+  "modified_time": null,
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": false,
+   "record_operations_supported": false
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": false,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 120,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "datetime",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": false,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": false,
+   "api_create": false,
+   "web_create": false,
+   "api_update": false
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Modified Time",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": false,
+  "customizable_properties": null,
+  "display_label": "Modified Time",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": false,
+  "multi_module_lookup": {},
+  "id": "6686316000016773619",
+  "created_time": null,
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": false,
+   "quick_create": false,
+   "create": false
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Modified_Time",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": false,
+  "child_fields": null,
+  "pick_list_values": [],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "string",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 200,
+  "modified_time": null,
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": false,
+   "record_operations_supported": false
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": false,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 120,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "datetime",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": false,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": false,
+   "api_create": false,
+   "web_create": false,
+   "api_update": false
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Last Activity Time",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": true,
+  "customizable_properties": null,
+  "display_label": "Last Activity Time",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": false,
+  "multi_module_lookup": {},
+  "id": "6686316000016773621",
+  "created_time": null,
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": false,
+   "quick_create": false,
+   "create": false
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Last_Activity_Time",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": false,
+  "child_fields": null,
+  "pick_list_values": [],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "string",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 786,
+  "modified_time": null,
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": false,
+   "record_operations_supported": false
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": false,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 120,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "datetime",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": false,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": true,
+   "api_create": true,
+   "web_create": true,
+   "api_update": true
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Email Opt Out",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": false,
+  "customizable_properties": [
+   "fieldlabel",
+   "removal",
+   "tooltip",
+   "default_value",
+   "add_to_other_layouts",
+   "ai_governance_masking"
+  ],
+  "display_label": "Email Opt Out",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": true,
+  "multi_module_lookup": {},
+  "id": "6686316000016773627",
+  "created_time": null,
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": true,
+   "quick_create": false,
+   "create": true
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Email_Opt_Out",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": false,
+  "child_fields": null,
+  "pick_list_values": [],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "boolean",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 301,
+  "modified_time": null,
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": true,
+   "record_operations_supported": false
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": false,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 5,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "boolean",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": true,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": true,
+   "api_create": true,
+   "web_create": true,
+   "api_update": true
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Tag",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": false,
+  "customizable_properties": null,
+  "display_label": "Tag",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": false,
+  "multi_module_lookup": {},
+  "id": "6686316000016773631",
+  "created_time": null,
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": false,
+   "quick_create": false,
+   "create": false
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Tag",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": false,
+  "child_fields": null,
+  "pick_list_values": [],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "jsonarray",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 209,
+  "modified_time": null,
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": false,
+   "record_operations_supported": false
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": false,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 2000,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": false,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "text",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": false,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": false,
+   "api_create": false,
+   "web_create": false,
+   "api_update": false
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Unsubscribed Mode",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": true,
+  "customizable_properties": null,
+  "display_label": "Unsubscribed Mode",
+  "read_only": true,
+  "association_details": null,
+  "businesscard_supported": false,
+  "multi_module_lookup": {},
+  "id": "6686316000016773647",
+  "created_time": null,
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_only",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_only",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": false,
+   "quick_create": false,
+   "create": false
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Unsubscribed_Mode",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": false,
+  "child_fields": null,
+  "pick_list_values": [
+   {
+    "display_value": "Consent form",
+    "sequence_number": 1,
+    "reference_value": "Consent form",
+    "colour_code": null,
+    "actual_value": "Consent form",
+    "id": "6686316000016773685",
+    "type": "used"
+   },
+   {
+    "display_value": "Manual",
+    "sequence_number": 2,
+    "reference_value": "Manual",
+    "colour_code": null,
+    "actual_value": "Manual",
+    "id": "6686316000016773681",
+    "type": "used"
+   },
+   {
+    "display_value": "Unsubscribe link",
+    "sequence_number": 3,
+    "reference_value": "Unsubscribe link",
+    "colour_code": null,
+    "actual_value": "Unsubscribe link",
+    "id": "6686316000016773679",
+    "type": "used"
+   },
+   {
+    "display_value": "Zoho campaigns",
+    "sequence_number": 4,
+    "reference_value": "Zoho campaigns",
+    "colour_code": null,
+    "actual_value": "Zoho campaigns",
+    "id": "6686316000016773683",
+    "type": "used"
+   }
+  ],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "string",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 2,
+  "modified_time": null,
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": false,
+   "record_operations_supported": false
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": false,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 120,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": true,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "picklist",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": false,
+  "blueprint_supported": false,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": false,
+   "api_create": false,
+   "web_create": false,
+   "api_update": false
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Unsubscribed Time",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": true,
+  "customizable_properties": null,
+  "display_label": "Unsubscribed Time",
+  "read_only": true,
+  "association_details": null,
+  "businesscard_supported": false,
+  "multi_module_lookup": {},
+  "id": "6686316000016773649",
+  "created_time": null,
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_only",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_only",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": false,
+   "quick_create": false,
+   "create": false
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Unsubscribed_Time",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": false,
+  "child_fields": null,
+  "pick_list_values": [],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "string",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 333,
+  "modified_time": null,
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": false,
+   "record_operations_supported": false
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": false,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 120,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "datetime",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": false,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": false,
+  "operation_type": {
+   "web_update": true,
+   "api_create": true,
+   "web_create": true,
+   "api_update": true
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Locked",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": true,
+  "customizable_properties": null,
+  "display_label": "Locked",
+  "read_only": true,
+  "association_details": null,
+  "businesscard_supported": false,
+  "multi_module_lookup": {},
+  "id": "6686316000016773651",
+  "created_time": null,
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_only",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_only",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": false,
+   "edit": false,
+   "quick_create": false,
+   "create": false
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Locked__s",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": false,
+  "child_fields": null,
+  "pick_list_values": [],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "boolean",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 301,
+  "modified_time": null,
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": false,
+   "record_operations_supported": false
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": false,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 5,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "boolean",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": false,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": false,
+   "api_create": false,
+   "web_create": false,
+   "api_update": false
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Record Id",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": true,
+  "customizable_properties": null,
+  "display_label": "Record Id",
+  "read_only": true,
+  "association_details": null,
+  "businesscard_supported": false,
+  "multi_module_lookup": {},
+  "id": "6686316000016773657",
+  "created_time": null,
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_only",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_only",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": false,
+   "edit": false,
+   "quick_create": false,
+   "create": false
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "id",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": false,
+  "child_fields": null,
+  "pick_list_values": [],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "string",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 52,
+  "modified_time": null,
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": false,
+   "record_operations_supported": false
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": false,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 18,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "bigint",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": false,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": false,
+  "operation_type": {
+   "web_update": true,
+   "api_create": true,
+   "web_create": true,
+   "api_update": true
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Profile Image",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": false,
+  "customizable_properties": [
+   "fieldlabel",
+   "image_enable",
+   "add_to_other_layouts",
+   "ai_governance_masking"
+  ],
+  "display_label": "Profile Image",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": false,
+  "multi_module_lookup": {},
+  "id": "6686316000016773671",
+  "created_time": null,
+  "filterable": false,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": true,
+   "quick_create": false,
+   "create": true
+  },
+  "separator": false,
+  "searchable": false,
+  "external": null,
+  "api_name": "Record_Image",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": false,
+  "child_fields": null,
+  "pick_list_values": [],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "string",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 66,
+  "modified_time": null,
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": false,
+   "record_operations_supported": false
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": false,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 255,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": false,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "profileimage",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": false,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": true,
+   "api_create": true,
+   "web_create": true,
+   "api_update": true
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Number of Cards",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": false,
+  "customizable_properties": [
+   "mandatory",
+   "fieldlabel",
+   "max_length_digits",
+   "unique",
+   "encrypted",
+   "removal",
+   "deletion",
+   "private_field",
+   "tooltip",
+   "hipaa_field",
+   "add_to_other_layouts",
+   "number_separator",
+   "field_masking",
+   "ai_governance_masking"
+  ],
+  "display_label": "Number of Cards",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": true,
+  "multi_module_lookup": {},
+  "id": "6686316000016781751",
+  "created_time": "2026-03-31T02:09:28+06:00",
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": true,
+   "quick_create": false,
+   "create": true
+  },
+  "separator": true,
+  "searchable": true,
+  "external": null,
+  "api_name": "Number_of_Cards",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": false,
+  "child_fields": null,
+  "pick_list_values": [],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "integer",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 32,
+  "modified_time": "2026-03-31T02:09:28+06:00",
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": true,
+   "record_operations_supported": true
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": true,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 9,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "integer",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": true,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": true,
+   "api_create": true,
+   "web_create": true,
+   "api_update": true
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Amount Paid",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": false,
+  "customizable_properties": [
+   "mandatory",
+   "fieldlabel",
+   "max_length_digits",
+   "encrypted",
+   "removal",
+   "deletion",
+   "private_field",
+   "tooltip",
+   "hipaa_field",
+   "add_to_other_layouts",
+   "rounding_type",
+   "maximum_decimal",
+   "field_masking",
+   "ai_governance_masking"
+  ],
+  "display_label": "Amount Paid",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": true,
+  "multi_module_lookup": {},
+  "id": "6686316000016781768",
+  "created_time": "2026-03-31T02:09:28+06:00",
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": true,
+   "quick_create": false,
+   "create": true
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Amount_Paid",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": false,
+  "child_fields": null,
+  "pick_list_values": [],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "double",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 36,
+  "modified_time": "2026-03-31T02:09:28+06:00",
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": true,
+   "record_operations_supported": true
+  },
+  "currency": {
+   "rounding_option": "normal",
+   "precision": 2
+  },
+  "enable_record_category": false,
+  "custom_field": true,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 16,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "currency",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": 2,
+  "mass_update": true,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": true,
+   "api_create": true,
+   "web_create": true,
+   "api_update": true
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Client Name",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": false,
+  "customizable_properties": [
+   "mandatory",
+   "fieldlabel",
+   "removal",
+   "deletion",
+   "tooltip",
+   "add_to_other_layouts",
+   "related_list_label",
+   "lookup_filter",
+   "field_of_lookup",
+   "ai_governance_masking"
+  ],
+  "display_label": "Client Name",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": true,
+  "multi_module_lookup": {},
+  "id": "6686316000016781785",
+  "created_time": "2026-03-31T02:09:28+06:00",
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": true,
+   "quick_create": false,
+   "create": true
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Client_Name",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": false,
+  "child_fields": null,
+  "pick_list_values": [],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "jsonobject",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 133,
+  "modified_time": "2026-03-31T02:09:28+06:00",
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": false,
+   "record_operations_supported": false
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": true,
+  "lookup": {
+   "display_label": "Related List Label 2",
+   "revalidate_filter_during_edit": false,
+   "api_name": "Related_List_Label_21",
+   "module": {
+    "api_name": "Contacts",
+    "crypt": false,
+    "id": "6686316000000002179"
+   },
+   "id": "6686316000016781789",
+   "query_details": {
+    "system_query_id": null
+   }
+  },
+  "address": null,
+  "rollup_summary": {},
+  "length": 120,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "lookup",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": false,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": true,
+   "api_create": true,
+   "web_create": true,
+   "api_update": true
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Appointment Date & Time",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": false,
+  "customizable_properties": [
+   "mandatory",
+   "fieldlabel",
+   "encrypted",
+   "removal",
+   "deletion",
+   "private_field",
+   "tooltip",
+   "hipaa_field",
+   "add_to_other_layouts",
+   "field_masking",
+   "ai_governance_masking"
+  ],
+  "display_label": "Appointment Date & Time",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": true,
+  "multi_module_lookup": {},
+  "id": "6686316000016781810",
+  "created_time": "2026-03-31T02:09:28+06:00",
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": true,
+   "quick_create": false,
+   "create": true
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Appointment_Date_Time",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": false,
+  "child_fields": null,
+  "pick_list_values": [],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "string",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 333,
+  "modified_time": "2026-03-31T02:09:28+06:00",
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": true,
+   "record_operations_supported": false
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": true,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 120,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "datetime",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": true,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": true,
+   "api_create": true,
+   "web_create": true,
+   "api_update": true
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Service Address (for mobile)",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": false,
+  "customizable_properties": [
+   "mandatory",
+   "fieldlabel",
+   "max_length_digits",
+   "unique",
+   "encrypted",
+   "removal",
+   "deletion",
+   "private_field",
+   "tooltip",
+   "hipaa_field",
+   "add_to_other_layouts",
+   "external_field",
+   "field_masking",
+   "ai_governance_masking"
+  ],
+  "display_label": "Service Address (for mobile)",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": true,
+  "multi_module_lookup": {},
+  "id": "6686316000016781827",
+  "created_time": "2026-03-31T02:09:28+06:00",
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": true,
+   "quick_create": false,
+   "create": true
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Service_Address_for_mobile",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": false,
+  "child_fields": null,
+  "pick_list_values": [],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "string",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 1,
+  "modified_time": "2026-03-31T02:09:28+06:00",
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": true,
+   "record_operations_supported": true
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": true,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 255,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "text",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": true,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": true,
+   "api_create": true,
+   "web_create": true,
+   "api_update": true
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Agent  Assigned",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": false,
+  "customizable_properties": [
+   "mandatory",
+   "fieldlabel",
+   "removal",
+   "deletion",
+   "private_field",
+   "tooltip",
+   "hipaa_field",
+   "history_tracking",
+   "display_value_alphabetically",
+   "default_value",
+   "option_add",
+   "add_to_other_layouts",
+   "color_code",
+   "replace_values",
+   "record_category",
+   "add_record_category",
+   "remove_record_category",
+   "rename_record_category",
+   "modify_record_category_type",
+   "ai_governance_masking"
+  ],
+  "display_label": "Agent  Assigned",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": true,
+  "multi_module_lookup": {},
+  "id": "6686316000016781845",
+  "created_time": "2026-03-31T02:09:29+06:00",
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": true,
+   "quick_create": false,
+   "create": true
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Agent_Assigned",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": false,
+  "child_fields": null,
+  "pick_list_values": [
+   {
+    "display_value": "-None-",
+    "sequence_number": 1,
+    "reference_value": "-None-",
+    "colour_code": null,
+    "actual_value": "-None-",
+    "id": "6686316000016781851",
+    "type": "used"
+   },
+   {
+    "display_value": "Aziz Bekishov",
+    "sequence_number": 2,
+    "reference_value": "Aziz Bekishov",
+    "colour_code": null,
+    "actual_value": "Aziz Bekishov",
+    "id": "6686316000016781844",
+    "type": "used"
+   },
+   {
+    "display_value": "Nadira",
+    "sequence_number": 3,
+    "reference_value": "Nadira",
+    "colour_code": null,
+    "actual_value": "Nadira",
+    "id": "6686316000016781846",
+    "type": "used"
+   },
+   {
+    "display_value": "Amir",
+    "sequence_number": 4,
+    "reference_value": "Amir",
+    "colour_code": null,
+    "actual_value": "Amir",
+    "id": "6686316000016781848",
+    "type": "used"
+   }
+  ],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "string",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 2,
+  "modified_time": "2026-03-31T02:09:29+06:00",
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": true,
+   "record_operations_supported": true
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": true,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 120,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "picklist",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": true,
+  "blueprint_supported": true,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": true,
+   "api_create": true,
+   "web_create": true,
+   "api_update": true
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Fingerprint Service Type",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": false,
+  "customizable_properties": [
+   "mandatory",
+   "fieldlabel",
+   "removal",
+   "deletion",
+   "private_field",
+   "tooltip",
+   "hipaa_field",
+   "history_tracking",
+   "display_value_alphabetically",
+   "default_value",
+   "option_add",
+   "add_to_other_layouts",
+   "color_code",
+   "replace_values",
+   "record_category",
+   "add_record_category",
+   "remove_record_category",
+   "rename_record_category",
+   "modify_record_category_type",
+   "ai_governance_masking"
+  ],
+  "display_label": "Fingerprint Service Type",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": true,
+  "multi_module_lookup": {},
+  "id": "6686316000016781872",
+  "created_time": "2026-03-31T02:09:29+06:00",
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": true,
+   "quick_create": false,
+   "create": true
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Fingerprint_Service_Type",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": true,
+  "child_fields": null,
+  "pick_list_values": [
+   {
+    "display_value": "-None-",
+    "sequence_number": 1,
+    "reference_value": "-None-",
+    "colour_code": null,
+    "actual_value": "-None-",
+    "id": "6686316000016781882",
+    "type": "used"
+   },
+   {
+    "display_value": "FBI Live Scan",
+    "sequence_number": 2,
+    "reference_value": "FBI Live Scan",
+    "colour_code": "#168aef",
+    "actual_value": "FBI Live Scan",
+    "id": "6686316000016781871",
+    "type": "used"
+   },
+   {
+    "display_value": "FD-258 Card",
+    "sequence_number": 3,
+    "reference_value": "FD-258 Card",
+    "colour_code": "#e972fd",
+    "actual_value": "FD-258 Card",
+    "id": "6686316000016781873",
+    "type": "used"
+   },
+   {
+    "display_value": "FDLE",
+    "sequence_number": 4,
+    "reference_value": "FDLE",
+    "colour_code": "#f5c72f",
+    "actual_value": "FDLE",
+    "id": "6686316000016781875",
+    "type": "used"
+   },
+   {
+    "display_value": "ATF",
+    "sequence_number": 5,
+    "reference_value": "ATF",
+    "colour_code": "#168aef",
+    "actual_value": "ATF",
+    "id": "6686316000016781877",
+    "type": "used"
+   },
+   {
+    "display_value": "Mobile Fingerprinting",
+    "sequence_number": 6,
+    "reference_value": "Mobile Fingerprinting",
+    "colour_code": "#25b52a",
+    "actual_value": "Mobile Fingerprinting",
+    "id": "6686316000016781879",
+    "type": "used"
+   }
+  ],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "string",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 2,
+  "modified_time": "2026-03-31T02:09:29+06:00",
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": true,
+   "record_operations_supported": true
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": true,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 120,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "picklist",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": true,
+  "blueprint_supported": true,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": true,
+   "api_create": true,
+   "web_create": true,
+   "api_update": true
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Fingerprint Stage",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": false,
+  "customizable_properties": [
+   "mandatory",
+   "fieldlabel",
+   "removal",
+   "deletion",
+   "private_field",
+   "tooltip",
+   "hipaa_field",
+   "history_tracking",
+   "display_value_alphabetically",
+   "default_value",
+   "option_add",
+   "add_to_other_layouts",
+   "color_code",
+   "replace_values",
+   "record_category",
+   "add_record_category",
+   "remove_record_category",
+   "rename_record_category",
+   "modify_record_category_type",
+   "ai_governance_masking"
+  ],
+  "display_label": "Fingerprint Stage",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": true,
+  "multi_module_lookup": {},
+  "id": "6686316000016781905",
+  "created_time": "2026-03-31T02:09:29+06:00",
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": true,
+   "quick_create": false,
+   "create": true
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Fingerprint_Stage",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": true,
+  "child_fields": null,
+  "pick_list_values": [
+   {
+    "display_value": "-None-",
+    "sequence_number": 1,
+    "reference_value": "-None-",
+    "colour_code": null,
+    "actual_value": "-None-",
+    "id": "6686316000016781921",
+    "type": "used"
+   },
+   {
+    "display_value": "Client placed the request",
+    "sequence_number": 2,
+    "reference_value": "Client placed the request",
+    "colour_code": "#c4f0b3",
+    "actual_value": "Client placed the request",
+    "id": "6686316000016781904",
+    "type": "used"
+   },
+   {
+    "display_value": "FINGERPRINT LEADS FROM GET QUOTE PIPELINE",
+    "sequence_number": 3,
+    "reference_value": "FINGERPRINT LEADS FROM GET QUOTE PIPELINE",
+    "colour_code": "#168aef",
+    "actual_value": "APOSTILE LEADS FROM GET QUOTE PIPELINE",
+    "id": "6686316000019446028",
+    "type": "used"
+   },
+   {
+    "display_value": "5% Discount Follow Up -Offer",
+    "sequence_number": 4,
+    "reference_value": "5% Discount Follow Up -Offer",
+    "colour_code": "#e972fd",
+    "actual_value": "5% Discount Follow Up -Offer",
+    "id": "6686316000026997272",
+    "type": "used"
+   },
+   {
+    "display_value": "Qualified",
+    "sequence_number": 5,
+    "reference_value": "Qualified",
+    "colour_code": "#67c480",
+    "actual_value": "Qualified",
+    "id": "6686316000016781906",
+    "type": "used"
+   },
+   {
+    "display_value": "Quote Sent",
+    "sequence_number": 6,
+    "reference_value": "Quote Sent",
+    "colour_code": "#4137be",
+    "actual_value": "Quote Sent",
+    "id": "6686316000016781908",
+    "type": "used"
+   },
+   {
+    "display_value": "Appointment Scheduled",
+    "sequence_number": 7,
+    "reference_value": "Appointment Scheduled",
+    "colour_code": "#e972fd",
+    "actual_value": "Appointment Scheduled",
+    "id": "6686316000016781910",
+    "type": "used"
+   },
+   {
+    "display_value": "Service Completed",
+    "sequence_number": 8,
+    "reference_value": "Service Completed",
+    "colour_code": "#25b52a",
+    "actual_value": "Service Completed",
+    "id": "6686316000016781912",
+    "type": "used"
+   },
+   {
+    "display_value": "Delivered / Submitted",
+    "sequence_number": 9,
+    "reference_value": "Delivered / Submitted",
+    "colour_code": "#f5c72f",
+    "actual_value": "Delivered / Submitted",
+    "id": "6686316000016781914",
+    "type": "used"
+   },
+   {
+    "display_value": "Send Review",
+    "sequence_number": 10,
+    "reference_value": "Send Review",
+    "colour_code": "#4137be",
+    "actual_value": "Closed Won",
+    "id": "6686316000016781916",
+    "type": "used"
+   },
+   {
+    "display_value": "No Review/ Closed Lost",
+    "sequence_number": 11,
+    "reference_value": "No Review/ Closed Lost",
+    "colour_code": "#eb4d4d",
+    "actual_value": "Closed Lost",
+    "id": "6686316000016781918",
+    "type": "used"
+   },
+   {
+    "display_value": "USELES LEADS ( COMING FROM SPAM, etc)",
+    "sequence_number": 12,
+    "reference_value": "USELES LEADS ( COMING FROM SPAM, etc)",
+    "colour_code": "#eb4d4d",
+    "actual_value": "USELES LEADS ( COMING FROM SPAM, etc)",
+    "id": "6686316000026997271",
+    "type": "used"
+   }
+  ],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "string",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 2,
+  "modified_time": "2026-08-22T03:16:44+06:00",
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": true,
+   "record_operations_supported": true
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": true,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 120,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "picklist",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": true,
+  "blueprint_supported": true,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": true,
+   "api_create": true,
+   "web_create": true,
+   "api_update": true
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Fingerprint Purpose",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": false,
+  "customizable_properties": [
+   "mandatory",
+   "fieldlabel",
+   "removal",
+   "deletion",
+   "private_field",
+   "tooltip",
+   "hipaa_field",
+   "history_tracking",
+   "display_value_alphabetically",
+   "default_value",
+   "option_add",
+   "add_to_other_layouts",
+   "color_code",
+   "replace_values",
+   "record_category",
+   "add_record_category",
+   "remove_record_category",
+   "rename_record_category",
+   "modify_record_category_type",
+   "ai_governance_masking"
+  ],
+  "display_label": "Fingerprint Purpose",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": true,
+  "multi_module_lookup": {},
+  "id": "6686316000016781947",
+  "created_time": "2026-03-31T02:09:29+06:00",
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": true,
+   "quick_create": false,
+   "create": true
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Fingerprint_Purpose",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": true,
+  "child_fields": null,
+  "pick_list_values": [
+   {
+    "display_value": "-None-",
+    "sequence_number": 1,
+    "reference_value": "-None-",
+    "colour_code": null,
+    "actual_value": "-None-",
+    "id": "6686316000016781957",
+    "type": "used"
+   },
+   {
+    "display_value": "Immigration",
+    "sequence_number": 2,
+    "reference_value": "Immigration",
+    "colour_code": "#ffda62",
+    "actual_value": "Immigration",
+    "id": "6686316000016781946",
+    "type": "used"
+   },
+   {
+    "display_value": "Employment",
+    "sequence_number": 3,
+    "reference_value": "Employment",
+    "colour_code": "#e972fd",
+    "actual_value": "Employment",
+    "id": "6686316000016781948",
+    "type": "used"
+   },
+   {
+    "display_value": "Licensing",
+    "sequence_number": 4,
+    "reference_value": "Licensing",
+    "colour_code": "#5cb3fd",
+    "actual_value": "Licensing",
+    "id": "6686316000016781950",
+    "type": "used"
+   },
+   {
+    "display_value": "Background Check",
+    "sequence_number": 5,
+    "reference_value": "Background Check",
+    "colour_code": "#25b52a",
+    "actual_value": "Background Check",
+    "id": "6686316000016781952",
+    "type": "used"
+   },
+   {
+    "display_value": "Other",
+    "sequence_number": 6,
+    "reference_value": "Other",
+    "colour_code": "#8a37be",
+    "actual_value": "Other",
+    "id": "6686316000016781954",
+    "type": "used"
+   }
+  ],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "string",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 2,
+  "modified_time": "2026-03-31T02:09:29+06:00",
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": true,
+   "record_operations_supported": true
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": true,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 120,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "picklist",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": true,
+  "blueprint_supported": true,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": true,
+   "api_create": true,
+   "web_create": true,
+   "api_update": true
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Package",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": false,
+  "customizable_properties": [
+   "mandatory",
+   "fieldlabel",
+   "removal",
+   "deletion",
+   "private_field",
+   "tooltip",
+   "hipaa_field",
+   "history_tracking",
+   "display_value_alphabetically",
+   "default_value",
+   "option_add",
+   "add_to_other_layouts",
+   "color_code",
+   "replace_values",
+   "record_category",
+   "add_record_category",
+   "remove_record_category",
+   "rename_record_category",
+   "modify_record_category_type",
+   "ai_governance_masking"
+  ],
+  "display_label": "Package",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": true,
+  "multi_module_lookup": {},
+  "id": "6686316000016781980",
+  "created_time": "2026-03-31T02:09:29+06:00",
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": true,
+   "quick_create": false,
+   "create": true
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Package",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": true,
+  "child_fields": null,
+  "pick_list_values": [
+   {
+    "display_value": "-None-",
+    "sequence_number": 1,
+    "reference_value": "-None-",
+    "colour_code": null,
+    "actual_value": "-None-",
+    "id": "6686316000016781984",
+    "type": "used"
+   },
+   {
+    "display_value": "Standard",
+    "sequence_number": 2,
+    "reference_value": "Standard",
+    "colour_code": "#ffc6c6",
+    "actual_value": "Standard",
+    "id": "6686316000016781979",
+    "type": "used"
+   },
+   {
+    "display_value": "Same Day",
+    "sequence_number": 3,
+    "reference_value": "Same Day",
+    "colour_code": "#af38fa",
+    "actual_value": "Same Day",
+    "id": "6686316000016781981",
+    "type": "used"
+   }
+  ],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "string",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 2,
+  "modified_time": "2026-03-31T02:09:29+06:00",
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": true,
+   "record_operations_supported": true
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": true,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 120,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "picklist",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": true,
+  "blueprint_supported": true,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": true,
+   "api_create": true,
+   "web_create": true,
+   "api_update": true
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Apostille Needed",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": false,
+  "customizable_properties": [
+   "mandatory",
+   "fieldlabel",
+   "removal",
+   "deletion",
+   "private_field",
+   "tooltip",
+   "hipaa_field",
+   "history_tracking",
+   "display_value_alphabetically",
+   "default_value",
+   "option_add",
+   "add_to_other_layouts",
+   "color_code",
+   "replace_values",
+   "record_category",
+   "add_record_category",
+   "remove_record_category",
+   "rename_record_category",
+   "modify_record_category_type",
+   "ai_governance_masking"
+  ],
+  "display_label": "Apostille Needed",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": true,
+  "multi_module_lookup": {},
+  "id": "6686316000016782004",
+  "created_time": "2026-03-31T02:09:29+06:00",
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": true,
+   "quick_create": false,
+   "create": true
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Apostille_Needed",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": true,
+  "child_fields": null,
+  "pick_list_values": [
+   {
+    "display_value": "-None-",
+    "sequence_number": 1,
+    "reference_value": "-None-",
+    "colour_code": null,
+    "actual_value": "-None-",
+    "id": "6686316000016782008",
+    "type": "used"
+   },
+   {
+    "display_value": "YES",
+    "sequence_number": 2,
+    "reference_value": "YES",
+    "colour_code": "#25b52a",
+    "actual_value": "YES",
+    "id": "6686316000016782003",
+    "type": "used"
+   },
+   {
+    "display_value": "NO",
+    "sequence_number": 3,
+    "reference_value": "NO",
+    "colour_code": "#9a2e47",
+    "actual_value": "NO",
+    "id": "6686316000016782005",
+    "type": "used"
+   }
+  ],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "string",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 2,
+  "modified_time": "2026-03-31T02:09:29+06:00",
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": true,
+   "record_operations_supported": true
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": true,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 120,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "picklist",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": true,
+  "blueprint_supported": true,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": true,
+   "api_create": true,
+   "web_create": true,
+   "api_update": true
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Appointment Type",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": false,
+  "customizable_properties": [
+   "mandatory",
+   "fieldlabel",
+   "removal",
+   "deletion",
+   "private_field",
+   "tooltip",
+   "hipaa_field",
+   "history_tracking",
+   "display_value_alphabetically",
+   "default_value",
+   "option_add",
+   "add_to_other_layouts",
+   "color_code",
+   "replace_values",
+   "record_category",
+   "add_record_category",
+   "remove_record_category",
+   "rename_record_category",
+   "modify_record_category_type",
+   "ai_governance_masking"
+  ],
+  "display_label": "Appointment Type",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": true,
+  "multi_module_lookup": {},
+  "id": "6686316000016782028",
+  "created_time": "2026-03-31T02:09:29+06:00",
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": true,
+   "quick_create": false,
+   "create": true
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Appointment_Type",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": true,
+  "child_fields": null,
+  "pick_list_values": [
+   {
+    "display_value": "-None-",
+    "sequence_number": 1,
+    "reference_value": "-None-",
+    "colour_code": null,
+    "actual_value": "-None-",
+    "id": "6686316000016782032",
+    "type": "used"
+   },
+   {
+    "display_value": "Office",
+    "sequence_number": 2,
+    "reference_value": "Office",
+    "colour_code": "#67c480",
+    "actual_value": "Office",
+    "id": "6686316000016782027",
+    "type": "used"
+   },
+   {
+    "display_value": "Mobile",
+    "sequence_number": 3,
+    "reference_value": "Mobile",
+    "colour_code": "#5cb3fd",
+    "actual_value": "Mobile",
+    "id": "6686316000016782029",
+    "type": "used"
+   }
+  ],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "string",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 2,
+  "modified_time": "2026-03-31T02:09:29+06:00",
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": true,
+   "record_operations_supported": true
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": true,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 120,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "picklist",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": true,
+  "blueprint_supported": true,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": true,
+   "api_create": true,
+   "web_create": true,
+   "api_update": true
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Translation Needed",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": false,
+  "customizable_properties": [
+   "mandatory",
+   "fieldlabel",
+   "removal",
+   "deletion",
+   "private_field",
+   "tooltip",
+   "hipaa_field",
+   "history_tracking",
+   "display_value_alphabetically",
+   "default_value",
+   "option_add",
+   "add_to_other_layouts",
+   "color_code",
+   "replace_values",
+   "record_category",
+   "add_record_category",
+   "remove_record_category",
+   "rename_record_category",
+   "modify_record_category_type",
+   "ai_governance_masking"
+  ],
+  "display_label": "Translation Needed",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": true,
+  "multi_module_lookup": {},
+  "id": "6686316000016782052",
+  "created_time": "2026-03-31T02:09:29+06:00",
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": true,
+   "quick_create": false,
+   "create": true
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Translation_Needed",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": true,
+  "child_fields": null,
+  "pick_list_values": [
+   {
+    "display_value": "-None-",
+    "sequence_number": 1,
+    "reference_value": "-None-",
+    "colour_code": null,
+    "actual_value": "-None-",
+    "id": "6686316000016782056",
+    "type": "used"
+   },
+   {
+    "display_value": "YES",
+    "sequence_number": 2,
+    "reference_value": "YES",
+    "colour_code": "#25b52a",
+    "actual_value": "YES",
+    "id": "6686316000016782051",
+    "type": "used"
+   },
+   {
+    "display_value": "NO",
+    "sequence_number": 3,
+    "reference_value": "NO",
+    "colour_code": "#f27e22",
+    "actual_value": "NO",
+    "id": "6686316000016782053",
+    "type": "used"
+   }
+  ],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "string",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 2,
+  "modified_time": "2026-03-31T02:09:29+06:00",
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": true,
+   "record_operations_supported": true
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": true,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 120,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "picklist",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": true,
+  "blueprint_supported": true,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": true,
+   "api_create": true,
+   "web_create": true,
+   "api_update": true
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Fingerprint Type",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": false,
+  "customizable_properties": [
+   "mandatory",
+   "fieldlabel",
+   "removal",
+   "deletion",
+   "private_field",
+   "tooltip",
+   "hipaa_field",
+   "history_tracking",
+   "display_value_alphabetically",
+   "default_value",
+   "option_add",
+   "add_to_other_layouts",
+   "color_code",
+   "replace_values",
+   "record_category",
+   "add_record_category",
+   "remove_record_category",
+   "rename_record_category",
+   "modify_record_category_type",
+   "ai_governance_masking"
+  ],
+  "display_label": "Fingerprint Type",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": true,
+  "multi_module_lookup": {},
+  "id": "6686316000016782076",
+  "created_time": "2026-03-31T02:09:29+06:00",
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": true,
+   "quick_create": false,
+   "create": true
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Fingerprint_Type",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": true,
+  "child_fields": null,
+  "pick_list_values": [
+   {
+    "display_value": "-None-",
+    "sequence_number": 1,
+    "reference_value": "-None-",
+    "colour_code": null,
+    "actual_value": "-None-",
+    "id": "6686316000016782080",
+    "type": "used"
+   },
+   {
+    "display_value": "Live Scan",
+    "sequence_number": 2,
+    "reference_value": "Live Scan",
+    "colour_code": "#ffd6bc",
+    "actual_value": "Live Scan",
+    "id": "6686316000016782075",
+    "type": "used"
+   },
+   {
+    "display_value": "Print-to-Card",
+    "sequence_number": 3,
+    "reference_value": "Print-to-Card",
+    "colour_code": "#c9651a",
+    "actual_value": "Print-to-Card",
+    "id": "6686316000016782077",
+    "type": "used"
+   }
+  ],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "string",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 2,
+  "modified_time": "2026-03-31T02:09:29+06:00",
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": true,
+   "record_operations_supported": true
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": true,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 120,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "picklist",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": true,
+  "blueprint_supported": true,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": true,
+   "api_create": true,
+   "web_create": true,
+   "api_update": true
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Client Comment",
+  "tooltip": null,
+  "textarea": {
+   "type": "small"
+  },
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": false,
+  "customizable_properties": [
+   "mandatory",
+   "fieldlabel",
+   "encrypted",
+   "removal",
+   "deletion",
+   "private_field",
+   "tooltip",
+   "hipaa_field",
+   "add_to_other_layouts",
+   "ai_governance_masking"
+  ],
+  "display_label": "Client Comment",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": true,
+  "multi_module_lookup": {},
+  "id": "6686316000016782399",
+  "created_time": "2026-03-31T02:18:35+06:00",
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": true,
+   "quick_create": false,
+   "create": true
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Client_Comment",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": false,
+  "child_fields": null,
+  "pick_list_values": [],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "string",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 110,
+  "modified_time": "2026-03-31T02:18:35+06:00",
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": false,
+   "record_operations_supported": true
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": true,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 2000,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": false,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "textarea",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": false,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": true,
+   "api_create": true,
+   "web_create": true,
+   "api_update": true
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Our Comment",
+  "tooltip": null,
+  "textarea": {
+   "type": "small"
+  },
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": false,
+  "customizable_properties": [
+   "mandatory",
+   "fieldlabel",
+   "encrypted",
+   "removal",
+   "deletion",
+   "private_field",
+   "tooltip",
+   "hipaa_field",
+   "add_to_other_layouts",
+   "ai_governance_masking"
+  ],
+  "display_label": "Our Comment",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": true,
+  "multi_module_lookup": {},
+  "id": "6686316000016782416",
+  "created_time": "2026-03-31T02:18:35+06:00",
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": true,
+   "quick_create": false,
+   "create": true
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Our_Comment",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": false,
+  "child_fields": null,
+  "pick_list_values": [],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "string",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 110,
+  "modified_time": "2026-03-31T02:18:35+06:00",
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": false,
+   "record_operations_supported": true
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": true,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 2000,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": false,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "textarea",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": false,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": true,
+   "api_create": true,
+   "web_create": true,
+   "api_update": true
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Regards",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": false,
+  "customizable_properties": [
+   "mandatory",
+   "fieldlabel",
+   "removal",
+   "deletion",
+   "private_field",
+   "tooltip",
+   "hipaa_field",
+   "history_tracking",
+   "display_value_alphabetically",
+   "default_value",
+   "option_add",
+   "add_to_other_layouts",
+   "color_code",
+   "replace_values",
+   "record_category",
+   "add_record_category",
+   "remove_record_category",
+   "rename_record_category",
+   "modify_record_category_type",
+   "ai_governance_masking"
+  ],
+  "display_label": "Regards",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": true,
+  "multi_module_lookup": {},
+  "id": "6686316000017840223",
+  "created_time": "2026-04-10T21:27:01+06:00",
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": true,
+   "quick_create": false,
+   "create": true
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Regards",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": false,
+  "child_fields": null,
+  "pick_list_values": [
+   {
+    "display_value": "-None-",
+    "sequence_number": 1,
+    "reference_value": "-None-",
+    "colour_code": null,
+    "actual_value": "-None-",
+    "id": "6686316000017840233",
+    "type": "used"
+   },
+   {
+    "display_value": "Aziz Bekishov",
+    "sequence_number": 2,
+    "reference_value": "Aziz Bekishov",
+    "colour_code": null,
+    "actual_value": "Aziz Bekishov",
+    "id": "6686316000017840222",
+    "type": "used"
+   },
+   {
+    "display_value": "Daveys Asiligwa",
+    "sequence_number": 3,
+    "reference_value": "Daveys Asiligwa",
+    "colour_code": null,
+    "actual_value": "Daveys Asiligwa",
+    "id": "6686316000017840224",
+    "type": "used"
+   },
+   {
+    "display_value": "Jules Davies",
+    "sequence_number": 4,
+    "reference_value": "Jules Davies",
+    "colour_code": null,
+    "actual_value": "Jules Davies",
+    "id": "6686316000017840226",
+    "type": "used"
+   },
+   {
+    "display_value": "Sulaiman Daoud",
+    "sequence_number": 5,
+    "reference_value": "Sulaiman Daoud",
+    "colour_code": null,
+    "actual_value": "Sulaiman Daoud",
+    "id": "6686316000017840228",
+    "type": "used"
+   },
+   {
+    "display_value": "Emmanuel Kimutai",
+    "sequence_number": 6,
+    "reference_value": "Emmanuel Kimutai",
+    "colour_code": null,
+    "actual_value": "Charity Silla",
+    "id": "6686316000017840230",
+    "type": "used"
+   },
+   {
+    "display_value": "Akram Daoud",
+    "sequence_number": 7,
+    "reference_value": "Akram Daoud",
+    "colour_code": null,
+    "actual_value": "Akram Daoud",
+    "id": "6686316000032739091",
+    "type": "used"
+   }
+  ],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "string",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 2,
+  "modified_time": "2026-11-16T17:35:04+06:00",
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": true,
+   "record_operations_supported": true
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": true,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 120,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "picklist",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": true,
+  "blueprint_supported": true,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": true,
+   "api_create": true,
+   "web_create": true,
+   "api_update": true
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "Phone",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": false,
+  "customizable_properties": [
+   "mandatory",
+   "fieldlabel",
+   "max_length_digits",
+   "unique",
+   "encrypted",
+   "removal",
+   "deletion",
+   "private_field",
+   "tooltip",
+   "hipaa_field",
+   "add_to_other_layouts",
+   "field_masking",
+   "ai_governance_masking"
+  ],
+  "display_label": "Phone",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": true,
+  "multi_module_lookup": {},
+  "id": "6686316000023625009",
+  "created_time": "2026-07-10T22:05:03+06:00",
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": true,
+   "quick_create": false,
+   "create": true
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "Phone",
+  "parent_field": null,
+  "unique": {},
+  "enable_colour_code": false,
+  "child_fields": null,
+  "pick_list_values": [],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "string",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 33,
+  "modified_time": "2026-07-10T22:05:03+06:00",
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": true,
+   "record_operations_supported": true
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": true,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 30,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "phone",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": true,
+  "multiselectlookup": {},
+  "auto_number": {}
+ },
+ {
+  "associated_module": null,
+  "webhook": true,
+  "operation_type": {
+   "web_update": true,
+   "api_create": true,
+   "web_create": true,
+   "api_update": true
+  },
+  "colour_code_enabled_by_system": false,
+  "field_label": "External Order Key",
+  "tooltip": null,
+  "display_format_properties": null,
+  "type": "used",
+  "field_read_only": false,
+  "customizable_properties": [
+   "mandatory",
+   "fieldlabel",
+   "max_length_digits",
+   "unique",
+   "encrypted",
+   "removal",
+   "deletion",
+   "private_field",
+   "tooltip",
+   "hipaa_field",
+   "add_to_other_layouts",
+   "external_field",
+   "field_masking",
+   "ai_governance_masking"
+  ],
+  "display_label": "External Order Key",
+  "read_only": false,
+  "association_details": null,
+  "businesscard_supported": true,
+  "multi_module_lookup": {},
+  "id": "6686316000024995003",
+  "created_time": "2026-07-27T21:15:02+06:00",
+  "filterable": true,
+  "visible": true,
+  "ai_governance": {
+   "records_masking": [
+    {
+     "mask_details": null,
+     "type": "internal",
+     "mask_enabled": false
+    },
+    {
+     "mask_details": null,
+     "type": "external",
+     "mask_enabled": false
+    }
+   ],
+   "accessible_to_models": [
+    "internal",
+    "external"
+   ]
+  },
+  "profiles": [
+   {
+    "permission_type": "read_write",
+    "name": "Administrator",
+    "id": "6686316000000026011"
+   },
+   {
+    "permission_type": "read_write",
+    "name": "Standard",
+    "id": "6686316000000026014"
+   }
+  ],
+  "view_type": {
+   "view": true,
+   "edit": true,
+   "quick_create": false,
+   "create": true
+  },
+  "separator": false,
+  "searchable": true,
+  "external": null,
+  "api_name": "External_Order_Key",
+  "parent_field": null,
+  "unique": {
+   "case_sensitive": false
+  },
+  "enable_colour_code": false,
+  "child_fields": null,
+  "pick_list_values": [],
+  "system_mandatory": false,
+  "virtual_field": false,
+  "json_type": "string",
+  "crypt": null,
+  "range": null,
+  "created_source": "default",
+  "display_type": -1,
+  "ui_type": 1,
+  "modified_time": "2026-07-27T21:15:02+06:00",
+  "public": false,
+  "email_parser": {
+   "fields_update_supported": true,
+   "record_operations_supported": true
+  },
+  "currency": {},
+  "enable_record_category": false,
+  "custom_field": true,
+  "lookup": {},
+  "address": null,
+  "rollup_summary": {},
+  "length": 100,
+  "display_field": false,
+  "pick_list_values_sorted_lexically": false,
+  "sortable": true,
+  "global_picklist": null,
+  "display_format": null,
+  "history_tracking": null,
+  "data_type": "text",
+  "formula": {},
+  "static_field": false,
+  "decimal_place": null,
+  "mass_update": false,
+  "multiselectlookup": {},
+  "auto_number": {}
+ }
+]

@@ -1,0 +1,9 @@
+{% extends "crm/panel/base.html" %}
+{% block title %}DCMN panel{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>DCMN panel</h1>
+    <p>{{ message }}</p>
+    {% if login_url %}<p><a href="{{ login_url }}">Sign in</a></p>{% endif %}
+</div>
+{% endblock %}

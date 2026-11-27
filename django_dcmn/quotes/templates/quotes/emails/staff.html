@@ -1,0 +1,7 @@
+<div style="font-family: Arial, sans-serif; font-size: 14px; color: #222; line-height: 1.5;">
+    {% for line in first_lines %}<p style="margin: 0 0 8px;{% if not forloop.last %} color: #b3261e; font-weight: bold;{% endif %}">{{ line }}</p>{% endfor %}
+    <pre style="font-family: Menlo, Consolas, monospace; font-size: 13px; white-space: pre-wrap; background: #f8f9fa; border: 1px solid #e3e3e3; border-radius: 6px; padding: 12px;">{{ receipt }}</pre>
+    <p style="margin: 12px 0 0;">
+        {% for link in links %}{{ link.label }}{% if link.url %} <a href="{{ link.url }}" style="color: #003e9c;">{{ link.url }}</a>{% endif %}{% if link.note %} {{ link.note }}{% endif %}<br>{% endfor %}
+    </p>
+</div>

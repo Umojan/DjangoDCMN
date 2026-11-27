@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
+import json
 import os
 from pathlib import Path
 import dj_database_url
@@ -264,3 +265,128 @@ CACHES = {
         }
     }
 }
+
+
+# ====== QUOTES v3 / CRM ENGINE ======
+# Get a Quote v5 intake (`quotes`) and the related-service engine (`crm`). Every flag defaults to the safe
+# value (DESIGN §13.1): with these defaults the new endpoints answer 503 and the beat tasks return at once.
+# Code reads them through quotes/flags.py and crm/flags.py, never directly.
+def _env_list(name, default=''):
+    return [v.strip() for v in config(name, default=default).split(',') if v.strip()]
+
+
+INSTALLED_APPS += ['quotes', 'crm']
+
+# Intake (quotes)
+QUOTE_V3_ENABLED = config('QUOTE_V3_ENABLED', default=False, cast=bool)
+QUOTE_V3_TEST_ONLY = config('QUOTE_V3_TEST_ONLY', default=True, cast=bool)              # only "ZZ TEST" names
+QUOTE_V3_ZOHO_SYNC = config('QUOTE_V3_ZOHO_SYNC', default=True, cast=bool)              # False = store-and-forward
+QUOTE_AUTO_INTAKE = config('QUOTE_AUTO_INTAKE', default='none')                         # none|primary (QUESTIONS A1)
+QUOTE_V3_SUBFORM = config('QUOTE_V3_SUBFORM', default='off')                            # off|auto (ZOHO-SETUP Z11)
+QUOTE_V3_CONFIRMATION_EMAIL = config('QUOTE_V3_CONFIRMATION_EMAIL', default=False, cast=bool)
+QUOTE_V3_TEST_EMAILS = config('QUOTE_V3_TEST_EMAILS', default=False, cast=bool)          # client emails for ZZ TEST
+QUOTE_REPLY_TO = config('QUOTE_REPLY_TO', default='support@dcmobilenotary.com')
+QUOTE_V3_UPLOADS_ENABLED = config('QUOTE_V3_UPLOADS_ENABLED', default=False, cast=bool)  # WP9
+QUOTE_TURNSTILE_REQUIRED = config('QUOTE_TURNSTILE_REQUIRED', default=False, cast=bool)
+QUOTES_HOURLY_CEILING = config('QUOTES_HOURLY_CEILING', default=60, cast=int)          # spam circuit → held
+QUOTES_PROXY_HOPS = config('QUOTES_PROXY_HOPS', default=1, cast=int)                   # X-Forwarded-For hop for throttles
+QUOTE_V3_SHADOW_LEGACY = config('QUOTE_V3_SHADOW_LEGACY', default=False, cast=bool)      # S1 shadow mode
+QUOTES_NOTIFY_EMAILS = _env_list('QUOTES_NOTIFY_EMAILS')                               # empty → EMAIL_OFFICE_RECEIVER
+QUOTES_TEST_NOTIFY_EMAILS = _env_list('QUOTES_TEST_NOTIFY_EMAILS')                     # empty → EMAIL_OFFICE_RECEIVER
+PII_HASH_SALT = config('PII_HASH_SALT', default='')                                     # required when QUOTE_V3_ENABLED
+PRIVATE_MEDIA_ROOT = config('PRIVATE_MEDIA_ROOT', default='')                           # WP9, volume storage option only
+
+# Engine (crm)
+CRM_ENGINE_MODE = config('CRM_ENGINE_MODE', default='off')                              # off|dry_run|live
+CRM_ENGINE_TEST_ONLY = config('CRM_ENGINE_TEST_ONLY', default=True, cast=bool)          # only "ZZ TEST" sources
+CRM_SOURCES_ALLOWED = _env_list('CRM_SOURCES_ALLOWED', default='Get_A_Quote_Leads')
+CRM_ACTION_KEYS = config('CRM_ACTION_KEYS', default='')                                 # "caller:key,…"; empty = every call 401
+CRM_CREATE_LIMIT_PER_SOURCE_HOUR = config('CRM_CREATE_LIMIT_PER_SOURCE_HOUR', default=10, cast=int)
+CRM_CREATE_LIMIT_GLOBAL_HOUR = config('CRM_CREATE_LIMIT_GLOBAL_HOUR', default=60, cast=int)
+CRM_PANEL_LINK_ALERT_HOUR = config('CRM_PANEL_LINK_ALERT_HOUR', default=30, cast=int)
+CRM_RULES_MAX_MODE = config('CRM_RULES_MAX_MODE', default='suggest')                    # ceiling for every rule
+INTAKE_CANDIDATE_DAYS = config('INTAKE_CANDIDATE_DAYS', default=30, cast=int)
+ENGINE_INLINE = config('ENGINE_INLINE', default=True, cast=bool)                        # False = every click answers 202
+ENGINE_TID_POLICY = config(
+    'ENGINE_TID_POLICY',
+    default='{"Apostille_Services": "mint_silent", "Translation_Services": "mint_silent", '
+            '"Embassy_Legalization": "mint_silent", "Deals": "mint_silent"}',
+    cast=json.loads,
+)
+ENGINE_TID_CREATED_EMAIL = config('ENGINE_TID_CREATED_EMAIL', default='never')          # never|first_per_quote
+ENGINE_TRIGGER_POLICY = config('ENGINE_TRIGGER_POLICY', default='{"*": []}', cast=json.loads)
+ENGINE_PARITY_CONSTANTS = config('ENGINE_PARITY_CONSTANTS', default=True, cast=bool)
+ENGINE_ADOPTION = config('ENGINE_ADOPTION', default='auto_exact')                       # auto_exact|confirm_all|off
+ENGINE_ORPHAN_SCAN = config('ENGINE_ORPHAN_SCAN', default=True, cast=bool)
+ENGINE_COPY_FILES = config('ENGINE_COPY_FILES', default=False, cast=bool)
+APOSTILLE_FBI_STAGE = config('APOSTILLE_FBI_STAGE', default='')                         # QUESTIONS A6
+TRANSLATION_CAPTURE_ENABLED = config('TRANSLATION_CAPTURE_ENABLED', default=False, cast=bool)
+TRANSLATION_CAPTURE_TYPES = _env_list('TRANSLATION_CAPTURE_TYPES', default='fbi,apostille,embassy,marriage,fingerprinting')
+
+# Zoho (shared by both apps)
+ZOHO_OWNER_BY_SERVICE = config('ZOHO_OWNER_BY_SERVICE', default='{}', cast=json.loads)  # {service_key: zoho_user_id}
+ZOHO_QUOTE_OWNER_ID = config('ZOHO_QUOTE_OWNER_ID', default='')                         # GAQL owner; empty = API user
+ZOHO_ORG_ID = config('ZOHO_ORG_ID', default='org882204370')
+ZOHO_SCHEMA_APPLY_ALLOWED = config('ZOHO_SCHEMA_APPLY_ALLOWED', default=False, cast=bool)  # must be 1 for --apply
+ZOHO_SCHEMA_LOG_DIR = config('ZOHO_SCHEMA_LOG_DIR', default=str(BASE_DIR / 'var'))
+
+# Ops and end-to-end runs
+OPS_ALERT_EMAILS = _env_list('OPS_ALERT_EMAILS')                                       # empty → EMAIL_OFFICE_RECEIVER
+E2E_ALLOWED = config('E2E_ALLOWED', default=False, cast=bool)                           # must be 1 for e2e --execute
+E2E_ATTRIBUTION = config('E2E_ATTRIBUTION', default=False, cast=bool)                   # attribution rows for ZZ TEST (E1)
+E2E_EMAIL_BASE = config('E2E_EMAIL_BASE', default='')
+
+REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'].update({
+    'quotes_burst': '5/min',
+    'quotes_sustained': '20/hour',
+    'crm_key': '120/min',
+    'crm_panel': '60/min',
+})
+
+# Each task checks its own flag first, so these entries are harmless while the features are off.
+CELERY_BEAT_SCHEDULE.update({
+    'quotes-reconcile-submissions-every-2-minutes': {
+        'task': 'quotes.tasks.reconcile_quote_submissions',
+        'schedule': 120.0,
+    },
+    'quotes-link-recent-phone-leads-every-10-minutes': {
+        'task': 'quotes.tasks.link_recent_phone_leads',
+        'schedule': 600.0,
+    },
+    'quotes-purge-pii-daily': {
+        'task': 'quotes.tasks.purge_quote_pii',
+        'schedule': crontab(hour=3, minute=30),
+    },
+    'crm-reconcile-service-links-every-2-minutes': {
+        'task': 'crm.tasks.reconcile_service_links',
+        'schedule': 120.0,
+    },
+    'crm-scan-orphan-copies-hourly': {
+        'task': 'crm.tasks.scan_orphan_copies',
+        'schedule': 3600.0,
+    },
+    'crm-refresh-zoho-schema-every-6-hours': {
+        'task': 'crm.tasks.refresh_zoho_schema',
+        'schedule': 6 * 3600.0,
+    },
+    'crm-apply-translation-signals-every-5-minutes': {
+        'task': 'crm.tasks.apply_translation_signals',
+        'schedule': 300.0,
+    },
+    'crm-ops-daily-digest': {
+        'task': 'crm.tasks.ops_daily_digest',
+        'schedule': crontab(hour=13, minute=0),
+    },
+    'crm-beat-heartbeat-every-minute': {
+        'task': 'crm.tasks.beat_heartbeat',
+        'schedule': 60.0,
+    },
+    'crm-prewarm-zoho-token-every-40-minutes': {
+        'task': 'crm.tasks.prewarm_zoho_token',
+        'schedule': 2400.0,
+    },
+    'crm-purge-engine-pii-daily': {
+        'task': 'crm.tasks.purge_engine_pii',
+        'schedule': crontab(hour=3, minute=40),
+    },
+})

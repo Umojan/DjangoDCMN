@@ -1,0 +1,39 @@
+{
+  "_request": "GET /crm/v6/Notary_Services/6686316000033749002/__timeline",
+  "tag": "copy-of-quote2762",
+  "__timeline": [
+    {
+      "done_by": {
+        "name": "Customer Service",
+        "id": "6686316000000503001"
+      },
+      "related_record": null,
+      "automation_details": {
+        "rule": {
+          "name": "NOTARY LEADS FROM GET QUOTE PIPELINE",
+          "id": "6686316000002478447"
+        },
+        "workflow_rule": {
+          "owner": {
+            "name": "Customer Service",
+            "id": "6686316000000503001"
+          }
+        },
+        "type": "workflow_rule"
+      },
+      "record": {
+        "module": {
+          "api_name": "Notary_Services",
+          "id": "6686316000002155690"
+        },
+        "name": "Notary Service",
+        "id": "6686316000033749002"
+      },
+      "audited_time": "2026-11-26T11:59:15+06:00",
+      "action": "added",
+      "id": "6686316000033749003",
+      "source": "workflow",
+      "field_history": null
+    }
+  ]
+}

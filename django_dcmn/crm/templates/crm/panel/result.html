@@ -1,0 +1,96 @@
+{% extends "crm/panel/base.html" %}
+{% block title %}{% if staff %}Staff panel{% else %}Add service{% endif %}{% endblock %}
+{% block content %}
+<div class="msg{% if not body.ok %} error{% endif %}" id="message">{{ body.message }}</div>
+
+{% if results %}
+<div class="card">
+    <h2>{% if body.mode == "preview" or results.0.status == "preview" %}Preview{% else %}Results{% endif %}</h2>
+    <div id="results">
+        {% for result in results %}
+        <div class="line">
+            <span class="name">{{ result.label }}</span>
+            <span class="chip {{ result.status }}">{{ result.status }}</span>
+            <span class="grow muted">{{ result.module|default:"" }}{% if result.error_code %} · {{ result.error_code }}{% endif %}</span>
+            {% if result.url %}<a href="{{ result.url }}" target="_blank" rel="noopener">Open</a>{% endif %}
+        </div>
+        {% if result.status == "preview" %}
+        <form method="post" action="{{ urls.act }}" class="preview">
+            {% csrf_token %}
+            {% if urls.ref %}<input type="hidden" name="panel_ref" value="{{ urls.ref }}">{% endif %}
+            <input type="hidden" name="initials" value="{{ initials }}">
+            {% if result.action == "create" or result.action == "degraded" %}
+            <dl class="payload">
+                {% for name, value in result.payload.items %}<dt>{{ name }}</dt><dd>{{ value }}</dd>{% endfor %}
+            </dl>
+            {% if result.dropped %}<p class="muted">Not sent (field missing in Zoho): {{ result.dropped|join:", " }}</p>{% endif %}
+            <div class="row">
+                {% if result.stages %}
+                <label>Stage <select name="stage">
+                    <option value="">{{ result.stage|default:"Default stage" }} (default)</option>
+                    {% for stage in result.stages %}{% if stage != result.stage %}<option value="{{ stage }}">{{ stage }}</option>{% endif %}{% endfor %}
+                </select></label>
+                {% endif %}
+                <span class="grow"></span>
+                {% if result.action == "create" %}<button type="submit" name="op" value="create:{{ result.service }}" class="primary">Create</button>{% endif %}
+            </div>
+            {% elif result.action == "adopt" %}
+            <p class="muted">A matching record exists already; Create links it instead of making a new one.</p>
+            <div class="row"><span class="grow"></span><button type="submit" name="op" value="create:{{ result.service }}" class="primary">Link it</button></div>
+            {% elif result.action == "needs_decision" %}
+            <p class="muted">These records may already be this service:</p>
+            <ul class="cands">
+                {% for candidate in result.candidates %}
+                <li><span class="grow">{{ candidate.name|default:"(no name)" }} · {{ candidate.stage|default:"no stage" }}</span>{% if candidate.url %}<a href="{{ candidate.url }}" target="_blank" rel="noopener">Open</a>{% endif %}</li>
+                {% endfor %}
+            </ul>
+            <p class="muted">Go back to the panel and create it to choose one.</p>
+            {% endif %}
+        </form>
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<p><a href="{{ urls.page }}">Back to the panel</a></p>
+{{ labels|json_script:"crm-labels" }}
+{% endblock %}
+{% block scripts %}
+{% if poll %}
+{{ poll|json_script:"crm-poll" }}
+<script>
+(function () {
+    var cfg = JSON.parse(document.getElementById('crm-poll').textContent);
+    var labels = JSON.parse(document.getElementById('crm-labels').textContent);
+    var started = Date.now();
+    function render(data) {
+        document.getElementById('message').textContent = data.message || '';
+        var box = document.getElementById('results');
+        if (!box || !data.results) { return; }
+        box.textContent = '';
+        data.results.forEach(function (result) {
+            var row = document.createElement('div'), name = document.createElement('span'), chip = document.createElement('span');
+            row.className = 'line'; name.className = 'name'; chip.className = 'chip ' + result.status;
+            name.textContent = labels[result.service] || result.service; chip.textContent = result.status;
+            row.appendChild(name); row.appendChild(chip);
+            if (result.url && result.url.indexOf('https://') === 0) {
+                var link = document.createElement('a');
+                link.href = result.url; link.target = '_blank'; link.rel = 'noopener'; link.textContent = 'Open';
+                row.appendChild(link);
+            }
+            box.appendChild(row);
+        });
+    }
+    function again() { if (Date.now() - started < cfg.for_ms) { setTimeout(poll, cfg.every_ms); } }
+    function poll() {
+        fetch(cfg.url, {credentials: 'same-origin', headers: {'Accept': 'application/json'}})
+            .then(function (response) { return response.json(); })
+            .then(function (data) { render(data); if (data.state === 'running') { again(); } })
+            .catch(again);
+    }
+    again();
+}());
+</script>
+{% endif %}
+{% endblock %}

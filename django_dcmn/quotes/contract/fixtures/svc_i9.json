@@ -1,0 +1,132 @@
+{
+  "description": "One `i9` line with every v5 question answered.",
+  "body": {
+    "schema_version": "quote.v3",
+    "form_version": "v5-2026-11-26",
+    "submission_id": "0b6c000b-5a1e-4c3d-9e2f-00000000000b",
+    "locale": "en",
+    "page": {
+      "url": "https://www.dcmobilenotary.com/schedule-an-appointment",
+      "path": "/schedule-an-appointment",
+      "referrer_path": null
+    },
+    "entry": {
+      "type": "direct",
+      "params": {
+        "service": null,
+        "doc": null,
+        "group": null,
+        "country": null,
+        "state": null,
+        "speed": null
+      },
+      "preselected": [],
+      "bad_params": [],
+      "cta_id": null,
+      "cta_page": null
+    },
+    "timing": {
+      "started_at": "2026-11-26T15:40:02.114Z",
+      "submitted_at": "2026-11-26T15:42:31.870Z",
+      "elapsed_ms": 149756
+    },
+    "services": [
+      {
+        "service": "i9",
+        "position": 1,
+        "source": "user",
+        "addon_of": null,
+        "switched_from": null,
+        "answers": {},
+        "answer_source": {},
+        "addons": [],
+        "route": null,
+        "price_shown": {
+          "kind": "review",
+          "amount_usd": null,
+          "tier": null,
+          "per_document_usd": null,
+          "plus_embassy_fee": false,
+          "text": "Price after free review"
+        },
+        "summary": null
+      }
+    ],
+    "price_notes": [],
+    "contact": {
+      "full_name": "ZZ TEST i9 client",
+      "email": "zz-test+i9@example.com",
+      "phone": "+1 202 555 0147",
+      "preferred_channel": "whatsapp",
+      "when": "asap",
+      "deadline": null,
+      "message": null
+    },
+    "consent": {
+      "terms_method": "statement",
+      "terms_version": "terms-2026-11",
+      "whatsapp_opt_in": true,
+      "sms_opt_in": false,
+      "consent_text_version": "consent-v5-2026-11-26"
+    },
+    "files": [],
+    "attribution": {
+      "source": "google",
+      "medium": "organic",
+      "campaign": null,
+      "utm_content": null,
+      "utm_term": null,
+      "gclid": null,
+      "fbclid": null,
+      "msclkid": null,
+      "landing_page": "/apostille-fbi",
+      "referrer_domain": "www.google.com",
+      "device_type": "mobile",
+      "first_visit_at": "2026-11-25T19:20:02.118Z",
+      "visit_count": 2,
+      "pages_viewed": 5,
+      "lead_url": "https://www.dcmobilenotary.com/schedule-an-appointment?service=apostille&doc=fbi"
+    },
+    "turnstile_token": null,
+    "website_confirm": "",
+    "fax": "",
+    "client": {
+      "tz": "America/New_York",
+      "viewport_w": 390,
+      "ga_client_id": null
+    }
+  },
+  "expect": {
+    "status": 201,
+    "body": {
+      "ok": true,
+      "confirmation_email": "off"
+    },
+    "body_keys": [
+      "reference",
+      "received_at"
+    ],
+    "rows": {
+      "submissions": 1,
+      "lines": 1,
+      "rejections": 0
+    },
+    "submission": {
+      "primary_service": "i9",
+      "service_keys": [
+        "i9"
+      ],
+      "is_test": true
+    },
+    "lines": [
+      {
+        "service_key": "i9",
+        "position": 1,
+        "is_primary": true,
+        "price_flag": "review",
+        "answers": {},
+        "dropped_answers": {}
+      }
+    ]
+  }
+}

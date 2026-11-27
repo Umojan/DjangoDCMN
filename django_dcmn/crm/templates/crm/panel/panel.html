@@ -1,0 +1,99 @@
+{% extends "crm/panel/base.html" %}
+{% block title %}{% if staff %}Staff panel{% else %}Add service{% endif %}{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>{{ header.name|default:"Client" }}{% if staff %}<span class="badge staff">Staff panel</span>{% else %}<span class="badge">Add service</span>{% endif %}</h1>
+    <p class="muted">{{ header.email }}{% if header.email and header.phone %} · {% endif %}{{ header.phone }}</p>
+    <p class="muted">{% if header.url %}<a href="{{ header.url }}" target="_blank" rel="noopener">{{ header.ref }}</a>{% else %}{{ header.ref }}{% endif %}</p>
+</div>
+
+<form method="post" action="{{ urls.act }}">
+    {% csrf_token %}
+    {% if urls.ref %}<input type="hidden" name="panel_ref" value="{{ urls.ref }}">{% endif %}
+    <div class="card">
+        <h2>Requested and linked services</h2>
+        {% for line in requested %}
+        <div class="line">
+            <span class="name">{{ line.label }}</span>
+            <span class="chip {{ line.state }}">{{ line.state_word }}</span>
+            <span class="grow muted">{{ line.done_by }}</span>
+            {% if line.target_url %}<a href="{{ line.target_url }}" target="_blank" rel="noopener">Open</a>{% endif %}
+            {% for op, word, primary in line.actions %}
+            <button type="submit" name="op" value="{{ op }}"{% if primary %} class="primary"{% endif %}>{{ word }}</button>
+            {% endfor %}
+        </div>
+        {% empty %}
+        <p class="muted">No service was requested on this record.</p>
+        {% endfor %}
+    </div>
+
+    {% if suggested %}
+    <div class="card">
+        <h2>Suggested</h2>
+        {% for line in suggested %}
+        <div class="line">
+            <span class="name">{{ line.label }}</span>
+            <span class="chip suggested">{{ line.state_word }}</span>
+            <span class="grow"></span>
+            <button type="submit" name="op" value="dismiss:{{ line.service }}">Dismiss</button>
+            <button type="submit" name="op" value="create:{{ line.service }}" class="primary">Create</button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if decisions %}
+    <div class="card">
+        <h2>Pick a record</h2>
+        <p class="muted">These records may already be this service. Link one, or create a new record anyway.</p>
+        {% for line in decisions %}
+        <div class="line">
+            <span class="name">{{ line.label }}</span>
+            <span class="chip needs_decision">{{ line.state_word }}</span>
+            <ul class="cands">
+                {% for candidate in line.candidates %}
+                <li>
+                    <span class="grow">{{ candidate.name|default:"(no name)" }} · {{ candidate.stage|default:"no stage" }}{% if candidate.created %} · {{ candidate.created }}{% endif %}</span>
+                    {% if candidate.url %}<a href="{{ candidate.url }}" target="_blank" rel="noopener">Open</a>{% endif %}
+                    <button type="submit" name="op" value="link:{{ line.service }}:{{ candidate.id }}">Link this record</button>
+                </li>
+                {% endfor %}
+            </ul>
+            <button type="submit" name="op" value="create_new:{{ line.service }}">Create new anyway</button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <h2>Add a service the client did not ask for</h2>
+        {% for key, label in addable %}
+        <label class="check"><input type="checkbox" name="services" value="{{ key }}"{% if key == preselect %} checked{% endif %}> {{ label }}</label>
+        {% endfor %}
+        <p class="muted">Preview shows the module, stage and fields first. Nothing is written until you click Create.</p>
+    </div>
+
+    <div class="card">
+        <h2>Note for the new records (optional)</h2>
+        <textarea name="comment" maxlength="500" placeholder="Added to the record's comment"></textarea>
+        {% if staff %}
+        <div class="row">
+            <label class="check"><input type="checkbox" name="force_spam" value="1"> Not spam (create even if the quote was flagged)</label>
+        </div>
+        <div class="row">
+            <label>Owner id <input type="text" name="owner_id" inputmode="numeric" pattern="[0-9]{1,32}" size="20"></label>
+            <label>Record id to link <input type="text" name="record_id" inputmode="numeric" pattern="[0-9]{1,32}" size="20"></label>
+        </div>
+        {% endif %}
+        <div class="row">
+            <label>Your initials <input type="text" name="initials" value="{{ initials }}" pattern="[A-Za-z]{2,4}" maxlength="4" size="5"{% if not staff %} required{% endif %}></label>
+            <span class="grow"></span>
+            <button type="submit" name="op" value="preview">Preview ticked</button>
+            <button type="submit" name="op" value="create" class="primary">Create ticked</button>
+        </div>
+    </div>
+</form>
+{% endblock %}
+{% block scripts %}
+{% if strip_token %}<script>if (window.history && history.replaceState) { history.replaceState(null, '', window.location.pathname); }</script>{% endif %}
+{% endblock %}

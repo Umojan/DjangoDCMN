@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="referrer" content="no-referrer">
+    <title>{% block title %}Add service{% endblock %} — DCMN</title>
+    <style>
+        body { margin: 0; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; background: #f3f6fb; color: #0f1f3d; font-size: 14px; }
+        .wrap { max-width: 720px; margin: 0 auto; padding: 20px 16px 40px; }
+        .card { background: #fff; border-radius: 14px; padding: 18px 20px; margin-bottom: 14px; box-shadow: 0 6px 24px rgba(16,42,90,.07); }
+        h1 { font-size: 19px; margin: 0 0 4px; } h2 { font-size: 15px; margin: 0 0 10px; }
+        p { margin: 0 0 10px; line-height: 1.5; color: #4b5563; } .muted { color: #6b7280; font-size: 13px; }
+        a { color: #003e9c; }
+        .badge { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: #fff; background: #003e9c; border-radius: 6px; padding: 2px 7px; margin-left: 6px; vertical-align: middle; }
+        .badge.staff { background: #b45309; }
+        .line { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 0; border-top: 1px solid #eef1f6; }
+        .line:first-of-type { border-top: 0; } .line .name { font-weight: 600; min-width: 150px; } .line .grow { flex: 1; }
+        .chip { font-size: 12px; border-radius: 999px; padding: 2px 9px; background: #eef1f6; color: #374151; white-space: nowrap; }
+        .chip.created, .chip.adopted { background: #dcfce7; color: #166534; }
+        .chip.failed, .chip.degraded, .chip.target_deleted { background: #fee2e2; color: #991b1b; }
+        .chip.needs_decision, .chip.suggested { background: #fef3c7; color: #92400e; }
+        .chip.pending, .chip.creating, .chip.retry { background: #dbeafe; color: #1e40af; }
+        button { font: inherit; font-weight: 600; border: 1px solid #003e9c; background: #fff; color: #003e9c; border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+        button.primary { background: #003e9c; color: #fff; } button:hover { filter: brightness(.95); }
+        label.check { display: inline-flex; align-items: center; gap: 6px; margin: 0 14px 8px 0; }
+        input[type=text], select, textarea { font: inherit; border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 8px; box-sizing: border-box; }
+        textarea { width: 100%; min-height: 54px; }
+        .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 10px; }
+        .msg { border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; background: #eef6ff; color: #0f1f3d; }
+        .msg.error { background: #fef2f2; color: #991b1b; }
+        .cands { width: 100%; margin: 4px 0 0; padding: 0; list-style: none; }
+        .cands li { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 6px 0; }
+        dl.payload { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 8px 0; font-size: 13px; }
+        dl.payload dt { color: #6b7280; } dl.payload dd { margin: 0; word-break: break-word; }
+        @media (max-width: 479px) { .line .name { min-width: 0; width: 100%; } }
+    </style>
+</head>
+<body>
+<div class="wrap">
+{% block content %}{% endblock %}
+</div>
+{% block scripts %}{% endblock %}
+</body>
+</html>

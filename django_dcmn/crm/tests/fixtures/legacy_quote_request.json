@@ -1,0 +1,78 @@
+{
+  "_note": "Recorded 2026-11-27 from the unchanged legacy view (orders/ has no diff): POST, duplicate POST, invalid POST. __ORDER_ID__ is the QuoteRequest pk, __DATE__ the UTC date of the staff email.",
+  "path": "/api/quote/create-order/",
+  "request": {
+    "name": "ZZ TEST Legacy Quote",
+    "email": "zz.test.legacy@example.com",
+    "phone": "2025550100",
+    "address": "Washington, DC",
+    "number": "2",
+    "appointment_date": "2026-12-02",
+    "appointment_time": "11:00 AM",
+    "services": "Apostille",
+    "comments": "ZZ TEST legacy quote request",
+    "attribution": {
+      "utm_source": "google",
+      "utm_medium": "cpc",
+      "utm_campaign": "zz-test",
+      "gclid": "zz-test-gclid",
+      "landing_page": "https://www.dcmobilenotary.com/get-a-quote"
+    }
+  },
+  "responses": [
+    {
+      "status": 201,
+      "content_type": "application/json",
+      "content": "{\"message\":\"Quote request created\",\"order_id\":__ORDER_ID__}"
+    },
+    {
+      "status": 200,
+      "content_type": "application/json",
+      "content": "{\"message\":\"Quote request already received\",\"order_id\":__ORDER_ID__,\"duplicate\":true}"
+    },
+    {
+      "status": 400,
+      "content_type": "application/json",
+      "content": "{\"email\":[\"This field is required.\"]}"
+    }
+  ],
+  "record": {
+    "name": "ZZ TEST Legacy Quote",
+    "email": "zz.test.legacy@example.com",
+    "phone": "2025550100",
+    "address": "Washington, DC",
+    "number": "2",
+    "appointment_date": "2026-12-02",
+    "appointment_time": "11:00 AM",
+    "services": "Apostille",
+    "comments": "ZZ TEST legacy quote request",
+    "zoho_synced": false,
+    "attribution_data": {
+      "utm_source": "google",
+      "utm_medium": "cpc",
+      "utm_campaign": "zz-test",
+      "gclid": "zz-test-gclid",
+      "landing_page": "https://www.dcmobilenotary.com/get-a-quote",
+      "lead_type": "form"
+    }
+  },
+  "sync_jobs": [
+    {
+      "order_type": "quote",
+      "status": "pending",
+      "tracking_id": ""
+    }
+  ],
+  "staff_email": {
+    "subject": "❓ New Quote Request — __DATE__",
+    "body": "New Quote Request submitted! Order ID: __ORDER_ID__\n\nName: ZZ TEST Legacy Quote\nEmail: zz.test.legacy@example.com\nPhone: 2025550100\nAddress: Washington, DC\n\nDate: 2026-12-02, Time: 11:00 AM\nNumber of documents: 2\nServices: Apostille\n\nMessage: \nZZ TEST legacy quote request\n",
+    "to": [
+      "office@example.com"
+    ],
+    "headers": {
+      "Message-ID": "<quote-request-__ORDER_ID__@dcmobilenotary.com>",
+      "In-Reply-To": "<quote-request-thread-__DATE__@dcmobilenotary.com>",
+      "References": "<quote-request-thread-__DATE__@dcmobilenotary.com>"
+    }
+  }
+}

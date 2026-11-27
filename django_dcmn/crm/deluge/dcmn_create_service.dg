@@ -1,0 +1,50 @@
+string button.dcmn_create_service(String recordId, String moduleApi, String serviceKey, String userId)
+{
+	src = Map();
+	src.put("module", moduleApi);
+	src.put("id", recordId);
+	svcs = List();
+	svcs.add(serviceKey);
+	actor = Map();
+	actor.put("zoho_user_id", userId);
+	actor.put("email", zoho.loginuserid);
+	body = Map();
+	body.put("api_version", "rs.v1");
+	body.put("source", src);
+	body.put("services", svcs);
+	body.put("mode", "create");
+	trig = "zoho_button";
+	if(serviceKey == "*")
+	{
+		trig = "create_all";
+	}
+	body.put("trigger", trig);
+	body.put("actor", actor);
+	body.put("client_request_id", recordId + ":" + serviceKey);
+	resp = invokeurl
+	[
+		url :"https://api.dcmobilenotary.net/api/crm/v1/related-services/"
+		type :POST
+		headers:{"Content-Type":"application/json"}
+		body:body.toString()
+		connection:"dcmn_api"
+		detailed:true
+	];
+	code = resp.get("responseCode");
+	txt = ifnull(resp.get("responseText"), "").toString();
+	if(txt.startsWith("{"))
+	{
+		data = txt.toMap();
+		target = ifnull(data.get("open_url"), "");
+		if(code == 200 && target != "")
+		{
+			openUrl(target, "new window");
+		}
+		msg = ifnull(data.get("message"), "");
+		if(msg != "")
+		{
+			return msg;
+		}
+	}
+	return "DCMN could not do this right now (HTTP " + code + "). Nothing was duplicated. Try again in a minute; if it repeats, tell Vlad.";
+}

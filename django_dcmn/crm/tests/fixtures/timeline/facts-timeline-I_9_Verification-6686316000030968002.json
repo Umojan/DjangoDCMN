@@ -1,0 +1,39 @@
+{
+  "_request": "GET /crm/v6/I_9_Verification/6686316000030968002/__timeline",
+  "tag": "copy-of-quote2600",
+  "__timeline": [
+    {
+      "done_by": {
+        "name": "Customer Service",
+        "id": "6686316000000503001"
+      },
+      "related_record": null,
+      "automation_details": {
+        "rule": {
+          "name": "I-9 LEADS FROM GET QUOTE PIPELINE",
+          "id": "6686316000002342272"
+        },
+        "workflow_rule": {
+          "owner": {
+            "name": "Customer Service",
+            "id": "6686316000000503001"
+          }
+        },
+        "type": "workflow_rule"
+      },
+      "record": {
+        "module": {
+          "api_name": "I_9_Verification",
+          "id": "6686316000001315002"
+        },
+        "name": "I-9 Employment Verification Services",
+        "id": "6686316000030968002"
+      },
+      "audited_time": "2026-10-22T20:08:10+06:00",
+      "action": "added",
+      "id": "6686316000030968003",
+      "source": "workflow",
+      "field_history": null
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "Name": "ZZ TEST · Translation · ZZ TEST translation client · Q-482913",
+  "External_Order_Key": "dcmn:qr:57:translation",
+  "Translation_Status": "TRANSLATION LEADS FROM GET QUOTE PIPELINE",
+  "Quote_Request": {
+    "id": "6686316000033717016"
+  },
+  "Quote_Reference": "Q-482913",
+  "Created_From": "https://crm.zoho.com/crm/org882204370/tab/CustomModule7/6686316000033717016",
+  "Client_Name": {
+    "id": "6686316000000900001"
+  },
+  "Attribution_Record": {
+    "id": "6686316000000800001"
+  },
+  "Client_Name1": "ZZ TEST translation client",
+  "Email": "zz-test+translation@example.com",
+  "Phone": "+12025550147",
+  "Price_Per_Page": 0,
+  "Deadline_for_translation": "2026-11-29",
+  "Languages": "English → Portuguese",
+  "Translation_Type": "Digital Certified",
+  "Pages": 4,
+  "Client_Comments": "[Q-482913] Translation · from web quote\nEnglish → Portuguese · Certified (digital) · 4 pages\nPrice shown: Price after free review\nContact: WhatsApp (opted in) · When: As soon as possible\nQuote: https://crm.zoho.com/crm/org882204370/tab/CustomModule7/6686316000033717016"
+}

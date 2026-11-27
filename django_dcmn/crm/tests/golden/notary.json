@@ -1,0 +1,19 @@
+{
+  "Name": "ZZ TEST · Notary · ZZ TEST legacy client · Get A Quote record",
+  "External_Order_Key": "dcmn:rel:gaql:6686316000033717016:notary",
+  "Notary_Stages": "NOTARY LEADS FROM GET QUOTE PIPELINE",
+  "Quote_Request": {
+    "id": "6686316000033717016"
+  },
+  "Created_From": "https://crm.zoho.com/crm/org882204370/tab/CustomModule7/6686316000033717016",
+  "Client_Name": {
+    "id": "6686316000000900001"
+  },
+  "Attribution_Record": {
+    "id": "6686316000000800001"
+  },
+  "Client_Email": "zz-test+legacy@example.com",
+  "Client_Phone_Number": "(202) 555-0147",
+  "Document_Type": "Marriage certificate",
+  "Client_Comments": "[Get A Quote record] Notary · from Zoho record\nNotary type not given\nMessage: Marriage certificate for Italy, please call after 5.\nQuote: https://crm.zoho.com/crm/org882204370/tab/CustomModule7/6686316000033717016"
+}
