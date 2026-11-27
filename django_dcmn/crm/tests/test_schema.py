@@ -22,13 +22,13 @@ from .test_schema_command import FIELDS_URL, REFRESHED_TOKEN, SchemaTestCase
 SERVICE_DISPLAY = ['Apostille', 'Embassy Legalization', 'Translation', 'FBI Background Check', 'Document Retrieval',
                    'Fingerprinting', 'Mobile Notary', 'Online Notary (RON)', 'Office Notary', 'I-9 Verification',
                    'Other / Not Sure']
-DCMN_TOOLTIP = {'name': 'static_text', 'value': 'Filled by DCMN — manual edits are overwritten'}
+DCMN_TOOLTIP = {'name': 'info_icon', 'value': 'Set by DCMN; edits overwritten'}  # non-text fields
 
 # ZOHO-SETUP Z3.1, verbatim (the Services Requested values are the DESIGN §5.3 list).
 Z3_EXAMPLES = {
     (GAQL, 'Quote Reference'): {
         'field_label': 'Quote Reference', 'data_type': 'text', 'length': 20,
-        'tooltip': {'name': 'static_text', 'value': 'Filled by DCMN — Q-number of the web quote'}},
+        'tooltip': {'name': 'static_text', 'value': 'DCMN web quote number'}},
     (GAQL, 'Quote Status'): {
         'field_label': 'Quote Status', 'data_type': 'picklist',
         'pick_list_values': [{'display_value': v, 'actual_value': v}
@@ -414,7 +414,7 @@ class SpecTests(SchemaTestCase):
             for spec in specs:
                 with self.subTest(module=module, api_name=spec.api_name):
                     self.assertTrue(all(len(value) <= 120 for value in spec.values))
-                    self.assertLessEqual(len(spec.tooltip or ''), 255)
+                    self.assertLessEqual(len(spec.tooltip or ''), 32)
                     self.assertLessEqual(spec.length or 0, 2000)
         self.assertEqual(tuple(schema_spec.SERVICE_VALUES.values()), tuple(SERVICE_DISPLAY))
         self.assertEqual(schema_spec.MANUAL_OPTIONS, {(GAQL, 'GET_A_QUOTE_LEADS'): ('Web Quote Request',)})

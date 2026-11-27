@@ -12,7 +12,8 @@ GAQL = 'Get_A_Quote_Leads'
 GAQL_LAYOUT_ID = '6686316000002178172'   # prod GAQL "Standard" layout: the org fingerprint of --apply (§6.6)
 MAX_CUSTOM_LOOKUPS = 3                    # proven by Triple Seal [F3]; a 4th custom lookup is BLOCKED
 RELATED_LIST_STEP = 'Z4.2'                # related-list titles are renamed by hand (A4)
-DCMN_TOOLTIP = 'Filled by DCMN — manual edits are overwritten'
+TOOLTIP_MAX = 32  # Zoho Fields API: tooltip.value maximum_length (INVALID_DATA above it)
+DCMN_TOOLTIP = 'Set by DCMN; edits overwritten'  # Zoho tooltip limit: 32 chars
 
 # Zoho display value per quote service key (DESIGN §5.3, QUESTIONS A4): Primary_Service, Services_Requested,
 # Services_Created and the subform Service column.
@@ -51,6 +52,8 @@ class FieldSpec:
     def __post_init__(self):
         if self.actual_values and len(self.actual_values) != len(self.values):
             raise ValueError(f'{self.api_name}: actual_values must match values')
+        if self.tooltip and len(self.tooltip) > TOOLTIP_MAX:
+            raise ValueError(f'{self.api_name}: tooltip longer than {TOOLTIP_MAX} chars (Zoho refuses it)')
 
     def create_payload(self) -> dict:
         """One item of `POST /crm/v6/settings/fields` (ZOHO-SETUP Z3.1)."""
@@ -67,7 +70,9 @@ class FieldSpec:
         if self.lookup_module:
             payload['lookup'] = {'module': {'api_name': self.lookup_module}}
         if self.tooltip:
-            payload['tooltip'] = {'name': 'static_text', 'value': self.tooltip}
+            # Zoho takes 'static_text' only on text fields; other types answer DEPENDENT_MISMATCH unless 'info_icon'.
+            kind = 'static_text' if self.data_type == 'text' else 'info_icon'
+            payload['tooltip'] = {'name': kind, 'value': self.tooltip}
         return payload
 
 
@@ -86,7 +91,7 @@ def _quote_request(title: str) -> FieldSpec:
 # --- Get_A_Quote_Leads (§6.1) -------------------------------------------------------------------
 
 # Not unique (C13): a re-sent quote may share it.
-QUOTE_REFERENCE = _text('Quote_Reference', 20, tooltip='Filled by DCMN — Q-number of the web quote')
+QUOTE_REFERENCE = _text('Quote_Reference', 20, tooltip='DCMN web quote number')
 CREATED_FROM = FieldSpec('Created_From', 'Created From', 'website')
 
 GET_A_QUOTE_LEADS = FieldSpec('GET_A_QUOTE_LEADS', 'GET A QUOTE LEADS', 'picklist', manual='Z4.1', existing=True)
