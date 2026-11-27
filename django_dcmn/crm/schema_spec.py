@@ -11,7 +11,7 @@ from dataclasses import dataclass, replace
 GAQL = 'Get_A_Quote_Leads'
 GAQL_LAYOUT_ID = '6686316000002178172'   # prod GAQL "Standard" layout: the org fingerprint of --apply (§6.6)
 MAX_CUSTOM_LOOKUPS = 3                    # proven by Triple Seal [F3]; a 4th custom lookup is BLOCKED
-RELATED_LIST_STEP = 'Z4.2'                # related-list titles are renamed by hand (A4)
+RELATED_LIST_STEP = 'Z4.2'                # a related-list title that drifted after the create is fixed by hand (A4)
 TOOLTIP_MAX = 32  # Zoho Fields API: tooltip.value maximum_length (INVALID_DATA above it)
 DCMN_TOOLTIP = 'Set by DCMN; edits overwritten'  # Zoho tooltip limit: 32 chars
 
@@ -41,7 +41,7 @@ class FieldSpec:
     length: int | None = None
     values: tuple[str, ...] = ()              # picklist display values, in order
     lookup_module: str | None = None
-    related_list_title: str | None = None     # title on the quote; renamed by hand (RELATED_LIST_STEP)
+    related_list_title: str | None = None     # title on the quote, sent as lookup.display_label at create
     manual: str | None = None                 # ZOHO-SETUP step id: made in the UI, never by the API
     fallback: 'FieldSpec | None' = None       # swapped in by PR if Zoho refuses this type (A2)
     actual_values: tuple[str, ...] = ()       # picklist actual values, when they differ from `values`
@@ -68,7 +68,9 @@ class FieldSpec:
                 {'display_value': display, 'actual_value': value} for display, value in zip(self.values, actual)
             ]
         if self.lookup_module:
-            payload['lookup'] = {'module': {'api_name': self.lookup_module}}
+            # Zoho requires lookup.display_label (MANDATORY_NOT_FOUND without it): the related list on the target.
+            payload['lookup'] = {'display_label': self.related_list_title or self.label,
+                                 'module': {'api_name': self.lookup_module}}
         if self.tooltip:
             # Zoho takes 'static_text' only on text fields; other types answer DEPENDENT_MISMATCH unless 'info_icon'.
             kind = 'static_text' if self.data_type == 'text' else 'info_icon'

@@ -42,7 +42,8 @@ Z3_EXAMPLES = {
     (GAQL, 'Lines Pending'): {'field_label': 'Lines Pending', 'data_type': 'integer', 'length': 9},
     (GAQL, 'WhatsApp Opt In'): {'field_label': 'WhatsApp Opt In', 'data_type': 'boolean'},
     ('Apostille_Services', 'Quote Request'): {
-        'field_label': 'Quote Request', 'data_type': 'lookup', 'lookup': {'module': {'api_name': 'Get_A_Quote_Leads'}}},
+        'field_label': 'Quote Request', 'data_type': 'lookup',
+        'lookup': {'display_label': 'Apostille from this quote', 'module': {'api_name': 'Get_A_Quote_Leads'}}},
     ('Apostille_Services', 'Created From'): {'field_label': 'Created From', 'data_type': 'website'},
     ('Apostille_Services', 'Translation Required'): {
         'field_label': 'Translation Required', 'data_type': 'picklist',
@@ -189,16 +190,12 @@ class VerifyTests(SchemaTestCase):
         self.assertEqual(code, 1)
         self.assertNotIn('ADD ', out.replace('ADD 0', ''))
         self.assertIn('MANUAL GET_A_QUOTE_LEADS option Web Quote Request (ZOHO-SETUP Z4.1)', out)
-        self.assertIn("MANUAL Quote_Request related list title 'Apostille from this quote' (ZOHO-SETUP Z4.2)", out)
+        self.assertIn("OK Quote_Request related list title 'Apostille from this quote'", out)   # set at create
 
         self.zoho.add_option(GAQL, 'GET_A_QUOTE_LEADS', 'Web Quote Request')   # Z4.1
         code, out = self.run_command('--verify')
-        self.assertEqual(code, 1)
-        self.assertIn('OK GET_A_QUOTE_LEADS option Web Quote Request', out)
-
-        self.zoho.set_related_list_titles()                        # Z4.2
-        code, out = self.run_command('--verify')
         self.assertEqual(code, 0, out)
+        self.assertIn('OK GET_A_QUOTE_LEADS option Web Quote Request', out)
         self.assertIn('MANUAL Quote_Lines subform: create in the UI (ZOHO-SETUP Z11, not required yet)', out)
 
         with override_settings(QUOTE_V3_SUBFORM='auto'):
@@ -212,6 +209,20 @@ class VerifyTests(SchemaTestCase):
 
         self.assertEqual(self.zoho_writes(), [])
         self.assertEqual(self.run_logs(), [])
+
+    def test_renamed_related_list_title_fails_verify_until_fixed_by_hand(self):
+        self.zoho.create_api_fields()
+        self.zoho.add_option(GAQL, 'GET_A_QUOTE_LEADS', 'Web Quote Request')
+        self.zoho.field('Apostille_Services', 'Quote_Request')['lookup']['display_label'] = 'Related List Label 1'
+
+        code, out = self.run_command('--verify')
+        self.assertEqual(code, 1)
+        self.assertIn("MANUAL Quote_Request related list title 'Apostille from this quote' (ZOHO-SETUP Z4.2)", out)
+
+        self.zoho.set_related_list_titles()                        # Z4.2
+        code, out = self.run_command('--verify')
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.zoho_writes(), [])
 
     def test_registry_problems_fail_verify(self):
         self.zoho.create_api_fields()

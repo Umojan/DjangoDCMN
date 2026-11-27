@@ -73,6 +73,9 @@ class FakeZoho:
         label = item['field_label']
         if label in self.refused:
             return FakeResponse(400, {'fields': [{'code': self.refused[label], 'details': {}, 'status': 'error'}]})
+        if item['data_type'] == 'lookup' and not (item.get('lookup') or {}).get('display_label'):
+            return FakeResponse(400, {'fields': [{'code': 'MANDATORY_NOT_FOUND', 'status': 'error', 'details': {
+                'api_name': 'display_label', 'json_path': '$.fields[0].lookup.display_label'}}]})   # live, 2026-11-27
         field = self.make_field(self.derived.get(label, label.replace(' ', '_')), item)
         self.fields[module].append(field)
         return FakeResponse(201, {'fields': [{'code': 'SUCCESS', 'details': {'id': field['id']},
@@ -97,7 +100,7 @@ class FakeZoho:
             field['textarea'] = item.get('textarea') or {'type': 'small'}
         if data_type == 'lookup':
             target = item['lookup']['module']['api_name']
-            field['lookup'] = {'display_label': 'Related List Label 1', 'api_name': 'Related_List_Label_1',
+            field['lookup'] = {'display_label': item['lookup']['display_label'], 'api_name': 'Related_List_Label_1',
                                'id': field_id, 'module': {'api_name': target, 'id': '6686316000000000001'}}
         return field
 
@@ -202,14 +205,13 @@ EXPECTED_ADD = [
 ]
 TITLED_MODULES = ('Apostille_Services', 'Embassy_Legalization', 'Translation_Services', 'FINGERPRINT_SERVICES',
                   'Notary_Services', 'I_9_Verification', 'Deals')
-EXPECTED_MANUAL = {
+EXPECTED_TITLES = dict(zip(TITLED_MODULES, (
+    'Apostille from this quote', 'Embassy from this quote', 'Translation from this quote',
+    'Fingerprinting / FBI from this quote', 'Notary from this quote', 'I-9 from this quote',
+    'FBI apostille from this quote')))
+EXPECTED_MANUAL = {      # the related-list titles are not here: a new lookup carries its title (display_label)
     (GAQL, 'GET_A_QUOTE_LEADS', 'option', 'option Web Quote Request'),
     (GAQL, 'Quote_Lines', 'field', 'subform: create in the UI'),
-    *[(module, 'Quote_Request', 'related_list', f"related list title '{title}'")
-      for module, title in zip(TITLED_MODULES, (
-          'Apostille from this quote', 'Embassy from this quote', 'Translation from this quote',
-          'Fingerprinting / FBI from this quote', 'Notary from this quote', 'I-9 from this quote',
-          'FBI apostille from this quote'))],
 }
 EXPECTED_EXISTING_OK = {
     (GAQL, 'GET_A_QUOTE_LEADS'), ('FINGERPRINT_SERVICES', 'Translation_Needed'), ('Deals', 'Translation_Required'),
@@ -236,7 +238,9 @@ class PlanTests(SchemaTestCase):
         self.assertEqual(set(document['metadata']), set(schema_spec.SPEC))   # the 9 modules (ZOHO-SETUP Z1)
         self.assertIn('MANUAL GET_A_QUOTE_LEADS option Web Quote Request (ZOHO-SETUP Z4.1)', out)
         self.assertIn('ADD Quote_Reference text 20', out)
-        self.assertIn('ADD 50 · OK 5 · MANUAL 9 · MISMATCH 0 · BLOCKED 0', out)
+        lookups = {i['module']: i['detail'] for i in plan if i['action'] == 'ADD' and i['api_name'] == 'Quote_Request'}
+        self.assertEqual(lookups, {m: f"lookup → Get_A_Quote_Leads, related list '{t}'" for m, t in EXPECTED_TITLES.items()})
+        self.assertIn('ADD 50 · OK 5 · MANUAL 2 · MISMATCH 0 · BLOCKED 0', out)
         self.assertEqual((target.parent / '.gitignore').read_text(encoding='utf-8').splitlines()[-1], '*')
 
     def test_plan_makes_only_get_requests(self):

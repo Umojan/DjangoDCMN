@@ -275,7 +275,7 @@ def plan_against(metadata: Mapping[str, list[dict]], modules: Iterable[str] | No
                     seen = option in _active_values(current)
                     items.append(PlanItem(module, spec.api_name, OK if seen else MANUAL, f'option {option}',
                                           kind='option', step='' if seen else spec.manual or ''))
-            if spec.related_list_title:
+            if spec.related_list_title and current is not None:   # a new lookup carries its title (describe)
                 items.append(_related_list_item(module, spec, current))
     return items
 
@@ -299,11 +299,11 @@ def _missing_item(module: str, spec: FieldSpec, live_fields: list[dict], lookups
     return PlanItem(module, spec.api_name, ADD, describe(spec))
 
 
-def _related_list_item(module: str, spec: FieldSpec, current: dict | None) -> PlanItem:
+def _related_list_item(module: str, spec: FieldSpec, current: dict) -> PlanItem:
     title = spec.related_list_title
     detail = f"related list title '{title}'"
-    lookup = (current or {}).get('lookup') or {}
-    if current is not None and 'display_label' not in lookup:
+    lookup = current.get('lookup') or {}
+    if 'display_label' not in lookup:
         return PlanItem(module, spec.api_name, MANUAL, f'{detail}: not readable, check by hand', kind='related_list',
                         step=schema_spec.RELATED_LIST_STEP, optional=True)
     if lookup.get('display_label') == title:
@@ -357,7 +357,8 @@ def compare(spec: FieldSpec, current: dict) -> str:
 
 def describe(spec: FieldSpec) -> str:
     if spec.data_type == 'lookup':
-        return f'lookup → {spec.lookup_module}'
+        title = f", related list '{spec.related_list_title}'" if spec.related_list_title else ''
+        return f'lookup → {spec.lookup_module}{title}'
     if spec.values:
         return f'{spec.data_type} ({len(spec.values)} values)'
     if spec.data_type == 'textarea':
