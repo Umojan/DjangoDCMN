@@ -719,4 +719,4 @@ Celery beat daily 15:00 UTC: reviews.tasks.send_review_reminders — ONE reminde
 - Settings: `REVIEWS_POSITIVE_THRESHOLD`, `REVIEWS_NOTIFY_EMAILS`, `REVIEWS_REMINDER_DAYS`, `REVIEWS_REMINDER_MAX_DAYS`,
   `REVIEWS_TOKEN_MAX_AGE_DAYS`, `REVIEWS_FEEDBACK_PATH`, `TRUSTPILOT_REVIEW_URL`, throttle `reviews_feedback` (10/hour).
 - Tests: `DJANGO_SETTINGS_MODULE=django_dcmn.settings_test python3 manage.py test reviews`.
-- Migrations are NOT run on Railway deploy (Procfile only starts gunicorn) — run `manage.py migrate` from a machine whose `.env` points at prod.
+- Migrations DO run on every Railway deploy of the `Django` web service: its pre-deploy command is `python manage.py migrate --noinput` (seen 2026-11-27, when `quotes 0001` and `crm 0001` applied themselves on the deploy of `98cd234`). A migration pushed to `main` therefore reaches prod at once; keep migrations additive. Ops commands on prod: `railway ssh --service Django -- python3 manage.py …`.
